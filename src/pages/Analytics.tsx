@@ -1,10 +1,12 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { mockInventory } from '@/data/mockData';
+import { useInventory } from '@/hooks/useInventory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const Analytics = () => {
-  const activeItems = mockInventory.filter(i => i.status !== 'sold');
+  const { inventory, getActiveItems, getFinancialSummary } = useInventory();
+  const activeItems = getActiveItems();
+  const summary = getFinancialSummary();
 
   // Brand performance
   const brandData = activeItems.reduce((acc, item) => {
@@ -26,11 +28,11 @@ const Analytics = () => {
 
   // Status distribution
   const statusData = [
-    { name: 'Listed', value: mockInventory.filter(i => i.status === 'listed').length },
-    { name: 'In Closet', value: mockInventory.filter(i => i.status === 'in-closet').length },
-    { name: 'On Hold', value: mockInventory.filter(i => i.status === 'on-hold').length },
-    { name: 'Archive', value: mockInventory.filter(i => i.status === 'archive-hold').length },
-    { name: 'Sold', value: mockInventory.filter(i => i.status === 'sold').length },
+    { name: 'Listed', value: inventory.filter(i => i.status === 'listed').length },
+    { name: 'In Closet', value: inventory.filter(i => i.status === 'in-closet').length },
+    { name: 'On Hold', value: inventory.filter(i => i.status === 'on-hold').length },
+    { name: 'Archive', value: inventory.filter(i => i.status === 'archive-hold').length },
+    { name: 'Sold', value: inventory.filter(i => i.status === 'sold').length },
   ].filter(s => s.value > 0);
 
   // Days held distribution
@@ -57,9 +59,9 @@ const Analytics = () => {
     }).format(amount);
   };
 
-  const totalInventoryValue = activeItems.reduce((sum, i) => sum + i.acquisitionCost, 0);
-  const potentialRevenue = activeItems.reduce((sum, i) => sum + i.askingPrice, 0);
-  const avgDaysHeld = Math.round(activeItems.reduce((sum, i) => sum + i.daysHeld, 0) / activeItems.length);
+  const avgDaysHeld = activeItems.length > 0 
+    ? Math.round(activeItems.reduce((sum, i) => sum + i.daysHeld, 0) / activeItems.length)
+    : 0;
 
   return (
     <DashboardLayout>
@@ -75,15 +77,15 @@ const Analytics = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-4">
             <p className="text-xs text-muted-foreground">Total Inventory Cost</p>
-            <p className="text-xl font-semibold mt-1">{formatCurrency(totalInventoryValue)}</p>
+            <p className="text-xl font-semibold mt-1">{formatCurrency(summary.activeInventoryCost)}</p>
           </Card>
           <Card className="p-4">
             <p className="text-xs text-muted-foreground">Potential Revenue</p>
-            <p className="text-xl font-semibold mt-1">{formatCurrency(potentialRevenue)}</p>
+            <p className="text-xl font-semibold mt-1">{formatCurrency(summary.potentialRevenue)}</p>
           </Card>
           <Card className="p-4">
             <p className="text-xs text-muted-foreground">Potential Profit</p>
-            <p className="text-xl font-semibold mt-1">{formatCurrency(potentialRevenue - totalInventoryValue)}</p>
+            <p className="text-xl font-semibold mt-1">{formatCurrency(summary.potentialRevenue - summary.activeInventoryCost)}</p>
           </Card>
           <Card className="p-4">
             <p className="text-xs text-muted-foreground">Avg Days Held</p>
