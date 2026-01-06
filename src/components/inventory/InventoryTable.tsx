@@ -17,11 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, ArrowUpDown } from 'lucide-react';
+import { Search, ArrowUpDown, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface InventoryTableProps {
   items: InventoryItem[];
+  onItemClick: (item: InventoryItem) => void;
 }
 
 const statusColors: Record<ItemStatus, string> = {
@@ -40,12 +41,12 @@ const statusLabels: Record<ItemStatus, string> = {
   'archive-hold': 'Archive',
 };
 
-type SortField = 'daysHeld' | 'askingPrice' | 'profitPotential' | 'brand';
+type SortField = 'daysHeld' | 'askingPrice' | 'profitPotential' | 'brand' | 'dateAdded';
 
-export function InventoryTable({ items }: InventoryTableProps) {
+export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sortField, setSortField] = useState<SortField>('daysHeld');
+  const [statusFilter, setStatusFilter] = useState<string>('active');
+  const [sortField, setSortField] = useState<SortField>('dateAdded');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const filteredAndSortedItems = useMemo(() => {
@@ -53,8 +54,11 @@ export function InventoryTable({ items }: InventoryTableProps) {
       const matchesSearch =
         item.name.toLowerCase().includes(search.toLowerCase()) ||
         item.brand.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      
+      if (statusFilter === 'all') return matchesSearch;
+      if (statusFilter === 'active') return matchesSearch && item.status !== 'sold';
+      if (statusFilter === 'sold') return matchesSearch && item.status === 'sold';
+      return matchesSearch && item.status === statusFilter;
     });
 
     return filtered.sort((a, b) => {
@@ -77,6 +81,10 @@ export function InventoryTable({ items }: InventoryTableProps) {
         case 'brand':
           aValue = a.brand;
           bValue = b.brand;
+          break;
+        case 'dateAdded':
+          aValue = new Date(a.dateAdded).getTime();
+          bValue = new Date(b.dateAdded).getTime();
           break;
         default:
           aValue = a.daysHeld;
@@ -127,11 +135,12 @@ export function InventoryTable({ items }: InventoryTableProps) {
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active Items</SelectItem>
+            <SelectItem value="all">All Items</SelectItem>
+            <SelectItem value="sold">Sold Items</SelectItem>
             <SelectItem value="in-closet">In Closet</SelectItem>
             <SelectItem value="listed">Listed</SelectItem>
             <SelectItem value="on-hold">On Hold</SelectItem>
-            <SelectItem value="sold">Sold</SelectItem>
             <SelectItem value="archive-hold">Archive Hold</SelectItem>
           </SelectContent>
         </Select>
@@ -154,6 +163,7 @@ export function InventoryTable({ items }: InventoryTableProps) {
                 </Button>
               </TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="text-right">Cost</TableHead>
               <TableHead className="text-right">
                 <Button
                   variant="ghost"
@@ -161,10 +171,11 @@ export function InventoryTable({ items }: InventoryTableProps) {
                   className="h-auto p-0 font-medium hover:bg-transparent"
                   onClick={() => toggleSort('askingPrice')}
                 >
-                  Price
+                  Asking
                   <ArrowUpDown className="ml-1 h-3 w-3" />
                 </Button>
               </TableHead>
+              <TableHead className="text-right">Floor</TableHead>
               <TableHead className="text-right">
                 <Button
                   variant="ghost"
@@ -187,12 +198,16 @@ export function InventoryTable({ items }: InventoryTableProps) {
                   <ArrowUpDown className="ml-1 h-3 w-3" />
                 </Button>
               </TableHead>
-              <TableHead>Platform</TableHead>
+              <TableHead className="w-10"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredAndSortedItems.map((item) => (
-              <TableRow key={item.id} className="hover:bg-muted/30">
+              <TableRow
+                key={item.id}
+                className="hover:bg-muted/30 cursor-pointer"
+                onClick={() => onItemClick(item)}
+              >
                 <TableCell>
                   <div>
                     <p className="font-medium text-sm">{item.name}</p>
@@ -205,24 +220,39 @@ export function InventoryTable({ items }: InventoryTableProps) {
                     {statusLabels[item.status]}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right font-mono text-sm">
-                  {formatCurrency(item.askingPrice)}
+                <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                  {formatCurrency(item.acquisitionCost)}
                 </TableCell>
                 <TableCell className="text-right font-mono text-sm">
-                  {formatCurrency(item.askingPrice - item.acquisitionCost)}
+                  {item.status === 'sold' ? formatCurrency(item.salePrice || 0) : formatCurrency(item.askingPrice)}
+                </TableCell>
+                <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                  {formatCurrency(item.lowestAcceptablePrice)}
+                </TableCell>
+                <TableCell className="text-right font-mono text-sm">
+                  <span className={item.status === 'sold' ? 'text-chart-2' : ''}>
+                    {item.status === 'sold'
+                      ? `+${formatCurrency((item.salePrice || 0) - item.acquisitionCost)}`
+                      : formatCurrency(item.askingPrice - item.acquisitionCost)}
+                  </span>
                 </TableCell>
                 <TableCell className="text-right">
                   <span className={item.daysHeld > 30 ? 'text-destructive font-medium' : 'text-muted-foreground'}>
                     {item.daysHeld}
                   </span>
                 </TableCell>
-                <TableCell className="text-sm capitalize text-muted-foreground">
-                  {item.platform === 'none' ? '—' : item.platform}
+                <TableCell>
+                  <Eye className="h-4 w-4 text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+        {filteredAndSortedItems.length === 0 && (
+          <div className="p-8 text-center text-muted-foreground">
+            No items found
+          </div>
+        )}
       </div>
     </div>
   );
