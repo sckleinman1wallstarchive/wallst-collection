@@ -2,17 +2,20 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { ProgressBar } from '@/components/dashboard/ProgressBar';
 import { TaskList } from '@/components/tasks/TaskList';
-import { mockInventory, mockTasks, mockFinancials } from '@/data/mockData';
+import { useInventory } from '@/hooks/useInventory';
+import { mockTasks } from '@/data/mockData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, DollarSign, TrendingUp, Clock, AlertTriangle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Index = () => {
-  // Calculate metrics
-  const activeItems = mockInventory.filter(i => i.status !== 'sold');
-  const listedItems = mockInventory.filter(i => i.status === 'listed');
-  const totalInventoryValue = activeItems.reduce((sum, i) => sum + i.acquisitionCost, 0);
-  const potentialRevenue = activeItems.reduce((sum, i) => sum + i.askingPrice, 0);
-  const avgDaysHeld = Math.round(activeItems.reduce((sum, i) => sum + i.daysHeld, 0) / activeItems.length);
+  const { inventory, getFinancialSummary, getActiveItems } = useInventory();
+  const summary = getFinancialSummary();
+  const activeItems = getActiveItems();
+  
+  const avgDaysHeld = activeItems.length > 0 
+    ? Math.round(activeItems.reduce((sum, i) => sum + i.daysHeld, 0) / activeItems.length)
+    : 0;
   const stagnantItems = activeItems.filter(i => i.daysHeld > 30);
   const upcomingTasks = mockTasks.filter(t => t.status !== 'done').slice(0, 4);
 
@@ -23,6 +26,8 @@ const Index = () => {
       minimumFractionDigits: 0,
     }).format(amount);
   };
+
+  const monthlyTarget = 5000;
 
   return (
     <DashboardLayout>
@@ -41,20 +46,20 @@ const Index = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Active Items"
-            value={activeItems.length}
-            subtitle={`${listedItems.length} currently listed`}
+            value={summary.activeItems}
+            subtitle={`${formatCurrency(summary.activeInventoryCost)} invested`}
             icon={<Package className="h-4 w-4" />}
           />
           <StatCard
-            title="Inventory Cost"
-            value={formatCurrency(totalInventoryValue)}
-            subtitle={`${formatCurrency(potentialRevenue)} potential`}
+            title="Potential Revenue"
+            value={formatCurrency(summary.potentialRevenue)}
+            subtitle={`Floor: ${formatCurrency(summary.minimumRevenue)}`}
             icon={<DollarSign className="h-4 w-4" />}
           />
           <StatCard
-            title="Monthly Progress"
-            value={formatCurrency(mockFinancials.currentProfit)}
-            subtitle={`of ${formatCurrency(mockFinancials.monthlyProfitTarget)} target`}
+            title="Realized Profit"
+            value={formatCurrency(summary.totalProfit)}
+            subtitle={`${summary.itemsSold} items sold`}
             icon={<TrendingUp className="h-4 w-4" />}
           />
           <StatCard
@@ -77,12 +82,12 @@ const Index = () => {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground">Profit Target</span>
                   <span className="text-sm font-medium">
-                    {formatCurrency(mockFinancials.currentProfit)} / {formatCurrency(mockFinancials.monthlyProfitTarget)}
+                    {formatCurrency(summary.totalProfit)} / {formatCurrency(monthlyTarget)}
                   </span>
                 </div>
                 <ProgressBar
-                  value={mockFinancials.currentProfit}
-                  max={mockFinancials.monthlyProfitTarget}
+                  value={summary.totalProfit}
+                  max={monthlyTarget}
                   showPercentage={false}
                 />
               </div>
@@ -90,27 +95,27 @@ const Index = () => {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground">Stretch Target</span>
                   <span className="text-sm font-medium">
-                    {formatCurrency(mockFinancials.currentProfit)} / {formatCurrency(mockFinancials.stretchTarget)}
+                    {formatCurrency(summary.totalProfit)} / {formatCurrency(10000)}
                   </span>
                 </div>
                 <ProgressBar
-                  value={mockFinancials.currentProfit}
-                  max={mockFinancials.stretchTarget}
+                  value={summary.totalProfit}
+                  max={10000}
                   showPercentage={false}
                 />
               </div>
               <div className="grid grid-cols-3 gap-4 pt-4 border-t border-border">
                 <div>
-                  <p className="text-xs text-muted-foreground">Target Margin</p>
-                  <p className="text-lg font-semibold">{mockFinancials.targetMargin}%</p>
+                  <p className="text-xs text-muted-foreground">Avg Margin</p>
+                  <p className="text-lg font-semibold">{summary.avgMargin}%</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Per Partner</p>
-                  <p className="text-lg font-semibold">{formatCurrency(mockFinancials.currentProfit / 3)}</p>
+                  <p className="text-lg font-semibold">{formatCurrency(summary.totalProfit / 3)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Capital Pool</p>
-                  <p className="text-lg font-semibold">{formatCurrency(mockFinancials.capitalInjected)}</p>
+                  <p className="text-xs text-muted-foreground">Items Sold</p>
+                  <p className="text-lg font-semibold">{summary.itemsSold}</p>
                 </div>
               </div>
             </CardContent>
@@ -126,29 +131,29 @@ const Index = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               {stagnantItems.length > 0 && (
-                <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20">
+                <Link to="/inventory" className="block p-3 rounded-md bg-destructive/10 border border-destructive/20 hover:bg-destructive/15 transition-colors">
                   <p className="text-sm font-medium">{stagnantItems.length} items over 30 days</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Consider price drops or relisting
                   </p>
-                </div>
+                </Link>
               )}
-              {mockInventory.filter(i => i.status === 'in-closet').length > 0 && (
-                <div className="p-3 rounded-md bg-muted border border-border">
+              {inventory.filter(i => i.status === 'in-closet').length > 0 && (
+                <Link to="/inventory" className="block p-3 rounded-md bg-muted border border-border hover:bg-muted/80 transition-colors">
                   <p className="text-sm font-medium">
-                    {mockInventory.filter(i => i.status === 'in-closet').length} unlisted items
+                    {inventory.filter(i => i.status === 'in-closet').length} unlisted items
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Capital not working until listed
                   </p>
-                </div>
+                </Link>
               )}
-              <div className="p-3 rounded-md bg-muted border border-border">
+              <Link to="/tasks" className="block p-3 rounded-md bg-muted border border-border hover:bg-muted/80 transition-colors">
                 <p className="text-sm font-medium">Weekly meeting</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Set agenda for Sunday sync
                 </p>
-              </div>
+              </Link>
             </CardContent>
           </Card>
         </div>
@@ -157,9 +162,9 @@ const Index = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base font-medium">Upcoming Tasks</CardTitle>
-            <a href="/tasks" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/tasks" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               View all →
-            </a>
+            </Link>
           </CardHeader>
           <CardContent>
             <TaskList tasks={upcomingTasks} />

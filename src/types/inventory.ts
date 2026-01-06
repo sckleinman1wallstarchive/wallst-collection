@@ -9,14 +9,16 @@ export interface InventoryItem {
   brand: string;
   category: ItemCategory;
   acquisitionCost: number;
-  targetMargin: number;
   askingPrice: number;
   lowestAcceptablePrice: number;
+  salePrice?: number;
   status: ItemStatus;
   daysHeld: number;
   platform: Platform;
   notes: string;
   dateAdded: string;
+  dateSold?: string;
+  soldTo?: string;
 }
 
 export interface Task {
@@ -44,5 +46,4 @@ export interface FinancialGoals {
   targetMargin: number;
   partnerPayoutTarget: number;
   capitalInjected: number;
-  currentProfit: number;
 }

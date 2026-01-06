@@ -1,14 +1,14 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { ProgressBar } from '@/components/dashboard/ProgressBar';
-import { mockFinancials, mockInventory } from '@/data/mockData';
+import { useInventory } from '@/hooks/useInventory';
+import { mockFinancials } from '@/data/mockData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Target, Users, Wallet, TrendingUp } from 'lucide-react';
 
 const Goals = () => {
-  const soldItems = mockInventory.filter(i => i.status === 'sold');
-  const totalRevenue = soldItems.reduce((sum, i) => sum + i.askingPrice, 0);
-  const totalCost = soldItems.reduce((sum, i) => sum + i.acquisitionCost, 0);
-  const actualMargin = totalRevenue > 0 ? ((totalRevenue - totalCost) / totalRevenue * 100).toFixed(1) : 0;
+  const { getFinancialSummary, getActiveItems } = useInventory();
+  const summary = getFinancialSummary();
+  const activeItems = getActiveItems();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -19,7 +19,7 @@ const Goals = () => {
   };
 
   const partners = ['Parker', 'Spencer', 'Parker K'];
-  const partnerShare = mockFinancials.currentProfit / 3;
+  const partnerShare = summary.totalProfit / 3;
   const partnerTarget = mockFinancials.partnerPayoutTarget;
 
   return (
@@ -44,18 +44,18 @@ const Goals = () => {
             <CardContent className="space-y-6">
               <div>
                 <div className="flex items-baseline justify-between mb-4">
-                  <span className="text-3xl font-semibold">{formatCurrency(mockFinancials.currentProfit)}</span>
+                  <span className="text-3xl font-semibold">{formatCurrency(summary.totalProfit)}</span>
                   <span className="text-muted-foreground text-sm">of {formatCurrency(mockFinancials.monthlyProfitTarget)}</span>
                 </div>
                 <ProgressBar
-                  value={mockFinancials.currentProfit}
+                  value={summary.totalProfit}
                   max={mockFinancials.monthlyProfitTarget}
                   label="Baseline Target"
                 />
               </div>
               <div>
                 <ProgressBar
-                  value={mockFinancials.currentProfit}
+                  value={summary.totalProfit}
                   max={mockFinancials.stretchTarget}
                   label="Stretch Target ($10k)"
                 />
@@ -78,17 +78,17 @@ const Goals = () => {
                 </div>
                 <div className="p-4 bg-muted rounded-lg">
                   <p className="text-xs text-muted-foreground">Actual Margin</p>
-                  <p className="text-2xl font-semibold mt-1">{actualMargin}%</p>
+                  <p className="text-2xl font-semibold mt-1">{summary.avgMargin}%</p>
                 </div>
               </div>
               <div className="pt-4 border-t border-border">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Total Revenue</span>
-                  <span className="font-medium">{formatCurrency(totalRevenue)}</span>
+                  <span className="font-medium">{formatCurrency(summary.totalRevenue)}</span>
                 </div>
                 <div className="flex justify-between text-sm mt-2">
                   <span className="text-muted-foreground">Total Cost</span>
-                  <span className="font-medium">{formatCurrency(totalCost)}</span>
+                  <span className="font-medium">{formatCurrency(summary.totalCostOfSold)}</span>
                 </div>
               </div>
             </CardContent>
@@ -143,14 +143,14 @@ const Goals = () => {
               <div className="p-4 bg-muted rounded-lg">
                 <p className="text-xs text-muted-foreground">Currently Deployed</p>
                 <p className="text-2xl font-semibold mt-1">
-                  {formatCurrency(mockInventory.filter(i => i.status !== 'sold').reduce((s, i) => s + i.acquisitionCost, 0))}
+                  {formatCurrency(summary.activeInventoryCost)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">In active inventory</p>
               </div>
               <div className="p-4 bg-muted rounded-lg">
                 <p className="text-xs text-muted-foreground">Available</p>
                 <p className="text-2xl font-semibold mt-1">
-                  {formatCurrency(mockFinancials.capitalInjected - mockInventory.filter(i => i.status !== 'sold').reduce((s, i) => s + i.acquisitionCost, 0) + mockFinancials.currentProfit)}
+                  {formatCurrency(mockFinancials.capitalInjected - summary.activeInventoryCost + summary.totalProfit)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">For new sourcing</p>
               </div>
