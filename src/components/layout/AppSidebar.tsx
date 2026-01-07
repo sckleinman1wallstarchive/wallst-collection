@@ -8,7 +8,6 @@ import {
   CheckSquare,
   FileText,
   Calculator,
-  Upload,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -31,7 +30,6 @@ const navigation = [
   { title: 'Analytics', url: '/analytics', icon: BarChart3 },
   { title: 'Tasks', url: '/tasks', icon: CheckSquare },
   { title: 'Content', url: '/content', icon: FileText },
-  { title: 'Import', url: '/import', icon: Upload },
 ];
 
 export function AppSidebar() {
