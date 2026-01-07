@@ -1,14 +1,13 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { ProgressBar } from '@/components/dashboard/ProgressBar';
-import { useInventory } from '@/hooks/useInventory';
+import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
 import { mockFinancials } from '@/data/mockData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Target, Users, Wallet, TrendingUp } from 'lucide-react';
+import { Target, Wallet, TrendingUp } from 'lucide-react';
 
 const Goals = () => {
-  const { getFinancialSummary, getActiveItems } = useInventory();
+  const { getFinancialSummary, getActiveItems } = useSupabaseInventory();
   const summary = getFinancialSummary();
-  const activeItems = getActiveItems();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -17,10 +16,6 @@ const Goals = () => {
       minimumFractionDigits: 0,
     }).format(amount);
   };
-
-  const partners = ['Parker', 'Spencer', 'Parker K'];
-  const partnerShare = summary.totalProfit / 3;
-  const partnerTarget = mockFinancials.partnerPayoutTarget;
 
   return (
     <DashboardLayout>
@@ -95,36 +90,6 @@ const Goals = () => {
           </Card>
         </div>
 
-        {/* Partner Split */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-medium flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Partner Payouts
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {partners.map((partner) => (
-                <div key={partner} className="p-4 bg-muted rounded-lg">
-                  <p className="text-sm font-medium">{partner}</p>
-                  <p className="text-2xl font-semibold mt-2">{formatCurrency(partnerShare)}</p>
-                  <div className="mt-3">
-                    <ProgressBar
-                      value={partnerShare}
-                      max={partnerTarget}
-                      showPercentage={false}
-                    />
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Target: {formatCurrency(partnerTarget)}/month
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Capital Tracking */}
         <Card>
           <CardHeader>
@@ -138,7 +103,6 @@ const Goals = () => {
               <div className="p-4 bg-muted rounded-lg">
                 <p className="text-xs text-muted-foreground">Total Injected</p>
                 <p className="text-2xl font-semibold mt-1">{formatCurrency(mockFinancials.capitalInjected)}</p>
-                <p className="text-xs text-muted-foreground mt-2">$5k per partner</p>
               </div>
               <div className="p-4 bg-muted rounded-lg">
                 <p className="text-xs text-muted-foreground">Currently Deployed</p>

@@ -23,8 +23,6 @@ export interface InventoryItem {
   platformSold: Database['public']['Enums']['platform'] | null;
   sourcePlatform: string | null;
   source: string | null;
-  owner: Database['public']['Enums']['item_owner'];
-  ownerSplit: string | null;
   notes: string | null;
   dateAdded: string | null;
   dateSold: string | null;
@@ -47,8 +45,6 @@ const toAppItem = (row: DbInventoryItem): InventoryItem => ({
   platformSold: row.platform_sold,
   sourcePlatform: row.source_platform,
   source: row.source,
-  owner: row.owner,
-  ownerSplit: row.owner_split,
   notes: row.notes,
   dateAdded: row.date_added,
   dateSold: row.date_sold,
@@ -70,8 +66,6 @@ const toDbInsert = (item: Partial<InventoryItem>): DbInsertItem => ({
   platform_sold: item.platformSold,
   source_platform: item.sourcePlatform,
   source: item.source,
-  owner: item.owner || 'Shared',
-  owner_split: item.ownerSplit,
   notes: item.notes,
   date_added: item.dateAdded,
   date_sold: item.dateSold,
@@ -94,8 +88,6 @@ const toDbUpdate = (item: Partial<InventoryItem>): DbUpdateItem => {
   if (item.platformSold !== undefined) update.platform_sold = item.platformSold;
   if (item.sourcePlatform !== undefined) update.source_platform = item.sourcePlatform;
   if (item.source !== undefined) update.source = item.source;
-  if (item.owner !== undefined) update.owner = item.owner;
-  if (item.ownerSplit !== undefined) update.owner_split = item.ownerSplit;
   if (item.notes !== undefined) update.notes = item.notes;
   if (item.dateAdded !== undefined) update.date_added = item.dateAdded;
   if (item.dateSold !== undefined) update.date_sold = item.dateSold;
@@ -242,19 +234,6 @@ export function useSupabaseInventory() {
     const minimumRevenue = active.reduce((sum, i) => sum + (i.lowestAcceptablePrice || 0), 0);
     const lostToScams = scammed.reduce((sum, i) => sum + i.acquisitionCost, 0);
 
-    // Calculate profit by owner
-    const parkerProfit = sold
-      .filter(i => i.owner === 'Parker Kleinman')
-      .reduce((sum, i) => sum + ((i.salePrice || 0) - i.acquisitionCost), 0);
-    
-    const spencerProfit = sold
-      .filter(i => i.owner === 'Spencer Kleinman')
-      .reduce((sum, i) => sum + ((i.salePrice || 0) - i.acquisitionCost), 0);
-    
-    const sharedProfit = sold
-      .filter(i => i.owner === 'Shared')
-      .reduce((sum, i) => sum + ((i.salePrice || 0) - i.acquisitionCost), 0);
-
     return {
       totalRevenue,
       totalCostOfSold,
@@ -266,8 +245,6 @@ export function useSupabaseInventory() {
       activeItems: active.length,
       lostToScams,
       avgMargin: totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : '0',
-      parkerProfit: parkerProfit + (sharedProfit / 2),
-      spencerProfit: spencerProfit + (sharedProfit / 2),
     };
   };
 

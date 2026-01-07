@@ -130,7 +130,6 @@ const Content = () => {
                   <TableHead>Date</TableHead>
                   <TableHead>Item</TableHead>
                   <TableHead>Platform</TableHead>
-                  <TableHead>Owner</TableHead>
                   <TableHead>Result</TableHead>
                 </TableRow>
               </TableHeader>
@@ -149,7 +148,6 @@ const Content = () => {
                         <span className="text-sm capitalize">{post.platform}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm">{post.owner}</TableCell>
                     <TableCell>
                       <Badge variant="secondary" className={resultColors[post.result]}>
                         {resultLabels[post.result]}
