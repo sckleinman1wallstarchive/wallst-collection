@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { InventoryItem, ItemStatus, Owner } from '@/types/inventory';
+import { InventoryItem } from '@/hooks/useSupabaseInventory';
+import { Database } from '@/integrations/supabase/types';
 import {
   Table,
   TableBody,
@@ -20,6 +21,8 @@ import {
 import { Search, ArrowUpDown, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+type ItemStatus = Database['public']['Enums']['item_status'];
+
 interface InventoryTableProps {
   items: InventoryItem[];
   onItemClick: (item: InventoryItem) => void;
@@ -28,8 +31,8 @@ interface InventoryTableProps {
 const statusColors: Record<ItemStatus, string> = {
   'in-closet': 'bg-muted text-muted-foreground',
   'listed': 'bg-primary/10 text-primary',
-  'on-hold': 'bg-chart-1/20 text-chart-3',
   'sold': 'bg-chart-2/20 text-chart-2',
+  'shipped': 'bg-chart-1/20 text-chart-1',
   'archive-hold': 'bg-accent text-accent-foreground',
   'scammed': 'bg-destructive/20 text-destructive',
   'refunded': 'bg-muted text-muted-foreground',
@@ -39,8 +42,8 @@ const statusColors: Record<ItemStatus, string> = {
 const statusLabels: Record<ItemStatus, string> = {
   'in-closet': 'In Closet',
   'listed': 'Listed',
-  'on-hold': 'On Hold',
   'sold': 'Sold',
+  'shipped': 'Shipped',
   'archive-hold': 'Archive',
   'scammed': 'Scammed',
   'refunded': 'Refunded',
@@ -60,16 +63,14 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
     let filtered = items.filter((item) => {
       const matchesSearch =
         item.name.toLowerCase().includes(search.toLowerCase()) ||
-        item.brand.toLowerCase().includes(search.toLowerCase());
+        (item.brand || '').toLowerCase().includes(search.toLowerCase());
       
-      // Status filter
       let matchesStatus = true;
       if (statusFilter === 'active') matchesStatus = !['sold', 'scammed', 'refunded', 'traded'].includes(item.status);
       else if (statusFilter === 'sold') matchesStatus = item.status === 'sold';
       else if (statusFilter === 'issues') matchesStatus = ['scammed', 'refunded', 'traded'].includes(item.status);
       else if (statusFilter !== 'all') matchesStatus = item.status === statusFilter;
 
-      // Owner filter
       const matchesOwner = ownerFilter === 'all' || item.owner === ownerFilter;
 
       return matchesSearch && matchesStatus && matchesOwner;
@@ -81,28 +82,28 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
 
       switch (sortField) {
         case 'profitPotential':
-          aValue = a.askingPrice - a.acquisitionCost;
-          bValue = b.askingPrice - b.acquisitionCost;
+          aValue = (a.askingPrice || 0) - a.acquisitionCost;
+          bValue = (b.askingPrice || 0) - b.acquisitionCost;
           break;
         case 'daysHeld':
-          aValue = a.daysHeld;
-          bValue = b.daysHeld;
+          aValue = a.daysHeld || 0;
+          bValue = b.daysHeld || 0;
           break;
         case 'askingPrice':
-          aValue = a.askingPrice;
-          bValue = b.askingPrice;
+          aValue = a.askingPrice || 0;
+          bValue = b.askingPrice || 0;
           break;
         case 'brand':
-          aValue = a.brand;
-          bValue = b.brand;
+          aValue = a.brand || '';
+          bValue = b.brand || '';
           break;
         case 'dateAdded':
-          aValue = new Date(a.dateAdded).getTime();
-          bValue = new Date(b.dateAdded).getTime();
+          aValue = new Date(a.dateAdded || '').getTime();
+          bValue = new Date(b.dateAdded || '').getTime();
           break;
         default:
-          aValue = a.daysHeld;
-          bValue = b.daysHeld;
+          aValue = a.daysHeld || 0;
+          bValue = b.daysHeld || 0;
       }
 
       if (typeof aValue === 'string') {
@@ -132,6 +133,12 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
     }).format(amount);
   };
 
+  const getOwnerDisplay = (owner: string) => {
+    if (owner === 'Parker Kleinman') return 'Parker';
+    if (owner === 'Spencer Kleinman') return 'Spencer';
+    return owner;
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-4">
@@ -155,19 +162,17 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
             <SelectItem value="issues">Issues (Scammed/Refunded)</SelectItem>
             <SelectItem value="in-closet">In Closet</SelectItem>
             <SelectItem value="listed">Listed</SelectItem>
-            <SelectItem value="on-hold">On Hold</SelectItem>
             <SelectItem value="archive-hold">Archive Hold</SelectItem>
           </SelectContent>
         </Select>
         <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-          <SelectTrigger className="w-full sm:w-[140px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue placeholder="Owner" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Owners</SelectItem>
-            <SelectItem value="Parker">Parker</SelectItem>
-            <SelectItem value="Spencer">Spencer</SelectItem>
-            <SelectItem value="Parker K">Parker K</SelectItem>
+            <SelectItem value="Parker Kleinman">Parker</SelectItem>
+            <SelectItem value="Spencer Kleinman">Spencer</SelectItem>
             <SelectItem value="Shared">Shared</SelectItem>
           </SelectContent>
         </Select>
@@ -179,39 +184,21 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
             <TableRow className="bg-muted/50">
               <TableHead className="font-medium">Item</TableHead>
               <TableHead>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-auto p-0 font-medium hover:bg-transparent"
-                  onClick={() => toggleSort('brand')}
-                >
-                  Brand
-                  <ArrowUpDown className="ml-1 h-3 w-3" />
+                <Button variant="ghost" size="sm" className="h-auto p-0 font-medium hover:bg-transparent" onClick={() => toggleSort('brand')}>
+                  Brand <ArrowUpDown className="ml-1 h-3 w-3" />
                 </Button>
               </TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Owner</TableHead>
               <TableHead className="text-right">Cost</TableHead>
               <TableHead className="text-right">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-auto p-0 font-medium hover:bg-transparent"
-                  onClick={() => toggleSort('askingPrice')}
-                >
-                  Asking
-                  <ArrowUpDown className="ml-1 h-3 w-3" />
+                <Button variant="ghost" size="sm" className="h-auto p-0 font-medium hover:bg-transparent" onClick={() => toggleSort('askingPrice')}>
+                  Asking <ArrowUpDown className="ml-1 h-3 w-3" />
                 </Button>
               </TableHead>
               <TableHead className="text-right">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-auto p-0 font-medium hover:bg-transparent"
-                  onClick={() => toggleSort('profitPotential')}
-                >
-                  Profit
-                  <ArrowUpDown className="ml-1 h-3 w-3" />
+                <Button variant="ghost" size="sm" className="h-auto p-0 font-medium hover:bg-transparent" onClick={() => toggleSort('profitPotential')}>
+                  Profit <ArrowUpDown className="ml-1 h-3 w-3" />
                 </Button>
               </TableHead>
               <TableHead className="w-10"></TableHead>
@@ -219,11 +206,7 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
           </TableHeader>
           <TableBody>
             {filteredAndSortedItems.map((item) => (
-              <TableRow
-                key={item.id}
-                className="hover:bg-muted/30 cursor-pointer"
-                onClick={() => onItemClick(item)}
-              >
+              <TableRow key={item.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => onItemClick(item)}>
                 <TableCell>
                   <div>
                     <p className="font-medium text-sm">{item.name}</p>
@@ -239,18 +222,18 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
                     {statusLabels[item.status]}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{item.owner}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{getOwnerDisplay(item.owner)}</TableCell>
                 <TableCell className="text-right font-mono text-sm text-muted-foreground">
                   {formatCurrency(item.acquisitionCost)}
                 </TableCell>
                 <TableCell className="text-right font-mono text-sm">
-                  {item.status === 'sold' ? formatCurrency(item.salePrice || 0) : formatCurrency(item.askingPrice)}
+                  {item.status === 'sold' ? formatCurrency(item.salePrice || 0) : formatCurrency(item.askingPrice || 0)}
                 </TableCell>
                 <TableCell className="text-right font-mono text-sm">
                   <span className={item.status === 'sold' ? 'text-chart-2' : ''}>
                     {item.status === 'sold'
                       ? `+${formatCurrency((item.salePrice || 0) - item.acquisitionCost)}`
-                      : formatCurrency(item.askingPrice - item.acquisitionCost)}
+                      : formatCurrency((item.askingPrice || 0) - item.acquisitionCost)}
                   </span>
                 </TableCell>
                 <TableCell>
@@ -261,9 +244,7 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
           </TableBody>
         </Table>
         {filteredAndSortedItems.length === 0 && (
-          <div className="p-8 text-center text-muted-foreground">
-            No items found
-          </div>
+          <div className="p-8 text-center text-muted-foreground">No items found</div>
         )}
       </div>
     </div>

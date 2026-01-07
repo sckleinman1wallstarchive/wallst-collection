@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { InventoryItem, ItemCategory, ItemStatus, Platform, Owner } from '@/types/inventory';
+import { InventoryItem } from '@/hooks/useSupabaseInventory';
+import { Database } from '@/integrations/supabase/types';
 import {
   Dialog,
   DialogContent,
@@ -20,23 +21,28 @@ import {
 } from '@/components/ui/select';
 import { Plus } from 'lucide-react';
 
+type ItemCategory = Database['public']['Enums']['item_category'];
+type ItemStatus = Database['public']['Enums']['item_status'];
+type Platform = Database['public']['Enums']['platform'];
+type Owner = Database['public']['Enums']['item_owner'];
+
 interface AddItemDialogProps {
-  onAdd: (item: Omit<InventoryItem, 'id' | 'daysHeld'>) => void;
+  onAdd: (item: Partial<InventoryItem>) => void;
 }
 
 const categories: { value: ItemCategory; label: string }[] = [
   { value: 'outerwear', label: 'Outerwear' },
-  { value: 'pants', label: 'Pants' },
-  { value: 'top', label: 'Top' },
+  { value: 'bottoms', label: 'Bottoms' },
+  { value: 'tops', label: 'Tops' },
   { value: 'footwear', label: 'Footwear' },
-  { value: 'accessory', label: 'Accessory' },
+  { value: 'accessories', label: 'Accessories' },
+  { value: 'bags', label: 'Bags' },
   { value: 'other', label: 'Other' },
 ];
 
 const statuses: { value: ItemStatus; label: string }[] = [
   { value: 'in-closet', label: 'In Closet' },
   { value: 'listed', label: 'Listed' },
-  { value: 'on-hold', label: 'On Hold' },
   { value: 'archive-hold', label: 'Archive Hold' },
 ];
 
@@ -45,16 +51,14 @@ const platforms: { value: Platform; label: string }[] = [
   { value: 'grailed', label: 'Grailed' },
   { value: 'depop', label: 'Depop' },
   { value: 'ebay', label: 'eBay' },
+  { value: 'poshmark', label: 'Poshmark' },
   { value: 'vinted', label: 'Vinted' },
   { value: 'mercari', label: 'Mercari' },
-  { value: 'instagram', label: 'Instagram' },
-  { value: 'in-person', label: 'In Person' },
 ];
 
 const owners: { value: Owner; label: string }[] = [
-  { value: 'Parker', label: 'Parker' },
-  { value: 'Spencer', label: 'Spencer' },
-  { value: 'Parker K', label: 'Parker K' },
+  { value: 'Parker Kleinman', label: 'Parker' },
+  { value: 'Spencer Kleinman', label: 'Spencer' },
   { value: 'Shared', label: 'Shared' },
 ];
 
@@ -63,7 +67,7 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
   const [formData, setFormData] = useState({
     name: '',
     brand: '',
-    category: 'top' as ItemCategory,
+    category: 'tops' as ItemCategory,
     size: '',
     acquisitionCost: '',
     askingPrice: '',
@@ -71,7 +75,7 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
     status: 'in-closet' as ItemStatus,
     platform: 'none' as Platform,
     sourcePlatform: '',
-    owner: 'Parker' as Owner,
+    owner: 'Parker Kleinman' as Owner,
     notes: '',
   });
 
@@ -88,22 +92,22 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
       name: formData.name,
       brand: formData.brand,
       category: formData.category,
-      size: formData.size || undefined,
+      size: formData.size || null,
       acquisitionCost: cost,
       askingPrice: asking || cost * 2,
       lowestAcceptablePrice: lowest || cost * 1.5,
       status: formData.status,
       platform: formData.platform,
-      sourcePlatform: formData.sourcePlatform || undefined,
+      sourcePlatform: formData.sourcePlatform || null,
       owner: formData.owner,
-      notes: formData.notes,
+      notes: formData.notes || null,
       dateAdded: new Date().toISOString().split('T')[0],
     });
 
     setFormData({
       name: '',
       brand: '',
-      category: 'top',
+      category: 'tops',
       size: '',
       acquisitionCost: '',
       askingPrice: '',
@@ -111,7 +115,7 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
       status: 'in-closet',
       platform: 'none',
       sourcePlatform: '',
-      owner: 'Parker',
+      owner: 'Parker Kleinman',
       notes: '',
     });
     setOpen(false);
@@ -124,10 +128,7 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Item
-        </Button>
+        <Button size="sm"><Plus className="h-4 w-4 mr-2" />Add Item</Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -137,74 +138,31 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <Label htmlFor="name">Item Name</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g. Helmut Lang Bondage Jacket"
-                required
-              />
+              <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Helmut Lang Bondage Jacket" required />
             </div>
-
             <div>
               <Label htmlFor="brand">Brand</Label>
-              <Input
-                id="brand"
-                value={formData.brand}
-                onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                placeholder="e.g. Helmut Lang"
-                required
-              />
+              <Input id="brand" value={formData.brand} onChange={(e) => setFormData({ ...formData, brand: e.target.value })} placeholder="e.g. Helmut Lang" required />
             </div>
-
             <div>
               <Label htmlFor="size">Size</Label>
-              <Input
-                id="size"
-                value={formData.size}
-                onChange={(e) => setFormData({ ...formData, size: e.target.value })}
-                placeholder="e.g. XL, 10, 44"
-              />
+              <Input id="size" value={formData.size} onChange={(e) => setFormData({ ...formData, size: e.target.value })} placeholder="e.g. XL, 10, 44" />
             </div>
-
             <div>
               <Label htmlFor="category">Category</Label>
-              <Select
-                value={formData.category}
-                onValueChange={(value: ItemCategory) =>
-                  setFormData({ ...formData, category: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+              <Select value={formData.category} onValueChange={(value: ItemCategory) => setFormData({ ...formData, category: value })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </SelectItem>
-                  ))}
+                  {categories.map((cat) => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <Label htmlFor="owner">Owner</Label>
-              <Select
-                value={formData.owner}
-                onValueChange={(value: Owner) =>
-                  setFormData({ ...formData, owner: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+              <Select value={formData.owner} onValueChange={(value: Owner) => setFormData({ ...formData, owner: value })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {owners.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
+                  {owners.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -217,56 +175,24 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
                 <Label htmlFor="cost">Cost (Paid)</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input
-                    id="cost"
-                    type="number"
-                    value={formData.acquisitionCost}
-                    onChange={(e) => setFormData({ ...formData, acquisitionCost: e.target.value })}
-                    placeholder="0"
-                    className="pl-7"
-                    required
-                  />
+                  <Input id="cost" type="number" value={formData.acquisitionCost} onChange={(e) => setFormData({ ...formData, acquisitionCost: e.target.value })} placeholder="0" className="pl-7" required />
                 </div>
               </div>
-
               <div>
                 <Label htmlFor="asking">Asking Price</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input
-                    id="asking"
-                    type="number"
-                    value={formData.askingPrice}
-                    onChange={(e) => setFormData({ ...formData, askingPrice: e.target.value })}
-                    placeholder={suggestedAsking.toString()}
-                    className="pl-7"
-                  />
+                  <Input id="asking" type="number" value={formData.askingPrice} onChange={(e) => setFormData({ ...formData, askingPrice: e.target.value })} placeholder={suggestedAsking.toString()} className="pl-7" />
                 </div>
-                {cost > 0 && !formData.askingPrice && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Suggested: ${suggestedAsking}
-                  </p>
-                )}
+                {cost > 0 && !formData.askingPrice && <p className="text-xs text-muted-foreground mt-1">Suggested: ${suggestedAsking}</p>}
               </div>
-
               <div>
                 <Label htmlFor="lowest">Lowest Accept</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input
-                    id="lowest"
-                    type="number"
-                    value={formData.lowestAcceptablePrice}
-                    onChange={(e) => setFormData({ ...formData, lowestAcceptablePrice: e.target.value })}
-                    placeholder={suggestedLowest.toString()}
-                    className="pl-7"
-                  />
+                  <Input id="lowest" type="number" value={formData.lowestAcceptablePrice} onChange={(e) => setFormData({ ...formData, lowestAcceptablePrice: e.target.value })} placeholder={suggestedLowest.toString()} className="pl-7" />
                 </div>
-                {cost > 0 && !formData.lowestAcceptablePrice && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Suggested: ${suggestedLowest}
-                  </p>
-                )}
+                {cost > 0 && !formData.lowestAcceptablePrice && <p className="text-xs text-muted-foreground mt-1">Suggested: ${suggestedLowest}</p>}
               </div>
             </div>
           </div>
@@ -274,42 +200,19 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="status">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value: ItemStatus) =>
-                  setFormData({ ...formData, status: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+              <Select value={formData.status} onValueChange={(value: ItemStatus) => setFormData({ ...formData, status: value })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {statuses.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
+                  {statuses.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <Label htmlFor="platform">Listed On</Label>
-              <Select
-                value={formData.platform}
-                onValueChange={(value: Platform) =>
-                  setFormData({ ...formData, platform: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+              <Select value={formData.platform} onValueChange={(value: Platform) => setFormData({ ...formData, platform: value })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {platforms.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>
-                      {p.label}
-                    </SelectItem>
-                  ))}
+                  {platforms.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -317,29 +220,16 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
 
           <div>
             <Label htmlFor="sourcePlatform">Sourced From</Label>
-            <Input
-              id="sourcePlatform"
-              value={formData.sourcePlatform}
-              onChange={(e) => setFormData({ ...formData, sourcePlatform: e.target.value })}
-              placeholder="e.g. Grailed, Estate Sale, Trade"
-            />
+            <Input id="sourcePlatform" value={formData.sourcePlatform} onChange={(e) => setFormData({ ...formData, sourcePlatform: e.target.value })} placeholder="e.g. Grailed, Estate Sale, Trade" />
           </div>
 
           <div>
             <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Season, condition, sizing notes, comps..."
-              rows={3}
-            />
+            <Textarea id="notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Season, condition, sizing notes, comps..." rows={3} />
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button type="submit">Add Item</Button>
           </div>
         </form>

@@ -1,7 +1,8 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { useInventory } from '@/hooks/useInventory';
+import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -14,7 +15,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, Tool
 import { DollarSign, TrendingUp, Users, Package } from 'lucide-react';
 
 const Accounting = () => {
-  const { inventory, getSoldItems, getFinancialSummary } = useInventory();
+  const { inventory, isLoading, getSoldItems, getFinancialSummary } = useSupabaseInventory();
   const soldItems = getSoldItems();
   const summary = getFinancialSummary();
 
@@ -29,6 +30,7 @@ const Accounting = () => {
   // Sales by date for chart
   const salesByDate = soldItems.reduce((acc, item) => {
     const date = item.dateSold || '';
+    if (!date) return acc;
     if (!acc[date]) {
       acc[date] = { date, revenue: 0, profit: 0, count: 0 };
     }
@@ -52,12 +54,33 @@ const Accounting = () => {
     };
   });
 
-  const partnerShare = summary.totalProfit / 3;
-
   // Monthly targets
   const monthlyTarget = 5000;
   const stretchTarget = 10000;
   const progressPercent = (summary.totalProfit / monthlyTarget) * 100;
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div>
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-4 w-48 mt-2" />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i} className="p-4">
+                <Skeleton className="h-10 w-10 rounded-lg mb-2" />
+                <Skeleton className="h-4 w-20 mb-1" />
+                <Skeleton className="h-6 w-24" />
+              </Card>
+            ))}
+          </div>
+          <Skeleton className="h-48 w-full" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -110,8 +133,8 @@ const Accounting = () => {
                 <Users className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Per Partner</p>
-                <p className="text-xl font-semibold">{formatCurrency(partnerShare)}</p>
+                <p className="text-xs text-muted-foreground">Avg Margin</p>
+                <p className="text-xl font-semibold">{summary.avgMargin}%</p>
               </div>
             </div>
           </Card>
@@ -252,6 +275,7 @@ const Accounting = () => {
                     <TableHead>Date</TableHead>
                     <TableHead>Item</TableHead>
                     <TableHead>Brand</TableHead>
+                    <TableHead>Owner</TableHead>
                     <TableHead className="text-right">Cost</TableHead>
                     <TableHead className="text-right">Sale Price</TableHead>
                     <TableHead className="text-right">Profit</TableHead>
@@ -269,11 +293,12 @@ const Accounting = () => {
                           <TableCell className="text-sm">{item.dateSold}</TableCell>
                           <TableCell>
                             <p className="font-medium text-sm">{item.name}</p>
-                            {item.soldTo && (
-                              <p className="text-xs text-muted-foreground">{item.soldTo}</p>
-                            )}
                           </TableCell>
                           <TableCell className="text-sm">{item.brand}</TableCell>
+                          <TableCell className="text-sm">
+                            {item.owner === 'Parker Kleinman' ? 'Parker' : 
+                             item.owner === 'Spencer Kleinman' ? 'Spencer' : 'Shared'}
+                          </TableCell>
                           <TableCell className="text-right font-mono text-sm text-muted-foreground">
                             {formatCurrency(item.acquisitionCost)}
                           </TableCell>
@@ -305,14 +330,17 @@ const Accounting = () => {
             <CardTitle className="text-base font-medium">Partner Profit Split</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-6">
-              {['Parker', 'Spencer', 'Parker K'].map((partner) => (
-                <div key={partner} className="p-4 bg-muted rounded-lg text-center">
-                  <p className="text-sm font-medium mb-2">{partner}</p>
-                  <p className="text-2xl font-semibold">{formatCurrency(partnerShare)}</p>
-                  <p className="text-xs text-muted-foreground mt-1">33.3% share</p>
-                </div>
-              ))}
+            <div className="grid grid-cols-2 gap-6">
+              <div className="p-4 bg-muted rounded-lg text-center">
+                <p className="text-sm font-medium mb-2">Parker Kleinman</p>
+                <p className="text-2xl font-semibold">{formatCurrency(summary.parkerProfit)}</p>
+                <p className="text-xs text-muted-foreground mt-1">From owned + shared items</p>
+              </div>
+              <div className="p-4 bg-muted rounded-lg text-center">
+                <p className="text-sm font-medium mb-2">Spencer Kleinman</p>
+                <p className="text-2xl font-semibold">{formatCurrency(summary.spencerProfit)}</p>
+                <p className="text-xs text-muted-foreground mt-1">From owned + shared items</p>
+              </div>
             </div>
           </CardContent>
         </Card>

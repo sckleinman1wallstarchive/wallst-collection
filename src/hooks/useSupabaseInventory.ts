@@ -1,0 +1,287 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Database } from '@/integrations/supabase/types';
+import { toast } from 'sonner';
+
+type DbInventoryItem = Database['public']['Tables']['inventory_items']['Row'];
+type DbInsertItem = Database['public']['Tables']['inventory_items']['Insert'];
+type DbUpdateItem = Database['public']['Tables']['inventory_items']['Update'];
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  brand: string | null;
+  category: Database['public']['Enums']['item_category'];
+  size: string | null;
+  acquisitionCost: number;
+  askingPrice: number | null;
+  lowestAcceptablePrice: number | null;
+  salePrice: number | null;
+  status: Database['public']['Enums']['item_status'];
+  daysHeld: number | null;
+  platform: Database['public']['Enums']['platform'];
+  platformSold: Database['public']['Enums']['platform'] | null;
+  sourcePlatform: string | null;
+  source: string | null;
+  owner: Database['public']['Enums']['item_owner'];
+  ownerSplit: string | null;
+  notes: string | null;
+  dateAdded: string | null;
+  dateSold: string | null;
+}
+
+// Transform database row to app format
+const toAppItem = (row: DbInventoryItem): InventoryItem => ({
+  id: row.id,
+  name: row.name,
+  brand: row.brand,
+  category: row.category,
+  size: row.size,
+  acquisitionCost: row.acquisition_cost,
+  askingPrice: row.asking_price,
+  lowestAcceptablePrice: row.lowest_acceptable_price,
+  salePrice: row.sale_price,
+  status: row.status,
+  daysHeld: row.days_held,
+  platform: row.platform,
+  platformSold: row.platform_sold,
+  sourcePlatform: row.source_platform,
+  source: row.source,
+  owner: row.owner,
+  ownerSplit: row.owner_split,
+  notes: row.notes,
+  dateAdded: row.date_added,
+  dateSold: row.date_sold,
+});
+
+// Transform app format to database insert format
+const toDbInsert = (item: Partial<InventoryItem>): DbInsertItem => ({
+  name: item.name || '',
+  brand: item.brand,
+  category: item.category || 'other',
+  size: item.size,
+  acquisition_cost: item.acquisitionCost || 0,
+  asking_price: item.askingPrice,
+  lowest_acceptable_price: item.lowestAcceptablePrice,
+  sale_price: item.salePrice,
+  status: item.status || 'in-closet',
+  days_held: item.daysHeld,
+  platform: item.platform || 'none',
+  platform_sold: item.platformSold,
+  source_platform: item.sourcePlatform,
+  source: item.source,
+  owner: item.owner || 'Shared',
+  owner_split: item.ownerSplit,
+  notes: item.notes,
+  date_added: item.dateAdded,
+  date_sold: item.dateSold,
+});
+
+// Transform app format to database update format
+const toDbUpdate = (item: Partial<InventoryItem>): DbUpdateItem => {
+  const update: DbUpdateItem = {};
+  if (item.name !== undefined) update.name = item.name;
+  if (item.brand !== undefined) update.brand = item.brand;
+  if (item.category !== undefined) update.category = item.category;
+  if (item.size !== undefined) update.size = item.size;
+  if (item.acquisitionCost !== undefined) update.acquisition_cost = item.acquisitionCost;
+  if (item.askingPrice !== undefined) update.asking_price = item.askingPrice;
+  if (item.lowestAcceptablePrice !== undefined) update.lowest_acceptable_price = item.lowestAcceptablePrice;
+  if (item.salePrice !== undefined) update.sale_price = item.salePrice;
+  if (item.status !== undefined) update.status = item.status;
+  if (item.daysHeld !== undefined) update.days_held = item.daysHeld;
+  if (item.platform !== undefined) update.platform = item.platform;
+  if (item.platformSold !== undefined) update.platform_sold = item.platformSold;
+  if (item.sourcePlatform !== undefined) update.source_platform = item.sourcePlatform;
+  if (item.source !== undefined) update.source = item.source;
+  if (item.owner !== undefined) update.owner = item.owner;
+  if (item.ownerSplit !== undefined) update.owner_split = item.ownerSplit;
+  if (item.notes !== undefined) update.notes = item.notes;
+  if (item.dateAdded !== undefined) update.date_added = item.dateAdded;
+  if (item.dateSold !== undefined) update.date_sold = item.dateSold;
+  return update;
+};
+
+export function useSupabaseInventory() {
+  const queryClient = useQueryClient();
+
+  // Fetch all inventory items
+  const { data: inventory = [], isLoading, error } = useQuery({
+    queryKey: ['inventory'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data.map(toAppItem);
+    },
+  });
+
+  // Add item
+  const addMutation = useMutation({
+    mutationFn: async (item: Partial<InventoryItem>) => {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .insert(toDbInsert(item))
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return toAppItem(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      toast.success('Item added');
+    },
+    onError: (error) => {
+      toast.error('Failed to add item: ' + error.message);
+    },
+  });
+
+  // Update item
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<InventoryItem> }) => {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .update(toDbUpdate(updates))
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return toAppItem(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      toast.success('Item updated');
+    },
+    onError: (error) => {
+      toast.error('Failed to update item: ' + error.message);
+    },
+  });
+
+  // Delete item
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('inventory_items')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      toast.success('Item deleted');
+    },
+    onError: (error) => {
+      toast.error('Failed to delete item: ' + error.message);
+    },
+  });
+
+  // Bulk insert for import
+  const bulkInsertMutation = useMutation({
+    mutationFn: async (items: Partial<InventoryItem>[]) => {
+      const dbItems = items.map(toDbInsert);
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .insert(dbItems)
+        .select();
+      
+      if (error) throw error;
+      return data.map(toAppItem);
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      toast.success(`Imported ${data.length} items`);
+    },
+    onError: (error) => {
+      toast.error('Failed to import items: ' + error.message);
+    },
+  });
+
+  // Helper functions
+  const addItem = (item: Partial<InventoryItem>) => addMutation.mutateAsync(item);
+  
+  const updateItem = (id: string, updates: Partial<InventoryItem>) => 
+    updateMutation.mutateAsync({ id, updates });
+  
+  const deleteItem = (id: string) => deleteMutation.mutateAsync(id);
+  
+  const markAsSold = (id: string, salePrice: number, platformSold?: Database['public']['Enums']['platform']) => 
+    updateMutation.mutateAsync({
+      id,
+      updates: {
+        status: 'sold',
+        salePrice,
+        platformSold,
+        dateSold: new Date().toISOString().split('T')[0],
+      },
+    });
+
+  const bulkInsert = (items: Partial<InventoryItem>[]) => bulkInsertMutation.mutateAsync(items);
+
+  const getActiveItems = () => inventory.filter((i) => 
+    i.status !== 'sold' && i.status !== 'scammed' && i.status !== 'refunded' && i.status !== 'traded'
+  );
+  
+  const getSoldItems = () => inventory.filter((i) => i.status === 'sold');
+
+  const getFinancialSummary = () => {
+    const sold = getSoldItems();
+    const active = getActiveItems();
+    const scammed = inventory.filter((i) => i.status === 'scammed');
+
+    const totalRevenue = sold.reduce((sum, i) => sum + (i.salePrice || 0), 0);
+    const totalCostOfSold = sold.reduce((sum, i) => sum + i.acquisitionCost, 0);
+    const totalProfit = totalRevenue - totalCostOfSold;
+    const activeInventoryCost = active.reduce((sum, i) => sum + i.acquisitionCost, 0);
+    const potentialRevenue = active.reduce((sum, i) => sum + (i.askingPrice || 0), 0);
+    const minimumRevenue = active.reduce((sum, i) => sum + (i.lowestAcceptablePrice || 0), 0);
+    const lostToScams = scammed.reduce((sum, i) => sum + i.acquisitionCost, 0);
+
+    // Calculate profit by owner
+    const parkerProfit = sold
+      .filter(i => i.owner === 'Parker Kleinman')
+      .reduce((sum, i) => sum + ((i.salePrice || 0) - i.acquisitionCost), 0);
+    
+    const spencerProfit = sold
+      .filter(i => i.owner === 'Spencer Kleinman')
+      .reduce((sum, i) => sum + ((i.salePrice || 0) - i.acquisitionCost), 0);
+    
+    const sharedProfit = sold
+      .filter(i => i.owner === 'Shared')
+      .reduce((sum, i) => sum + ((i.salePrice || 0) - i.acquisitionCost), 0);
+
+    return {
+      totalRevenue,
+      totalCostOfSold,
+      totalProfit,
+      activeInventoryCost,
+      potentialRevenue,
+      minimumRevenue,
+      itemsSold: sold.length,
+      activeItems: active.length,
+      lostToScams,
+      avgMargin: totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : '0',
+      parkerProfit: parkerProfit + (sharedProfit / 2),
+      spencerProfit: spencerProfit + (sharedProfit / 2),
+    };
+  };
+
+  return {
+    inventory,
+    isLoading,
+    error,
+    addItem,
+    updateItem,
+    deleteItem,
+    markAsSold,
+    bulkInsert,
+    getActiveItems,
+    getSoldItems,
+    getFinancialSummary,
+  };
+}

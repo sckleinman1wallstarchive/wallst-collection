@@ -4,19 +4,20 @@ import { InventoryTable } from '@/components/inventory/InventoryTable';
 import { AddItemDialog } from '@/components/inventory/AddItemDialog';
 import { SellItemDialog } from '@/components/inventory/SellItemDialog';
 import { ItemDetailSheet } from '@/components/inventory/ItemDetailSheet';
-import { useInventory } from '@/hooks/useInventory';
-import { InventoryItem } from '@/types/inventory';
+import { useSupabaseInventory, InventoryItem } from '@/hooks/useSupabaseInventory';
 import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const Inventory = () => {
   const { 
     inventory, 
+    isLoading,
     addItem, 
     updateItem, 
     deleteItem, 
     markAsSold,
     getFinancialSummary 
-  } = useInventory();
+  } = useSupabaseInventory();
 
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -44,6 +45,52 @@ const Inventory = () => {
     setDetailOpen(false);
   };
 
+  const handleAddItem = async (item: Parameters<typeof addItem>[0]) => {
+    await addItem(item);
+  };
+
+  const handleUpdateItem = async (id: string, updates: Partial<InventoryItem>) => {
+    await updateItem(id, updates);
+    setSelectedItem(prev => prev ? { ...prev, ...updates } : null);
+  };
+
+  const handleDeleteItem = async (id: string) => {
+    await deleteItem(id);
+    setDetailOpen(false);
+    setSelectedItem(null);
+  };
+
+  const handleMarkAsSold = async (id: string, salePrice: number, platformSold?: string) => {
+    await markAsSold(id, salePrice, platformSold as any);
+    setSellOpen(false);
+    setSellItem(null);
+  };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-4 w-48 mt-2" />
+            </div>
+            <Skeleton className="h-10 w-28" />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {[...Array(5)].map((_, i) => (
+              <Card key={i} className="p-4">
+                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-6 w-24" />
+              </Card>
+            ))}
+          </div>
+          <Skeleton className="h-96 w-full" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-6">
@@ -54,7 +101,7 @@ const Inventory = () => {
               {summary.activeItems} active items · {summary.itemsSold} sold
             </p>
           </div>
-          <AddItemDialog onAdd={addItem} />
+          <AddItemDialog onAdd={handleAddItem} />
         </div>
 
         {/* Quick Stats */}
@@ -87,8 +134,8 @@ const Inventory = () => {
           item={selectedItem}
           open={detailOpen}
           onOpenChange={setDetailOpen}
-          onUpdate={updateItem}
-          onDelete={deleteItem}
+          onUpdate={handleUpdateItem}
+          onDelete={handleDeleteItem}
           onSell={handleOpenSell}
         />
 
@@ -96,7 +143,7 @@ const Inventory = () => {
           item={sellItem}
           open={sellOpen}
           onOpenChange={setSellOpen}
-          onSell={markAsSold}
+          onSell={handleMarkAsSold}
         />
       </div>
     </DashboardLayout>

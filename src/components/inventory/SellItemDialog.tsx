@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { InventoryItem } from '@/types/inventory';
+import { InventoryItem } from '@/hooks/useSupabaseInventory';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ interface SellItemDialogProps {
   item: InventoryItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSell: (id: string, salePrice: number, soldTo?: string) => void;
+  onSell: (id: string, salePrice: number, platformSold?: string) => void;
 }
 
 export function SellItemDialog({ item, open, onOpenChange, onSell }: SellItemDialogProps) {
@@ -28,7 +28,7 @@ export function SellItemDialog({ item, open, onOpenChange, onSell }: SellItemDia
     const price = parseFloat(salePrice);
     if (isNaN(price)) return;
 
-    onSell(item.id, price, soldTo || undefined);
+    onSell(item.id, price, item.platform);
     setSalePrice('');
     setSoldTo('');
     onOpenChange(false);
@@ -58,11 +58,11 @@ export function SellItemDialog({ item, open, onOpenChange, onSell }: SellItemDia
             </div>
             <div className="p-2 bg-muted/50 rounded">
               <p className="text-xs text-muted-foreground">Asking</p>
-              <p className="font-mono font-medium">${item.askingPrice}</p>
+              <p className="font-mono font-medium">${item.askingPrice || 0}</p>
             </div>
             <div className="p-2 bg-muted/50 rounded">
               <p className="text-xs text-muted-foreground">Floor</p>
-              <p className="font-mono font-medium">${item.lowestAcceptablePrice}</p>
+              <p className="font-mono font-medium">${item.lowestAcceptablePrice || 0}</p>
             </div>
           </div>
 
@@ -75,7 +75,7 @@ export function SellItemDialog({ item, open, onOpenChange, onSell }: SellItemDia
                 type="number"
                 value={salePrice}
                 onChange={(e) => setSalePrice(e.target.value)}
-                placeholder={item.askingPrice.toString()}
+                placeholder={(item.askingPrice || 0).toString()}
                 className="pl-7 text-lg"
                 autoFocus
                 required
@@ -109,9 +109,7 @@ export function SellItemDialog({ item, open, onOpenChange, onSell }: SellItemDia
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit">Record Sale</Button>
           </div>
         </form>
