@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { InventoryItem, ItemStatus } from '@/types/inventory';
+import { InventoryItem, ItemStatus, Owner } from '@/types/inventory';
 import {
   Table,
   TableBody,
@@ -29,8 +29,11 @@ const statusColors: Record<ItemStatus, string> = {
   'in-closet': 'bg-muted text-muted-foreground',
   'listed': 'bg-primary/10 text-primary',
   'on-hold': 'bg-chart-1/20 text-chart-3',
-  'sold': 'bg-chart-2/20 text-chart-3',
+  'sold': 'bg-chart-2/20 text-chart-2',
   'archive-hold': 'bg-accent text-accent-foreground',
+  'scammed': 'bg-destructive/20 text-destructive',
+  'refunded': 'bg-muted text-muted-foreground',
+  'traded': 'bg-chart-4/20 text-chart-4',
 };
 
 const statusLabels: Record<ItemStatus, string> = {
@@ -39,6 +42,9 @@ const statusLabels: Record<ItemStatus, string> = {
   'on-hold': 'On Hold',
   'sold': 'Sold',
   'archive-hold': 'Archive',
+  'scammed': 'Scammed',
+  'refunded': 'Refunded',
+  'traded': 'Traded',
 };
 
 type SortField = 'daysHeld' | 'askingPrice' | 'profitPotential' | 'brand' | 'dateAdded';
@@ -46,6 +52,7 @@ type SortField = 'daysHeld' | 'askingPrice' | 'profitPotential' | 'brand' | 'dat
 export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('active');
+  const [ownerFilter, setOwnerFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('dateAdded');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
@@ -55,10 +62,17 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
         item.name.toLowerCase().includes(search.toLowerCase()) ||
         item.brand.toLowerCase().includes(search.toLowerCase());
       
-      if (statusFilter === 'all') return matchesSearch;
-      if (statusFilter === 'active') return matchesSearch && item.status !== 'sold';
-      if (statusFilter === 'sold') return matchesSearch && item.status === 'sold';
-      return matchesSearch && item.status === statusFilter;
+      // Status filter
+      let matchesStatus = true;
+      if (statusFilter === 'active') matchesStatus = !['sold', 'scammed', 'refunded', 'traded'].includes(item.status);
+      else if (statusFilter === 'sold') matchesStatus = item.status === 'sold';
+      else if (statusFilter === 'issues') matchesStatus = ['scammed', 'refunded', 'traded'].includes(item.status);
+      else if (statusFilter !== 'all') matchesStatus = item.status === statusFilter;
+
+      // Owner filter
+      const matchesOwner = ownerFilter === 'all' || item.owner === ownerFilter;
+
+      return matchesSearch && matchesStatus && matchesOwner;
     });
 
     return filtered.sort((a, b) => {
@@ -99,7 +113,7 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
 
       return sortDirection === 'asc' ? aValue - (bValue as number) : (bValue as number) - aValue;
     });
-  }, [items, search, statusFilter, sortField, sortDirection]);
+  }, [items, search, statusFilter, ownerFilter, sortField, sortDirection]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -138,10 +152,23 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
             <SelectItem value="active">Active Items</SelectItem>
             <SelectItem value="all">All Items</SelectItem>
             <SelectItem value="sold">Sold Items</SelectItem>
+            <SelectItem value="issues">Issues (Scammed/Refunded)</SelectItem>
             <SelectItem value="in-closet">In Closet</SelectItem>
             <SelectItem value="listed">Listed</SelectItem>
             <SelectItem value="on-hold">On Hold</SelectItem>
             <SelectItem value="archive-hold">Archive Hold</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+          <SelectTrigger className="w-full sm:w-[140px]">
+            <SelectValue placeholder="Owner" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Owners</SelectItem>
+            <SelectItem value="Parker">Parker</SelectItem>
+            <SelectItem value="Spencer">Spencer</SelectItem>
+            <SelectItem value="Parker K">Parker K</SelectItem>
+            <SelectItem value="Shared">Shared</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -163,6 +190,7 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
                 </Button>
               </TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Owner</TableHead>
               <TableHead className="text-right">Cost</TableHead>
               <TableHead className="text-right">
                 <Button
@@ -175,7 +203,6 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
                   <ArrowUpDown className="ml-1 h-3 w-3" />
                 </Button>
               </TableHead>
-              <TableHead className="text-right">Floor</TableHead>
               <TableHead className="text-right">
                 <Button
                   variant="ghost"
@@ -184,17 +211,6 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
                   onClick={() => toggleSort('profitPotential')}
                 >
                   Profit
-                  <ArrowUpDown className="ml-1 h-3 w-3" />
-                </Button>
-              </TableHead>
-              <TableHead className="text-right">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-auto p-0 font-medium hover:bg-transparent"
-                  onClick={() => toggleSort('daysHeld')}
-                >
-                  Days
                   <ArrowUpDown className="ml-1 h-3 w-3" />
                 </Button>
               </TableHead>
@@ -211,7 +227,10 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
                 <TableCell>
                   <div>
                     <p className="font-medium text-sm">{item.name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{item.category}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.size && <span className="mr-2">Size {item.size}</span>}
+                      <span className="capitalize">{item.category}</span>
+                    </p>
                   </div>
                 </TableCell>
                 <TableCell className="text-sm">{item.brand}</TableCell>
@@ -220,25 +239,18 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
                     {statusLabels[item.status]}
                   </Badge>
                 </TableCell>
+                <TableCell className="text-sm text-muted-foreground">{item.owner}</TableCell>
                 <TableCell className="text-right font-mono text-sm text-muted-foreground">
                   {formatCurrency(item.acquisitionCost)}
                 </TableCell>
                 <TableCell className="text-right font-mono text-sm">
                   {item.status === 'sold' ? formatCurrency(item.salePrice || 0) : formatCurrency(item.askingPrice)}
                 </TableCell>
-                <TableCell className="text-right font-mono text-sm text-muted-foreground">
-                  {formatCurrency(item.lowestAcceptablePrice)}
-                </TableCell>
                 <TableCell className="text-right font-mono text-sm">
                   <span className={item.status === 'sold' ? 'text-chart-2' : ''}>
                     {item.status === 'sold'
                       ? `+${formatCurrency((item.salePrice || 0) - item.acquisitionCost)}`
                       : formatCurrency(item.askingPrice - item.acquisitionCost)}
-                  </span>
-                </TableCell>
-                <TableCell className="text-right">
-                  <span className={item.daysHeld > 30 ? 'text-destructive font-medium' : 'text-muted-foreground'}>
-                    {item.daysHeld}
                   </span>
                 </TableCell>
                 <TableCell>
