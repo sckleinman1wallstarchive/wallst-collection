@@ -14,7 +14,168 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      capital_accounts: {
+        Row: {
+          cash_on_hand: number
+          id: string
+          parker_investment: number
+          spencer_investment: number
+          updated_at: string
+        }
+        Insert: {
+          cash_on_hand?: number
+          id?: string
+          parker_investment?: number
+          spencer_investment?: number
+          updated_at?: string
+        }
+        Update: {
+          cash_on_hand?: number
+          id?: string
+          parker_investment?: number
+          spencer_investment?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at: string
+          date: string
+          description: string
+          id: string
+          owner: Database["public"]["Enums"]["item_owner"]
+        }
+        Insert: {
+          amount: number
+          category?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          date?: string
+          description: string
+          id?: string
+          owner?: Database["public"]["Enums"]["item_owner"]
+        }
+        Update: {
+          amount?: number
+          category?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          owner?: Database["public"]["Enums"]["item_owner"]
+        }
+        Relationships: []
+      }
+      inventory_items: {
+        Row: {
+          acquisition_cost: number
+          asking_price: number | null
+          brand: string | null
+          category: Database["public"]["Enums"]["item_category"]
+          created_at: string
+          date_added: string | null
+          date_sold: string | null
+          days_held: number | null
+          id: string
+          lowest_acceptable_price: number | null
+          name: string
+          notes: string | null
+          owner: Database["public"]["Enums"]["item_owner"]
+          owner_split: string | null
+          platform: Database["public"]["Enums"]["platform"]
+          platform_sold: Database["public"]["Enums"]["platform"] | null
+          sale_price: number | null
+          size: string | null
+          source: string | null
+          source_platform: string | null
+          status: Database["public"]["Enums"]["item_status"]
+          updated_at: string
+        }
+        Insert: {
+          acquisition_cost?: number
+          asking_price?: number | null
+          brand?: string | null
+          category?: Database["public"]["Enums"]["item_category"]
+          created_at?: string
+          date_added?: string | null
+          date_sold?: string | null
+          days_held?: number | null
+          id?: string
+          lowest_acceptable_price?: number | null
+          name: string
+          notes?: string | null
+          owner?: Database["public"]["Enums"]["item_owner"]
+          owner_split?: string | null
+          platform?: Database["public"]["Enums"]["platform"]
+          platform_sold?: Database["public"]["Enums"]["platform"] | null
+          sale_price?: number | null
+          size?: string | null
+          source?: string | null
+          source_platform?: string | null
+          status?: Database["public"]["Enums"]["item_status"]
+          updated_at?: string
+        }
+        Update: {
+          acquisition_cost?: number
+          asking_price?: number | null
+          brand?: string | null
+          category?: Database["public"]["Enums"]["item_category"]
+          created_at?: string
+          date_added?: string | null
+          date_sold?: string | null
+          days_held?: number | null
+          id?: string
+          lowest_acceptable_price?: number | null
+          name?: string
+          notes?: string | null
+          owner?: Database["public"]["Enums"]["item_owner"]
+          owner_split?: string | null
+          platform?: Database["public"]["Enums"]["platform"]
+          platform_sold?: Database["public"]["Enums"]["platform"] | null
+          sale_price?: number | null
+          size?: string | null
+          source?: string | null
+          source_platform?: string | null
+          status?: Database["public"]["Enums"]["item_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          category: string | null
+          created_at: string
+          date: string
+          description: string
+          id: string
+          reference: string | null
+          type: string
+        }
+        Insert: {
+          amount: number
+          category?: string | null
+          created_at?: string
+          date?: string
+          description: string
+          id?: string
+          reference?: string | null
+          type: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          reference?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +184,34 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      expense_category: "supplies" | "shipping" | "platform-fees" | "other"
+      item_category:
+        | "tops"
+        | "bottoms"
+        | "outerwear"
+        | "footwear"
+        | "accessories"
+        | "bags"
+        | "other"
+      item_owner: "Parker Kleinman" | "Spencer Kleinman" | "Shared"
+      item_status:
+        | "in-closet"
+        | "listed"
+        | "sold"
+        | "shipped"
+        | "archive-hold"
+        | "scammed"
+        | "refunded"
+        | "traded"
+      platform:
+        | "grailed"
+        | "depop"
+        | "poshmark"
+        | "ebay"
+        | "vinted"
+        | "mercari"
+        | "trade"
+        | "none"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +338,38 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      expense_category: ["supplies", "shipping", "platform-fees", "other"],
+      item_category: [
+        "tops",
+        "bottoms",
+        "outerwear",
+        "footwear",
+        "accessories",
+        "bags",
+        "other",
+      ],
+      item_owner: ["Parker Kleinman", "Spencer Kleinman", "Shared"],
+      item_status: [
+        "in-closet",
+        "listed",
+        "sold",
+        "shipped",
+        "archive-hold",
+        "scammed",
+        "refunded",
+        "traded",
+      ],
+      platform: [
+        "grailed",
+        "depop",
+        "poshmark",
+        "ebay",
+        "vinted",
+        "mercari",
+        "trade",
+        "none",
+      ],
+    },
   },
 } as const
