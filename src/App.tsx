@@ -10,8 +10,8 @@ import Goals from "./pages/Goals";
 import Analytics from "./pages/Analytics";
 import Tasks from "./pages/Tasks";
 import Content from "./pages/Content";
+import Import from "./pages/Import";
 import NotFound from "./pages/NotFound";
-
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -28,6 +28,7 @@ const App = () => (
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/content" element={<Content />} />
+          <Route path="/import" element={<Import />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
