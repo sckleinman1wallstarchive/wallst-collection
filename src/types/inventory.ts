@@ -1,13 +1,14 @@
-export type ItemStatus = 'in-closet' | 'listed' | 'on-hold' | 'sold' | 'archive-hold';
+export type ItemStatus = 'in-closet' | 'listed' | 'on-hold' | 'sold' | 'archive-hold' | 'scammed' | 'refunded' | 'traded';
 export type ItemCategory = 'outerwear' | 'pants' | 'top' | 'footwear' | 'accessory' | 'other';
-export type Platform = 'grailed' | 'depop' | 'instagram' | 'in-person' | 'none';
-export type Owner = 'Parker' | 'Spencer' | 'Parker K';
+export type Platform = 'grailed' | 'depop' | 'instagram' | 'in-person' | 'ebay' | 'vinted' | 'mercari' | 'trade' | 'none';
+export type Owner = 'Parker' | 'Spencer' | 'Parker K' | 'Shared';
 
 export interface InventoryItem {
   id: string;
   name: string;
   brand: string;
   category: ItemCategory;
+  size?: string;
   acquisitionCost: number;
   askingPrice: number;
   lowestAcceptablePrice: number;
@@ -15,6 +16,9 @@ export interface InventoryItem {
   status: ItemStatus;
   daysHeld: number;
   platform: Platform;
+  sourcePlatform?: string;
+  owner: Owner;
+  ownerSplit?: string;
   notes: string;
   dateAdded: string;
   dateSold?: string;

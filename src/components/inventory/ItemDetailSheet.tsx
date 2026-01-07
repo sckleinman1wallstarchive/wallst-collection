@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { InventoryItem, ItemCategory, ItemStatus, Platform } from '@/types/inventory';
+import { InventoryItem, ItemCategory, ItemStatus, Platform, Owner } from '@/types/inventory';
 import {
   Sheet,
   SheetContent,
@@ -43,14 +43,28 @@ const statuses: { value: ItemStatus; label: string }[] = [
   { value: 'listed', label: 'Listed' },
   { value: 'on-hold', label: 'On Hold' },
   { value: 'archive-hold', label: 'Archive Hold' },
+  { value: 'scammed', label: 'Scammed' },
+  { value: 'refunded', label: 'Refunded' },
+  { value: 'traded', label: 'Traded' },
 ];
 
 const platforms: { value: Platform; label: string }[] = [
   { value: 'none', label: 'Not Listed' },
   { value: 'grailed', label: 'Grailed' },
   { value: 'depop', label: 'Depop' },
+  { value: 'ebay', label: 'eBay' },
+  { value: 'vinted', label: 'Vinted' },
+  { value: 'mercari', label: 'Mercari' },
   { value: 'instagram', label: 'Instagram' },
   { value: 'in-person', label: 'In Person' },
+  { value: 'trade', label: 'Trade' },
+];
+
+const owners: { value: Owner; label: string }[] = [
+  { value: 'Parker', label: 'Parker' },
+  { value: 'Spencer', label: 'Spencer' },
+  { value: 'Parker K', label: 'Parker K' },
+  { value: 'Shared', label: 'Shared' },
 ];
 
 export function ItemDetailSheet({
@@ -71,11 +85,13 @@ export function ItemDetailSheet({
       name: item.name,
       brand: item.brand,
       category: item.category,
+      size: item.size,
       acquisitionCost: item.acquisitionCost,
       askingPrice: item.askingPrice,
       lowestAcceptablePrice: item.lowestAcceptablePrice,
       status: item.status,
       platform: item.platform,
+      owner: item.owner,
       notes: item.notes,
     });
     setIsEditing(true);
@@ -94,7 +110,9 @@ export function ItemDetailSheet({
   };
 
   const profit = item.askingPrice - item.acquisitionCost;
-  const margin = ((profit / item.askingPrice) * 100).toFixed(0);
+  const margin = item.askingPrice > 0 ? ((profit / item.askingPrice) * 100).toFixed(0) : '0';
+
+  const isLostItem = ['scammed', 'refunded', 'traded'].includes(item.status);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -108,8 +126,9 @@ export function ItemDetailSheet({
             <div>
               <h3 className="text-lg font-semibold">{item.name}</h3>
               <p className="text-muted-foreground">{item.brand}</p>
+              {item.size && <p className="text-sm text-muted-foreground">Size {item.size}</p>}
             </div>
-            <Badge className="bg-chart-2/20 text-chart-3">Sold</Badge>
+            <Badge className="bg-chart-2/20 text-chart-2">Sold</Badge>
             <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
               <div>
                 <p className="text-xs text-muted-foreground">Cost</p>
@@ -129,6 +148,18 @@ export function ItemDetailSheet({
                 <p className="text-xs text-muted-foreground">Date Sold</p>
                 <p className="font-medium">{item.dateSold}</p>
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Owner</p>
+                <p className="font-medium">{item.owner}</p>
+              </div>
+              {item.ownerSplit && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Split</p>
+                  <p className="font-medium">{item.ownerSplit}</p>
+                </div>
+              )}
             </div>
             {item.soldTo && (
               <div>
@@ -161,6 +192,15 @@ export function ItemDetailSheet({
                 />
               </div>
               <div>
+                <Label>Size</Label>
+                <Input
+                  value={editData.size || ''}
+                  onChange={(e) => setEditData({ ...editData, size: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
                 <Label>Category</Label>
                 <Select
                   value={editData.category}
@@ -175,6 +215,26 @@ export function ItemDetailSheet({
                     {categories.map((c) => (
                       <SelectItem key={c.value} value={c.value}>
                         {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Owner</Label>
+                <Select
+                  value={editData.owner}
+                  onValueChange={(value: Owner) =>
+                    setEditData({ ...editData, owner: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {owners.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -278,43 +338,59 @@ export function ItemDetailSheet({
             <div>
               <h3 className="text-lg font-semibold">{item.name}</h3>
               <p className="text-muted-foreground">{item.brand}</p>
-              <div className="flex gap-2 mt-2">
+              <div className="flex gap-2 mt-2 flex-wrap">
+                {item.size && (
+                  <Badge variant="outline">Size {item.size}</Badge>
+                )}
                 <Badge variant="secondary" className="capitalize">
                   {item.category}
                 </Badge>
                 <Badge variant="outline" className="capitalize">
                   {item.status.replace('-', ' ')}
                 </Badge>
+                <Badge variant="outline">{item.owner}</Badge>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 bg-muted rounded-lg text-center">
-                <p className="text-xs text-muted-foreground">Cost</p>
-                <p className="font-mono text-lg font-semibold">${item.acquisitionCost}</p>
-              </div>
-              <div className="p-3 bg-muted rounded-lg text-center">
-                <p className="text-xs text-muted-foreground">Asking</p>
-                <p className="font-mono text-lg font-semibold">${item.askingPrice}</p>
-              </div>
-              <div className="p-3 bg-muted rounded-lg text-center">
-                <p className="text-xs text-muted-foreground">Floor</p>
-                <p className="font-mono text-lg font-semibold">${item.lowestAcceptablePrice}</p>
-              </div>
-            </div>
+            {!isLostItem && (
+              <>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <p className="text-xs text-muted-foreground">Cost</p>
+                    <p className="font-mono text-lg font-semibold">${item.acquisitionCost}</p>
+                  </div>
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <p className="text-xs text-muted-foreground">Asking</p>
+                    <p className="font-mono text-lg font-semibold">${item.askingPrice}</p>
+                  </div>
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <p className="text-xs text-muted-foreground">Floor</p>
+                    <p className="font-mono text-lg font-semibold">${item.lowestAcceptablePrice}</p>
+                  </div>
+                </div>
 
-            <div className="p-4 bg-primary/5 border border-primary/10 rounded-lg">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-xs text-muted-foreground">Potential Profit</p>
-                  <p className="font-mono text-xl font-semibold">${profit}</p>
+                <div className="p-4 bg-primary/5 border border-primary/10 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Potential Profit</p>
+                      <p className="font-mono text-xl font-semibold">${profit}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Target Margin</p>
+                      <p className="font-mono text-xl font-semibold">{margin}%</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Target Margin</p>
-                  <p className="font-mono text-xl font-semibold">{margin}%</p>
-                </div>
+              </>
+            )}
+
+            {isLostItem && (
+              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <p className="text-sm text-destructive font-medium">
+                  Lost ${item.acquisitionCost} - {item.status}
+                </p>
               </div>
-            </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
@@ -325,10 +401,18 @@ export function ItemDetailSheet({
                 <p className="text-xs text-muted-foreground">Platform</p>
                 <p className="font-medium capitalize">{item.platform === 'none' ? 'Not Listed' : item.platform}</p>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Date Added</p>
-                <p className="font-medium">{item.dateAdded}</p>
-              </div>
+              {item.sourcePlatform && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Sourced From</p>
+                  <p className="font-medium">{item.sourcePlatform}</p>
+                </div>
+              )}
+              {item.dateAdded && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Date Added</p>
+                  <p className="font-medium">{item.dateAdded}</p>
+                </div>
+              )}
             </div>
 
             {item.notes && (
@@ -339,10 +423,12 @@ export function ItemDetailSheet({
             )}
 
             <div className="flex gap-3 pt-4 border-t border-border">
-              <Button onClick={() => onSell(item)} className="flex-1">
-                <DollarSign className="h-4 w-4 mr-2" />
-                Record Sale
-              </Button>
+              {!isLostItem && (
+                <Button onClick={() => onSell(item)} className="flex-1">
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Record Sale
+                </Button>
+              )}
               <Button variant="outline" onClick={handleEdit}>
                 Edit
               </Button>

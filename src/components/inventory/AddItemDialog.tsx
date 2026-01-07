@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { InventoryItem, ItemCategory, ItemStatus, Platform } from '@/types/inventory';
+import { InventoryItem, ItemCategory, ItemStatus, Platform, Owner } from '@/types/inventory';
 import {
   Dialog,
   DialogContent,
@@ -44,8 +44,18 @@ const platforms: { value: Platform; label: string }[] = [
   { value: 'none', label: 'Not Listed' },
   { value: 'grailed', label: 'Grailed' },
   { value: 'depop', label: 'Depop' },
+  { value: 'ebay', label: 'eBay' },
+  { value: 'vinted', label: 'Vinted' },
+  { value: 'mercari', label: 'Mercari' },
   { value: 'instagram', label: 'Instagram' },
   { value: 'in-person', label: 'In Person' },
+];
+
+const owners: { value: Owner; label: string }[] = [
+  { value: 'Parker', label: 'Parker' },
+  { value: 'Spencer', label: 'Spencer' },
+  { value: 'Parker K', label: 'Parker K' },
+  { value: 'Shared', label: 'Shared' },
 ];
 
 export function AddItemDialog({ onAdd }: AddItemDialogProps) {
@@ -54,11 +64,14 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
     name: '',
     brand: '',
     category: 'top' as ItemCategory,
+    size: '',
     acquisitionCost: '',
     askingPrice: '',
     lowestAcceptablePrice: '',
     status: 'in-closet' as ItemStatus,
     platform: 'none' as Platform,
+    sourcePlatform: '',
+    owner: 'Parker' as Owner,
     notes: '',
   });
 
@@ -75,11 +88,14 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
       name: formData.name,
       brand: formData.brand,
       category: formData.category,
+      size: formData.size || undefined,
       acquisitionCost: cost,
       askingPrice: asking || cost * 2,
       lowestAcceptablePrice: lowest || cost * 1.5,
       status: formData.status,
       platform: formData.platform,
+      sourcePlatform: formData.sourcePlatform || undefined,
+      owner: formData.owner,
       notes: formData.notes,
       dateAdded: new Date().toISOString().split('T')[0],
     });
@@ -88,11 +104,14 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
       name: '',
       brand: '',
       category: 'top',
+      size: '',
       acquisitionCost: '',
       askingPrice: '',
       lowestAcceptablePrice: '',
       status: 'in-closet',
       platform: 'none',
+      sourcePlatform: '',
+      owner: 'Parker',
       notes: '',
     });
     setOpen(false);
@@ -139,6 +158,16 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
             </div>
 
             <div>
+              <Label htmlFor="size">Size</Label>
+              <Input
+                id="size"
+                value={formData.size}
+                onChange={(e) => setFormData({ ...formData, size: e.target.value })}
+                placeholder="e.g. XL, 10, 44"
+              />
+            </div>
+
+            <div>
               <Label htmlFor="category">Category</Label>
               <Select
                 value={formData.category}
@@ -153,6 +182,27 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
                   {categories.map((cat) => (
                     <SelectItem key={cat.value} value={cat.value}>
                       {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="owner">Owner</Label>
+              <Select
+                value={formData.owner}
+                onValueChange={(value: Owner) =>
+                  setFormData({ ...formData, owner: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {owners.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -244,7 +294,7 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
             </div>
 
             <div>
-              <Label htmlFor="platform">Platform</Label>
+              <Label htmlFor="platform">Listed On</Label>
               <Select
                 value={formData.platform}
                 onValueChange={(value: Platform) =>
@@ -263,6 +313,16 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div>
+            <Label htmlFor="sourcePlatform">Sourced From</Label>
+            <Input
+              id="sourcePlatform"
+              value={formData.sourcePlatform}
+              onChange={(e) => setFormData({ ...formData, sourcePlatform: e.target.value })}
+              placeholder="e.g. Grailed, Estate Sale, Trade"
+            />
           </div>
 
           <div>
