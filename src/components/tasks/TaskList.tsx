@@ -19,12 +19,6 @@ const statusStyles = {
   'done': 'text-chart-2',
 };
 
-const ownerColors: Record<string, string> = {
-  'Parker': 'bg-chart-1/20 text-chart-3',
-  'Spencer': 'bg-chart-2/20 text-chart-3',
-  'Parker K': 'bg-chart-4/30 text-chart-3',
-};
-
 export function TaskList({ tasks }: TaskListProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -51,16 +45,11 @@ export function TaskList({ tasks }: TaskListProps) {
               <div className="flex items-start gap-3">
                 <Icon className={`h-5 w-5 mt-0.5 ${statusStyles[task.status]}`} />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className={`font-medium text-sm ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
-                      {task.name}
-                    </p>
-                    <Badge variant="secondary" className={ownerColors[task.owner]}>
-                      {task.owner}
-                    </Badge>
-                  </div>
+                  <p className={`font-medium text-sm ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
+                    {task.name}
+                  </p>
                   <div className="flex items-center gap-3 mt-1">
-                    <span className="text-xs text-muted-foreground capitalize">{task.category}</span>
+                    <Badge variant="secondary" className="capitalize">{task.category}</Badge>
                     <span className={`text-xs ${overdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
                       {overdue ? 'Overdue: ' : 'Due: '}{formatDate(task.dueDate)}
                     </span>

@@ -55,7 +55,6 @@ type SortField = 'daysHeld' | 'askingPrice' | 'profitPotential' | 'brand' | 'dat
 export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('active');
-  const [ownerFilter, setOwnerFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('dateAdded');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
@@ -71,9 +70,7 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
       else if (statusFilter === 'issues') matchesStatus = ['scammed', 'refunded', 'traded'].includes(item.status);
       else if (statusFilter !== 'all') matchesStatus = item.status === statusFilter;
 
-      const matchesOwner = ownerFilter === 'all' || item.owner === ownerFilter;
-
-      return matchesSearch && matchesStatus && matchesOwner;
+      return matchesSearch && matchesStatus;
     });
 
     return filtered.sort((a, b) => {
@@ -114,7 +111,7 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
 
       return sortDirection === 'asc' ? aValue - (bValue as number) : (bValue as number) - aValue;
     });
-  }, [items, search, statusFilter, ownerFilter, sortField, sortDirection]);
+  }, [items, search, statusFilter, sortField, sortDirection]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -131,12 +128,6 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
       currency: 'USD',
       minimumFractionDigits: 0,
     }).format(amount);
-  };
-
-  const getOwnerDisplay = (owner: string) => {
-    if (owner === 'Parker Kleinman') return 'Parker';
-    if (owner === 'Spencer Kleinman') return 'Spencer';
-    return owner;
   };
 
   return (
@@ -165,17 +156,6 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
             <SelectItem value="archive-hold">Archive Hold</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-          <SelectTrigger className="w-full sm:w-[160px]">
-            <SelectValue placeholder="Owner" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Owners</SelectItem>
-            <SelectItem value="Parker Kleinman">Parker</SelectItem>
-            <SelectItem value="Spencer Kleinman">Spencer</SelectItem>
-            <SelectItem value="Shared">Shared</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       <div className="border rounded-lg overflow-hidden bg-card">
@@ -189,7 +169,6 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
                 </Button>
               </TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Owner</TableHead>
               <TableHead className="text-right">Cost</TableHead>
               <TableHead className="text-right">
                 <Button variant="ghost" size="sm" className="h-auto p-0 font-medium hover:bg-transparent" onClick={() => toggleSort('askingPrice')}>
@@ -222,7 +201,6 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
                     {statusLabels[item.status]}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{getOwnerDisplay(item.owner)}</TableCell>
                 <TableCell className="text-right font-mono text-sm text-muted-foreground">
                   {formatCurrency(item.acquisitionCost)}
                 </TableCell>

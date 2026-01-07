@@ -24,7 +24,6 @@ import { Trash2, DollarSign, Save } from 'lucide-react';
 type ItemCategory = Database['public']['Enums']['item_category'];
 type ItemStatus = Database['public']['Enums']['item_status'];
 type Platform = Database['public']['Enums']['platform'];
-type Owner = Database['public']['Enums']['item_owner'];
 
 interface ItemDetailSheetProps {
   item: InventoryItem | null;
@@ -66,12 +65,6 @@ const platforms: { value: Platform; label: string }[] = [
   { value: 'trade', label: 'Trade' },
 ];
 
-const owners: { value: Owner; label: string }[] = [
-  { value: 'Parker Kleinman', label: 'Parker' },
-  { value: 'Spencer Kleinman', label: 'Spencer' },
-  { value: 'Shared', label: 'Shared' },
-];
-
 export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, onSell }: ItemDetailSheetProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<InventoryItem>>({});
@@ -89,7 +82,6 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
       lowestAcceptablePrice: item.lowestAcceptablePrice,
       status: item.status,
       platform: item.platform,
-      owner: item.owner,
       notes: item.notes,
     });
     setIsEditing(true);
@@ -110,12 +102,6 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
   const profit = (item.askingPrice || 0) - item.acquisitionCost;
   const margin = (item.askingPrice || 0) > 0 ? ((profit / (item.askingPrice || 1)) * 100).toFixed(0) : '0';
   const isLostItem = ['scammed', 'refunded', 'traded'].includes(item.status);
-
-  const getOwnerDisplay = (owner: string) => {
-    if (owner === 'Parker Kleinman') return 'Parker';
-    if (owner === 'Spencer Kleinman') return 'Spencer';
-    return owner;
-  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -150,12 +136,6 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
                 <p className="font-medium">{item.dateSold}</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-xs text-muted-foreground">Owner</p>
-                <p className="font-medium">{getOwnerDisplay(item.owner)}</p>
-              </div>
-            </div>
             {item.notes && (
               <div>
                 <p className="text-xs text-muted-foreground">Notes</p>
@@ -179,25 +159,14 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
                 <Input value={editData.size || ''} onChange={(e) => setEditData({ ...editData, size: e.target.value })} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Category</Label>
-                <Select value={editData.category} onValueChange={(value: ItemCategory) => setEditData({ ...editData, category: value })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {categories.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Owner</Label>
-                <Select value={editData.owner} onValueChange={(value: Owner) => setEditData({ ...editData, owner: value })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {owners.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label>Category</Label>
+              <Select value={editData.category} onValueChange={(value: ItemCategory) => setEditData({ ...editData, category: value })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
@@ -251,7 +220,6 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
                 {item.size && <Badge variant="outline">Size {item.size}</Badge>}
                 <Badge variant="secondary" className="capitalize">{item.category}</Badge>
                 <Badge variant="outline" className="capitalize">{item.status.replace('-', ' ')}</Badge>
-                <Badge variant="outline">{getOwnerDisplay(item.owner)}</Badge>
               </div>
             </div>
 

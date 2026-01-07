@@ -2,21 +2,21 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { ProgressBar } from '@/components/dashboard/ProgressBar';
 import { TaskList } from '@/components/tasks/TaskList';
-import { useInventory } from '@/hooks/useInventory';
+import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
 import { mockTasks } from '@/data/mockData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, DollarSign, TrendingUp, Clock, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Index = () => {
-  const { inventory, getFinancialSummary, getActiveItems } = useInventory();
+  const { inventory, getFinancialSummary, getActiveItems } = useSupabaseInventory();
   const summary = getFinancialSummary();
   const activeItems = getActiveItems();
   
   const avgDaysHeld = activeItems.length > 0 
-    ? Math.round(activeItems.reduce((sum, i) => sum + i.daysHeld, 0) / activeItems.length)
+    ? Math.round(activeItems.reduce((sum, i) => sum + (i.daysHeld || 0), 0) / activeItems.length)
     : 0;
-  const stagnantItems = activeItems.filter(i => i.daysHeld > 30);
+  const stagnantItems = activeItems.filter(i => (i.daysHeld || 0) > 30);
   const upcomingTasks = mockTasks.filter(t => t.status !== 'done').slice(0, 4);
 
   const formatCurrency = (amount: number) => {
@@ -110,8 +110,8 @@ const Index = () => {
                   <p className="text-lg font-semibold">{summary.avgMargin}%</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Per Partner</p>
-                  <p className="text-lg font-semibold">{formatCurrency(summary.totalProfit / 3)}</p>
+                  <p className="text-xs text-muted-foreground">Total Profit</p>
+                  <p className="text-lg font-semibold">{formatCurrency(summary.totalProfit)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Items Sold</p>

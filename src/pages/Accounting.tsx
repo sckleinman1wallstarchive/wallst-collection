@@ -275,7 +275,6 @@ const Accounting = () => {
                     <TableHead>Date</TableHead>
                     <TableHead>Item</TableHead>
                     <TableHead>Brand</TableHead>
-                    <TableHead>Owner</TableHead>
                     <TableHead className="text-right">Cost</TableHead>
                     <TableHead className="text-right">Sale Price</TableHead>
                     <TableHead className="text-right">Profit</TableHead>
@@ -295,10 +294,6 @@ const Accounting = () => {
                             <p className="font-medium text-sm">{item.name}</p>
                           </TableCell>
                           <TableCell className="text-sm">{item.brand}</TableCell>
-                          <TableCell className="text-sm">
-                            {item.owner === 'Parker Kleinman' ? 'Parker' : 
-                             item.owner === 'Spencer Kleinman' ? 'Spencer' : 'Shared'}
-                          </TableCell>
                           <TableCell className="text-right font-mono text-sm text-muted-foreground">
                             {formatCurrency(item.acquisitionCost)}
                           </TableCell>
@@ -321,27 +316,6 @@ const Accounting = () => {
             ) : (
               <p className="text-sm text-muted-foreground text-center py-8">No sales recorded yet</p>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Partner Split Detail */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-medium">Partner Profit Split</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-6">
-              <div className="p-4 bg-muted rounded-lg text-center">
-                <p className="text-sm font-medium mb-2">Parker Kleinman</p>
-                <p className="text-2xl font-semibold">{formatCurrency(summary.parkerProfit)}</p>
-                <p className="text-xs text-muted-foreground mt-1">From owned + shared items</p>
-              </div>
-              <div className="p-4 bg-muted rounded-lg text-center">
-                <p className="text-sm font-medium mb-2">Spencer Kleinman</p>
-                <p className="text-2xl font-semibold">{formatCurrency(summary.spencerProfit)}</p>
-                <p className="text-xs text-muted-foreground mt-1">From owned + shared items</p>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>

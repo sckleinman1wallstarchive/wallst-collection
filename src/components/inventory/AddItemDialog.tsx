@@ -24,7 +24,6 @@ import { Plus } from 'lucide-react';
 type ItemCategory = Database['public']['Enums']['item_category'];
 type ItemStatus = Database['public']['Enums']['item_status'];
 type Platform = Database['public']['Enums']['platform'];
-type Owner = Database['public']['Enums']['item_owner'];
 
 interface AddItemDialogProps {
   onAdd: (item: Partial<InventoryItem>) => void;
@@ -56,12 +55,6 @@ const platforms: { value: Platform; label: string }[] = [
   { value: 'mercari', label: 'Mercari' },
 ];
 
-const owners: { value: Owner; label: string }[] = [
-  { value: 'Parker Kleinman', label: 'Parker' },
-  { value: 'Spencer Kleinman', label: 'Spencer' },
-  { value: 'Shared', label: 'Shared' },
-];
-
 export function AddItemDialog({ onAdd }: AddItemDialogProps) {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -75,7 +68,6 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
     status: 'in-closet' as ItemStatus,
     platform: 'none' as Platform,
     sourcePlatform: '',
-    owner: 'Parker Kleinman' as Owner,
     notes: '',
   });
 
@@ -86,11 +78,11 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
     const asking = parseFloat(formData.askingPrice);
     const lowest = parseFloat(formData.lowestAcceptablePrice);
 
-    if (!formData.name || !formData.brand || isNaN(cost)) return;
+    if (!formData.name || isNaN(cost)) return;
 
     onAdd({
       name: formData.name,
-      brand: formData.brand,
+      brand: formData.brand || null,
       category: formData.category,
       size: formData.size || null,
       acquisitionCost: cost,
@@ -99,7 +91,6 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
       status: formData.status,
       platform: formData.platform,
       sourcePlatform: formData.sourcePlatform || null,
-      owner: formData.owner,
       notes: formData.notes || null,
       dateAdded: new Date().toISOString().split('T')[0],
     });
@@ -115,7 +106,6 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
       status: 'in-closet',
       platform: 'none',
       sourcePlatform: '',
-      owner: 'Parker Kleinman',
       notes: '',
     });
     setOpen(false);
@@ -142,27 +132,18 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
             </div>
             <div>
               <Label htmlFor="brand">Brand</Label>
-              <Input id="brand" value={formData.brand} onChange={(e) => setFormData({ ...formData, brand: e.target.value })} placeholder="e.g. Helmut Lang" required />
+              <Input id="brand" value={formData.brand} onChange={(e) => setFormData({ ...formData, brand: e.target.value })} placeholder="e.g. Helmut Lang" />
             </div>
             <div>
               <Label htmlFor="size">Size</Label>
               <Input id="size" value={formData.size} onChange={(e) => setFormData({ ...formData, size: e.target.value })} placeholder="e.g. XL, 10, 44" />
             </div>
-            <div>
+            <div className="col-span-2">
               <Label htmlFor="category">Category</Label>
               <Select value={formData.category} onValueChange={(value: ItemCategory) => setFormData({ ...formData, category: value })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {categories.map((cat) => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="owner">Owner</Label>
-              <Select value={formData.owner} onValueChange={(value: Owner) => setFormData({ ...formData, owner: value })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {owners.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

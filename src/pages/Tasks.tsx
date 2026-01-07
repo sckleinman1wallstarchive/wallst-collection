@@ -30,12 +30,6 @@ Carryover:
   const inProgressTasks = mockTasks.filter(t => t.status === 'in-progress');
   const doneTasks = mockTasks.filter(t => t.status === 'done');
 
-  const tasksByOwner = {
-    'Parker': mockTasks.filter(t => t.owner === 'Parker' && t.status !== 'done'),
-    'Spencer': mockTasks.filter(t => t.owner === 'Spencer' && t.status !== 'done'),
-    'Parker K': mockTasks.filter(t => t.owner === 'Parker K' && t.status !== 'done'),
-  };
-
   return (
     <DashboardLayout>
       <div className="max-w-6xl mx-auto space-y-6">
@@ -55,7 +49,6 @@ Carryover:
         <Tabs defaultValue="status" className="space-y-4">
           <TabsList>
             <TabsTrigger value="status">By Status</TabsTrigger>
-            <TabsTrigger value="owner">By Owner</TabsTrigger>
             <TabsTrigger value="meeting">Meeting</TabsTrigger>
           </TabsList>
 
@@ -102,30 +95,6 @@ Carryover:
                   )}
                 </CardContent>
               </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="owner" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {Object.entries(tasksByOwner).map(([owner, tasks]) => (
-                <Card key={owner}>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium flex items-center justify-between">
-                      <span>{owner}</span>
-                      <span className="text-muted-foreground">{tasks.length}</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {tasks.length > 0 ? (
-                      <TaskList tasks={tasks} />
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        No active tasks
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
             </div>
           </TabsContent>
 

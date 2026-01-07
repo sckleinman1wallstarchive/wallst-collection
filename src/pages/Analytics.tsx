@@ -1,51 +1,51 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { useInventory } from '@/hooks/useInventory';
+import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const Analytics = () => {
-  const { inventory, getActiveItems, getFinancialSummary } = useInventory();
+  const { inventory, getActiveItems, getFinancialSummary } = useSupabaseInventory();
   const activeItems = getActiveItems();
   const summary = getFinancialSummary();
 
   // Brand performance
   const brandData = activeItems.reduce((acc, item) => {
-    const existing = acc.find(b => b.name === item.brand);
+    const brand = item.brand || 'Unknown';
+    const existing = acc.find(b => b.name === brand);
     if (existing) {
       existing.count += 1;
-      existing.value += item.askingPrice - item.acquisitionCost;
+      existing.value += (item.askingPrice || 0) - item.acquisitionCost;
     } else {
       acc.push({
-        name: item.brand,
+        name: brand,
         count: 1,
-        value: item.askingPrice - item.acquisitionCost,
+        value: (item.askingPrice || 0) - item.acquisitionCost,
       });
     }
     return acc;
   }, [] as { name: string; count: number; value: number }[]);
 
-  const sortedByProfit = [...brandData].sort((a, b) => b.value - a.value);
+  const sortedByProfit = [...brandData].sort((a, b) => b.value - a.value).slice(0, 10);
 
   // Status distribution
   const statusData = [
     { name: 'Listed', value: inventory.filter(i => i.status === 'listed').length },
     { name: 'In Closet', value: inventory.filter(i => i.status === 'in-closet').length },
-    { name: 'On Hold', value: inventory.filter(i => i.status === 'on-hold').length },
     { name: 'Archive', value: inventory.filter(i => i.status === 'archive-hold').length },
     { name: 'Sold', value: inventory.filter(i => i.status === 'sold').length },
   ].filter(s => s.value > 0);
 
   // Days held distribution
   const daysCategories = [
-    { range: '0-7 days', count: activeItems.filter(i => i.daysHeld <= 7).length },
-    { range: '8-14 days', count: activeItems.filter(i => i.daysHeld > 7 && i.daysHeld <= 14).length },
-    { range: '15-30 days', count: activeItems.filter(i => i.daysHeld > 14 && i.daysHeld <= 30).length },
-    { range: '30+ days', count: activeItems.filter(i => i.daysHeld > 30).length },
+    { range: '0-7 days', count: activeItems.filter(i => (i.daysHeld || 0) <= 7).length },
+    { range: '8-14 days', count: activeItems.filter(i => (i.daysHeld || 0) > 7 && (i.daysHeld || 0) <= 14).length },
+    { range: '15-30 days', count: activeItems.filter(i => (i.daysHeld || 0) > 14 && (i.daysHeld || 0) <= 30).length },
+    { range: '30+ days', count: activeItems.filter(i => (i.daysHeld || 0) > 30).length },
   ];
 
   // Capital blocking items
   const capitalBlockers = activeItems
-    .filter(i => i.daysHeld > 21)
+    .filter(i => (i.daysHeld || 0) > 21)
     .sort((a, b) => b.acquisitionCost - a.acquisitionCost)
     .slice(0, 5);
 
@@ -60,7 +60,7 @@ const Analytics = () => {
   };
 
   const avgDaysHeld = activeItems.length > 0 
-    ? Math.round(activeItems.reduce((sum, i) => sum + i.daysHeld, 0) / activeItems.length)
+    ? Math.round(activeItems.reduce((sum, i) => sum + (i.daysHeld || 0), 0) / activeItems.length)
     : 0;
 
   return (
@@ -97,7 +97,7 @@ const Analytics = () => {
           {/* Brand Performance */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base font-medium">Profit by Brand</CardTitle>
+              <CardTitle className="text-base font-medium">Profit by Brand (Top 10)</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-64">
@@ -184,7 +184,7 @@ const Analytics = () => {
                     <div key={item.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                       <div>
                         <p className="text-sm font-medium">{item.name}</p>
-                        <p className="text-xs text-muted-foreground">{item.daysHeld} days · {item.brand}</p>
+                        <p className="text-xs text-muted-foreground">{item.daysHeld || 0} days · {item.brand}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-mono">{formatCurrency(item.acquisitionCost)}</p>
