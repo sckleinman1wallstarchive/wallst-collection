@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { InventoryTable } from '@/components/inventory/InventoryTable';
 import { AddItemDialog } from '@/components/inventory/AddItemDialog';
@@ -7,6 +7,35 @@ import { ItemDetailSheet } from '@/components/inventory/ItemDetailSheet';
 import { useSupabaseInventory, InventoryItem } from '@/hooks/useSupabaseInventory';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { Database } from '@/integrations/supabase/types';
+
+type ItemStatus = Database['public']['Enums']['item_status'];
+
+const statusLabels: Record<string, string> = {
+  'in-closet': 'In Closet',
+  'in-closet-parker': 'In Closet (Parker)',
+  'in-closet-spencer': 'In Closet (Spencer)',
+  'listed': 'Listed',
+  'sold': 'Sold',
+  'otw': 'OTW',
+  'refunded': 'Refunded',
+  'traded': 'Traded',
+  'shipped': 'Shipped',
+  'archive-hold': 'Archive',
+  'scammed': 'Scammed',
+};
+
+interface StatusSummary {
+  status: string;
+  label: string;
+  count: number;
+  totalCost: number;
+  totalAsking: number;
+  totalFloor: number;
+  totalRevenue: number;
+  totalProfit: number;
+}
 
 const Inventory = () => {
   const { 
@@ -23,8 +52,46 @@ const Inventory = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [sellItem, setSellItem] = useState<InventoryItem | null>(null);
   const [sellOpen, setSellOpen] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
   const summary = getFinancialSummary();
+
+  // Calculate summaries by status
+  const statusSummaries = useMemo((): StatusSummary[] => {
+    const summaryMap = new Map<string, StatusSummary>();
+    
+    inventory.forEach((item) => {
+      const status = item.status;
+      const existing = summaryMap.get(status) || {
+        status,
+        label: statusLabels[status] || status,
+        count: 0,
+        totalCost: 0,
+        totalAsking: 0,
+        totalFloor: 0,
+        totalRevenue: 0,
+        totalProfit: 0,
+      };
+      
+      existing.count += 1;
+      existing.totalCost += item.acquisitionCost;
+      existing.totalAsking += item.askingPrice || 0;
+      existing.totalFloor += item.lowestAcceptablePrice || 0;
+      
+      if (status === 'sold') {
+        existing.totalRevenue += item.salePrice || 0;
+        existing.totalProfit += (item.salePrice || 0) - item.acquisitionCost;
+      }
+      
+      summaryMap.set(status, existing);
+    });
+    
+    // Order: active statuses first, then sold, then issues
+    const order = ['in-closet-parker', 'in-closet-spencer', 'in-closet', 'listed', 'otw', 'shipped', 'sold', 'traded', 'refunded', 'scammed', 'archive-hold'];
+    return order
+      .filter(s => summaryMap.has(s))
+      .map(s => summaryMap.get(s)!);
+  }, [inventory]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -104,29 +171,129 @@ const Inventory = () => {
           <AddItemDialog onAdd={handleAddItem} />
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <Card className="p-4">
-            <p className="text-xs text-muted-foreground">Invested</p>
-            <p className="text-xl font-semibold mt-1">{formatCurrency(summary.activeInventoryCost)}</p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs text-muted-foreground">Asking Total</p>
-            <p className="text-xl font-semibold mt-1">{formatCurrency(summary.potentialRevenue)}</p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs text-muted-foreground">Floor Total</p>
-            <p className="text-xl font-semibold mt-1">{formatCurrency(summary.minimumRevenue)}</p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs text-muted-foreground">Revenue (Sold)</p>
-            <p className="text-xl font-semibold mt-1">{formatCurrency(summary.totalRevenue)}</p>
-          </Card>
-          <Card className="p-4 bg-primary/5">
-            <p className="text-xs text-muted-foreground">Profit (Realized)</p>
-            <p className="text-xl font-semibold mt-1 text-chart-2">+{formatCurrency(summary.totalProfit)}</p>
-          </Card>
+        {/* Status Totals - Clickable Cards */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-muted-foreground">Status Breakdown</p>
+            {selectedStatus && (
+              <button 
+                onClick={() => setSelectedStatus(null)}
+                className="text-xs text-primary hover:underline"
+              >
+                Clear selection
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {statusSummaries.map((s) => {
+              const isSelected = selectedStatus === s.status;
+              const isSold = s.status === 'sold';
+              
+              return (
+                <Card 
+                  key={s.status}
+                  onClick={() => setSelectedStatus(isSelected ? null : s.status)}
+                  className={cn(
+                    "p-3 cursor-pointer transition-all hover:ring-2 hover:ring-primary/50",
+                    isSelected && "ring-2 ring-primary bg-primary/5"
+                  )}
+                >
+                  <p className="text-xs text-muted-foreground truncate">{s.label}</p>
+                  <p className="text-lg font-semibold mt-0.5">{s.count} items</p>
+                  <div className="mt-2 pt-2 border-t space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Cost</span>
+                      <span className="font-mono">{formatCurrency(s.totalCost)}</span>
+                    </div>
+                    {isSold ? (
+                      <>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Revenue</span>
+                          <span className="font-mono">{formatCurrency(s.totalRevenue)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Profit</span>
+                          <span className="font-mono text-chart-2">+{formatCurrency(s.totalProfit)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Asking</span>
+                          <span className="font-mono">{formatCurrency(s.totalAsking)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Floor</span>
+                          <span className="font-mono">{formatCurrency(s.totalFloor)}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
         </div>
+
+        {/* Selected Status Detail */}
+        {selectedStatus && (
+          <Card className="p-4 bg-primary/5 border-primary/20">
+            {(() => {
+              const s = statusSummaries.find(x => x.status === selectedStatus);
+              if (!s) return null;
+              const isSold = s.status === 'sold';
+              const potentialProfit = s.totalAsking - s.totalCost;
+              
+              return (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-lg">{s.label} Summary</h3>
+                    <span className="text-sm text-muted-foreground">{s.count} items</span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Total Cost</p>
+                      <p className="text-xl font-semibold">{formatCurrency(s.totalCost)}</p>
+                    </div>
+                    {isSold ? (
+                      <>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Total Revenue</p>
+                          <p className="text-xl font-semibold">{formatCurrency(s.totalRevenue)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Total Profit</p>
+                          <p className="text-xl font-semibold text-chart-2">+{formatCurrency(s.totalProfit)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Margin</p>
+                          <p className="text-xl font-semibold">
+                            {s.totalRevenue > 0 ? ((s.totalProfit / s.totalRevenue) * 100).toFixed(1) : 0}%
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Total Asking</p>
+                          <p className="text-xl font-semibold">{formatCurrency(s.totalAsking)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Total Floor</p>
+                          <p className="text-xl font-semibold">{formatCurrency(s.totalFloor)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Potential Profit</p>
+                          <p className="text-xl font-semibold text-chart-2">+{formatCurrency(potentialProfit)}</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+          </Card>
+        )}
 
         <InventoryTable items={inventory} onItemClick={handleItemClick} />
 
