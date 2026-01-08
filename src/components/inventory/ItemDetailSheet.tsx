@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { InventoryItem } from '@/hooks/useSupabaseInventory';
 import { Database } from '@/integrations/supabase/types';
 import {
@@ -19,9 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Trash2, DollarSign, Save } from 'lucide-react';
+import { Trash2, DollarSign, Save, ImagePlus, X, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
-type ItemCategory = Database['public']['Enums']['item_category'];
 type ItemStatus = Database['public']['Enums']['item_status'];
 type Platform = Database['public']['Enums']['platform'];
 
@@ -34,24 +35,15 @@ interface ItemDetailSheetProps {
   onSell: (item: InventoryItem) => void;
 }
 
-const categories: { value: ItemCategory; label: string }[] = [
-  { value: 'outerwear', label: 'Outerwear' },
-  { value: 'bottoms', label: 'Bottoms' },
-  { value: 'tops', label: 'Tops' },
-  { value: 'footwear', label: 'Footwear' },
-  { value: 'accessories', label: 'Accessories' },
-  { value: 'bags', label: 'Bags' },
-  { value: 'other', label: 'Other' },
-];
-
 const statuses: { value: ItemStatus; label: string }[] = [
-  { value: 'in-closet', label: 'In Closet' },
+  { value: 'in-closet-parker', label: 'In Closet (Parker)' },
+  { value: 'in-closet-spencer', label: 'In Closet (Spencer)' },
   { value: 'listed', label: 'Listed' },
+  { value: 'otw', label: 'OTW' },
   { value: 'shipped', label: 'Shipped' },
-  { value: 'archive-hold', label: 'Archive Hold' },
-  { value: 'scammed', label: 'Scammed' },
   { value: 'refunded', label: 'Refunded' },
   { value: 'traded', label: 'Traded' },
+  { value: 'scammed', label: 'Scammed' },
 ];
 
 const platforms: { value: Platform; label: string }[] = [
@@ -68,14 +60,59 @@ const platforms: { value: Platform; label: string }[] = [
 export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, onSell }: ItemDetailSheetProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<InventoryItem>>({});
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!item) return null;
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `items/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('inventory-images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('inventory-images')
+        .getPublicUrl(filePath);
+
+      if (isEditing) {
+        setEditData({ ...editData, imageUrl: publicUrl });
+      } else {
+        onUpdate(item.id, { imageUrl: publicUrl });
+      }
+      toast.success('Image uploaded');
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload image');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleEdit = () => {
     setEditData({
       name: item.name,
-      brand: item.brand,
-      category: item.category,
       size: item.size,
       acquisitionCost: item.acquisitionCost,
       askingPrice: item.askingPrice,
@@ -83,6 +120,7 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
       status: item.status,
       platform: item.platform,
       notes: item.notes,
+      imageUrl: item.imageUrl,
     });
     setIsEditing(true);
   };
@@ -102,6 +140,7 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
   const profit = (item.askingPrice || 0) - item.acquisitionCost;
   const margin = (item.askingPrice || 0) > 0 ? ((profit / (item.askingPrice || 1)) * 100).toFixed(0) : '0';
   const isLostItem = ['scammed', 'refunded', 'traded'].includes(item.status);
+  const currentImageUrl = isEditing ? editData.imageUrl : item.imageUrl;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -110,11 +149,25 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
           <SheetTitle className="text-left">Item Details</SheetTitle>
         </SheetHeader>
 
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+
         {item.status === 'sold' ? (
           <div className="mt-6 space-y-4">
+            {item.imageUrl && (
+              <img 
+                src={item.imageUrl} 
+                alt={item.name} 
+                className="w-full h-48 object-cover rounded-lg border border-border"
+              />
+            )}
             <div>
               <h3 className="text-lg font-semibold">{item.name}</h3>
-              <p className="text-muted-foreground">{item.brand}</p>
               {item.size && <p className="text-sm text-muted-foreground">Size {item.size}</p>}
             </div>
             <Badge className="bg-chart-2/20 text-chart-2">Sold</Badge>
@@ -145,28 +198,55 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
           </div>
         ) : isEditing ? (
           <div className="mt-6 space-y-4">
+            {/* Image in Edit Mode */}
+            <div>
+              <Label>Photo</Label>
+              {currentImageUrl ? (
+                <div className="relative group mt-1">
+                  <img 
+                    src={currentImageUrl} 
+                    alt="Item" 
+                    className="w-full h-40 object-cover rounded-lg border border-border"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => setEditData({ ...editData, imageUrl: null })}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="w-full h-32 mt-1 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-muted/50 transition-colors disabled:opacity-50"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+                      <span className="text-sm text-muted-foreground">Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Add Photo</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
             <div>
               <Label>Item Name</Label>
               <Input value={editData.name || ''} onChange={(e) => setEditData({ ...editData, name: e.target.value })} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Brand</Label>
-                <Input value={editData.brand || ''} onChange={(e) => setEditData({ ...editData, brand: e.target.value })} />
-              </div>
-              <div>
-                <Label>Size</Label>
-                <Input value={editData.size || ''} onChange={(e) => setEditData({ ...editData, size: e.target.value })} />
-              </div>
-            </div>
             <div>
-              <Label>Category</Label>
-              <Select value={editData.category} onValueChange={(value: ItemCategory) => setEditData({ ...editData, category: value })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label>Size</Label>
+              <Input value={editData.size || ''} onChange={(e) => setEditData({ ...editData, size: e.target.value })} />
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
@@ -213,13 +293,39 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
           </div>
         ) : (
           <div className="mt-6 space-y-6">
+            {/* Image Display */}
+            {item.imageUrl ? (
+              <img 
+                src={item.imageUrl} 
+                alt={item.name} 
+                className="w-full h-48 object-cover rounded-lg border border-border"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="w-full h-32 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-muted/50 transition-colors disabled:opacity-50"
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+                    <span className="text-sm text-muted-foreground">Uploading...</span>
+                  </>
+                ) : (
+                  <>
+                    <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Add Photo</span>
+                  </>
+                )}
+              </button>
+            )}
+
             <div>
               <h3 className="text-lg font-semibold">{item.name}</h3>
-              <p className="text-muted-foreground">{item.brand}</p>
               <div className="flex gap-2 mt-2 flex-wrap">
                 {item.size && <Badge variant="outline">Size {item.size}</Badge>}
-                <Badge variant="secondary" className="capitalize">{item.category}</Badge>
-                <Badge variant="outline" className="capitalize">{item.status.replace('-', ' ')}</Badge>
+                <Badge variant="outline" className="capitalize">{item.status.replace(/-/g, ' ')}</Badge>
               </div>
             </div>
 

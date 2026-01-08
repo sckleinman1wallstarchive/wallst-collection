@@ -79,6 +79,7 @@ export type Database = {
           date_sold: string | null
           days_held: number | null
           id: string
+          image_url: string | null
           lowest_acceptable_price: number | null
           name: string
           notes: string | null
@@ -101,6 +102,7 @@ export type Database = {
           date_sold?: string | null
           days_held?: number | null
           id?: string
+          image_url?: string | null
           lowest_acceptable_price?: number | null
           name: string
           notes?: string | null
@@ -123,6 +125,7 @@ export type Database = {
           date_sold?: string | null
           days_held?: number | null
           id?: string
+          image_url?: string | null
           lowest_acceptable_price?: number | null
           name?: string
           notes?: string | null
@@ -197,6 +200,9 @@ export type Database = {
         | "scammed"
         | "refunded"
         | "traded"
+        | "in-closet-parker"
+        | "in-closet-spencer"
+        | "otw"
       platform:
         | "grailed"
         | "depop"
@@ -353,6 +359,9 @@ export const Constants = {
         "scammed",
         "refunded",
         "traded",
+        "in-closet-parker",
+        "in-closet-spencer",
+        "otw",
       ],
       platform: [
         "grailed",

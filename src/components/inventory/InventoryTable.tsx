@@ -30,9 +30,12 @@ interface InventoryTableProps {
 
 const statusColors: Record<ItemStatus, string> = {
   'in-closet': 'bg-muted text-muted-foreground',
+  'in-closet-parker': 'bg-chart-1/20 text-chart-1',
+  'in-closet-spencer': 'bg-chart-3/20 text-chart-3',
   'listed': 'bg-primary/10 text-primary',
   'sold': 'bg-chart-2/20 text-chart-2',
   'shipped': 'bg-chart-1/20 text-chart-1',
+  'otw': 'bg-chart-5/20 text-chart-5',
   'archive-hold': 'bg-accent text-accent-foreground',
   'scammed': 'bg-destructive/20 text-destructive',
   'refunded': 'bg-muted text-muted-foreground',
@@ -41,16 +44,19 @@ const statusColors: Record<ItemStatus, string> = {
 
 const statusLabels: Record<ItemStatus, string> = {
   'in-closet': 'In Closet',
+  'in-closet-parker': 'In Closet (Parker)',
+  'in-closet-spencer': 'In Closet (Spencer)',
   'listed': 'Listed',
   'sold': 'Sold',
   'shipped': 'Shipped',
+  'otw': 'OTW',
   'archive-hold': 'Archive',
   'scammed': 'Scammed',
   'refunded': 'Refunded',
   'traded': 'Traded',
 };
 
-type SortField = 'daysHeld' | 'askingPrice' | 'profitPotential' | 'brand' | 'dateAdded';
+type SortField = 'daysHeld' | 'askingPrice' | 'profitPotential' | 'dateAdded';
 
 export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
   const [search, setSearch] = useState('');
@@ -60,9 +66,7 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
 
   const filteredAndSortedItems = useMemo(() => {
     let filtered = items.filter((item) => {
-      const matchesSearch =
-        item.name.toLowerCase().includes(search.toLowerCase()) ||
-        (item.brand || '').toLowerCase().includes(search.toLowerCase());
+      const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
       
       let matchesStatus = true;
       if (statusFilter === 'active') matchesStatus = !['sold', 'scammed', 'refunded', 'traded'].includes(item.status);
@@ -90,10 +94,6 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
           aValue = a.askingPrice || 0;
           bValue = b.askingPrice || 0;
           break;
-        case 'brand':
-          aValue = a.brand || '';
-          bValue = b.brand || '';
-          break;
         case 'dateAdded':
           aValue = new Date(a.dateAdded || '').getTime();
           bValue = new Date(b.dateAdded || '').getTime();
@@ -103,13 +103,7 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
           bValue = b.daysHeld || 0;
       }
 
-      if (typeof aValue === 'string') {
-        return sortDirection === 'asc'
-          ? aValue.localeCompare(bValue as string)
-          : (bValue as string).localeCompare(aValue);
-      }
-
-      return sortDirection === 'asc' ? aValue - (bValue as number) : (bValue as number) - aValue;
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
     });
   }, [items, search, statusFilter, sortField, sortDirection]);
 
@@ -136,7 +130,7 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search items or brands..."
+            placeholder="Search items..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -151,9 +145,10 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
             <SelectItem value="all">All Items</SelectItem>
             <SelectItem value="sold">Sold Items</SelectItem>
             <SelectItem value="issues">Issues (Scammed/Refunded)</SelectItem>
-            <SelectItem value="in-closet">In Closet</SelectItem>
+            <SelectItem value="in-closet-parker">In Closet (Parker)</SelectItem>
+            <SelectItem value="in-closet-spencer">In Closet (Spencer)</SelectItem>
             <SelectItem value="listed">Listed</SelectItem>
-            <SelectItem value="archive-hold">Archive Hold</SelectItem>
+            <SelectItem value="otw">OTW</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -163,11 +158,6 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead className="font-medium">Item</TableHead>
-              <TableHead>
-                <Button variant="ghost" size="sm" className="h-auto p-0 font-medium hover:bg-transparent" onClick={() => toggleSort('brand')}>
-                  Brand <ArrowUpDown className="ml-1 h-3 w-3" />
-                </Button>
-              </TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Cost</TableHead>
               <TableHead className="text-right">
@@ -189,13 +179,9 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
                 <TableCell>
                   <div>
                     <p className="font-medium text-sm">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.size && <span className="mr-2">Size {item.size}</span>}
-                      <span className="capitalize">{item.category}</span>
-                    </p>
+                    {item.size && <p className="text-xs text-muted-foreground">Size {item.size}</p>}
                   </div>
                 </TableCell>
-                <TableCell className="text-sm">{item.brand}</TableCell>
                 <TableCell>
                   <Badge variant="secondary" className={statusColors[item.status]}>
                     {statusLabels[item.status]}
