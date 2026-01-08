@@ -26,6 +26,7 @@ export interface InventoryItem {
   notes: string | null;
   dateAdded: string | null;
   dateSold: string | null;
+  imageUrl: string | null;
 }
 
 // Transform database row to app format
@@ -48,6 +49,7 @@ const toAppItem = (row: DbInventoryItem): InventoryItem => ({
   notes: row.notes,
   dateAdded: row.date_added,
   dateSold: row.date_sold,
+  imageUrl: (row as any).image_url || null,
 });
 
 // Transform app format to database insert format
@@ -60,7 +62,7 @@ const toDbInsert = (item: Partial<InventoryItem>): DbInsertItem => ({
   asking_price: item.askingPrice,
   lowest_acceptable_price: item.lowestAcceptablePrice,
   sale_price: item.salePrice,
-  status: item.status || 'in-closet',
+  status: item.status || 'in-closet-parker',
   days_held: item.daysHeld,
   platform: item.platform || 'none',
   platform_sold: item.platformSold,
@@ -69,11 +71,12 @@ const toDbInsert = (item: Partial<InventoryItem>): DbInsertItem => ({
   notes: item.notes,
   date_added: item.dateAdded,
   date_sold: item.dateSold,
-});
+  image_url: item.imageUrl,
+} as DbInsertItem);
 
 // Transform app format to database update format
 const toDbUpdate = (item: Partial<InventoryItem>): DbUpdateItem => {
-  const update: DbUpdateItem = {};
+  const update: Record<string, any> = {};
   if (item.name !== undefined) update.name = item.name;
   if (item.brand !== undefined) update.brand = item.brand;
   if (item.category !== undefined) update.category = item.category;
@@ -91,7 +94,8 @@ const toDbUpdate = (item: Partial<InventoryItem>): DbUpdateItem => {
   if (item.notes !== undefined) update.notes = item.notes;
   if (item.dateAdded !== undefined) update.date_added = item.dateAdded;
   if (item.dateSold !== undefined) update.date_sold = item.dateSold;
-  return update;
+  if (item.imageUrl !== undefined) update.image_url = item.imageUrl;
+  return update as DbUpdateItem;
 };
 
 export function useSupabaseInventory() {

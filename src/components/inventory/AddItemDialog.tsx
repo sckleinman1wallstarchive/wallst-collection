@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { InventoryItem } from '@/hooks/useSupabaseInventory';
 import { Database } from '@/integrations/supabase/types';
 import {
@@ -19,9 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus } from 'lucide-react';
+import { Plus, ImagePlus, X, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
-type ItemCategory = Database['public']['Enums']['item_category'];
 type ItemStatus = Database['public']['Enums']['item_status'];
 type Platform = Database['public']['Enums']['platform'];
 
@@ -29,20 +30,13 @@ interface AddItemDialogProps {
   onAdd: (item: Partial<InventoryItem>) => void;
 }
 
-const categories: { value: ItemCategory; label: string }[] = [
-  { value: 'outerwear', label: 'Outerwear' },
-  { value: 'bottoms', label: 'Bottoms' },
-  { value: 'tops', label: 'Tops' },
-  { value: 'footwear', label: 'Footwear' },
-  { value: 'accessories', label: 'Accessories' },
-  { value: 'bags', label: 'Bags' },
-  { value: 'other', label: 'Other' },
-];
-
 const statuses: { value: ItemStatus; label: string }[] = [
-  { value: 'in-closet', label: 'In Closet' },
+  { value: 'in-closet-parker', label: 'In Closet (Parker)' },
+  { value: 'in-closet-spencer', label: 'In Closet (Spencer)' },
   { value: 'listed', label: 'Listed' },
-  { value: 'archive-hold', label: 'Archive Hold' },
+  { value: 'otw', label: 'OTW' },
+  { value: 'refunded', label: 'Refunded' },
+  { value: 'traded', label: 'Traded' },
 ];
 
 const platforms: { value: Platform; label: string }[] = [
@@ -59,17 +53,59 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    brand: '',
-    category: 'tops' as ItemCategory,
     size: '',
     acquisitionCost: '',
     askingPrice: '',
     lowestAcceptablePrice: '',
-    status: 'in-closet' as ItemStatus,
+    status: 'in-closet-parker' as ItemStatus,
     platform: 'none' as Platform,
     sourcePlatform: '',
     notes: '',
+    imageUrl: null as string | null,
   });
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `items/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('inventory-images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('inventory-images')
+        .getPublicUrl(filePath);
+
+      setFormData({ ...formData, imageUrl: publicUrl });
+      toast.success('Image uploaded');
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload image');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,8 +118,6 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
 
     onAdd({
       name: formData.name,
-      brand: formData.brand || null,
-      category: formData.category,
       size: formData.size || null,
       acquisitionCost: cost,
       askingPrice: asking || cost * 2,
@@ -93,20 +127,20 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
       sourcePlatform: formData.sourcePlatform || null,
       notes: formData.notes || null,
       dateAdded: new Date().toISOString().split('T')[0],
+      imageUrl: formData.imageUrl,
     });
 
     setFormData({
       name: '',
-      brand: '',
-      category: 'tops',
       size: '',
       acquisitionCost: '',
       askingPrice: '',
       lowestAcceptablePrice: '',
-      status: 'in-closet',
+      status: 'in-closet-parker',
       platform: 'none',
       sourcePlatform: '',
       notes: '',
+      imageUrl: null,
     });
     setOpen(false);
   };
@@ -125,27 +159,63 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
           <DialogTitle>Add New Inventory Item</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Image Upload */}
+          <div>
+            <Label>Photo</Label>
+            {formData.imageUrl ? (
+              <div className="relative group mt-1">
+                <img 
+                  src={formData.imageUrl} 
+                  alt="Item" 
+                  className="w-full h-40 object-cover rounded-lg border border-border"
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => setFormData({ ...formData, imageUrl: null })}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="w-full h-32 mt-1 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-muted/50 transition-colors disabled:opacity-50"
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+                    <span className="text-sm text-muted-foreground">Uploading...</span>
+                  </>
+                ) : (
+                  <>
+                    <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Add Photo</span>
+                  </>
+                )}
+              </button>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <Label htmlFor="name">Item Name</Label>
               <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Helmut Lang Bondage Jacket" required />
             </div>
-            <div>
-              <Label htmlFor="brand">Brand</Label>
-              <Input id="brand" value={formData.brand} onChange={(e) => setFormData({ ...formData, brand: e.target.value })} placeholder="e.g. Helmut Lang" />
-            </div>
-            <div>
+            <div className="col-span-2">
               <Label htmlFor="size">Size</Label>
               <Input id="size" value={formData.size} onChange={(e) => setFormData({ ...formData, size: e.target.value })} placeholder="e.g. XL, 10, 44" />
-            </div>
-            <div className="col-span-2">
-              <Label htmlFor="category">Category</Label>
-              <Select value={formData.category} onValueChange={(value: ItemCategory) => setFormData({ ...formData, category: value })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
             </div>
           </div>
 
