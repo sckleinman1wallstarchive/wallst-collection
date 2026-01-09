@@ -8,6 +8,7 @@ import {
   CheckSquare,
   FileText,
   Calculator,
+  Ticket,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -25,6 +26,7 @@ import {
 const navigation = [
   { title: 'Overview', url: '/', icon: LayoutDashboard },
   { title: 'Inventory', url: '/inventory', icon: Package },
+  { title: 'Got Sole', url: '/got-sole', icon: Ticket },
   { title: 'Accounting', url: '/accounting', icon: Calculator },
   { title: 'Goals', url: '/goals', icon: Target },
   { title: 'Analytics', url: '/analytics', icon: BarChart3 },
