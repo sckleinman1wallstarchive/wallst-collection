@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Trash2, DollarSign, Save, ImagePlus, X, Loader2 } from 'lucide-react';
+import { Trash2, DollarSign, Save, ImagePlus, X, Loader2, ArrowRightLeft, CalendarCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -33,6 +33,8 @@ interface ItemDetailSheetProps {
   onUpdate: (id: string, updates: Partial<InventoryItem>) => void;
   onDelete: (id: string) => void;
   onSell: (item: InventoryItem) => void;
+  onTrade?: (item: InventoryItem) => void;
+  allItems?: InventoryItem[];
 }
 
 const statuses: { value: ItemStatus; label: string }[] = [
@@ -42,7 +44,6 @@ const statuses: { value: ItemStatus; label: string }[] = [
   { value: 'otw', label: 'OTW' },
   { value: 'shipped', label: 'Shipped' },
   { value: 'refunded', label: 'Refunded' },
-  { value: 'traded', label: 'Traded' },
   { value: 'scammed', label: 'Scammed' },
 ];
 
@@ -57,7 +58,7 @@ const platforms: { value: Platform; label: string }[] = [
   { value: 'trade', label: 'Trade' },
 ];
 
-export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, onSell }: ItemDetailSheetProps) {
+export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, onSell, onTrade, allItems = [] }: ItemDetailSheetProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<InventoryItem>>({});
   const [isUploading, setIsUploading] = useState(false);
@@ -121,6 +122,7 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
       platform: item.platform,
       notes: item.notes,
       imageUrl: item.imageUrl,
+      inConvention: item.inConvention,
     });
     setIsEditing(true);
   };
@@ -137,10 +139,20 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
     }
   };
 
+  const handleConventionToggle = () => {
+    onUpdate(item.id, { inConvention: !item.inConvention });
+  };
+
   const profit = (item.askingPrice || 0) - item.acquisitionCost;
   const margin = (item.askingPrice || 0) > 0 ? ((profit / (item.askingPrice || 1)) * 100).toFixed(0) : '0';
-  const isLostItem = ['scammed', 'refunded', 'traded'].includes(item.status);
+  const isLostItem = ['scammed', 'refunded'].includes(item.status);
+  const isTradedItem = item.status === 'traded';
   const currentImageUrl = isEditing ? editData.imageUrl : item.imageUrl;
+
+  // Get traded item info
+  const tradedForItem = isTradedItem && item.tradedForItemId 
+    ? allItems.find(i => i.id === item.tradedForItemId) 
+    : null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -196,9 +208,43 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
               </div>
             )}
           </div>
+        ) : isTradedItem ? (
+          <div className="mt-6 space-y-4">
+            {item.imageUrl && (
+              <img 
+                src={item.imageUrl} 
+                alt={item.name} 
+                className="w-full h-48 object-cover rounded-lg border border-border"
+              />
+            )}
+            <div>
+              <h3 className="text-lg font-semibold">{item.name}</h3>
+              {item.size && <p className="text-sm text-muted-foreground">Size {item.size}</p>}
+            </div>
+            <Badge className="bg-chart-4/20 text-chart-4">Traded</Badge>
+            <div className="p-4 bg-muted rounded-lg space-y-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Original Cost</p>
+                <p className="font-mono font-semibold">${item.acquisitionCost}</p>
+              </div>
+              {tradedForItem && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Traded For</p>
+                  <p className="font-medium">{tradedForItem.name}</p>
+                </div>
+              )}
+              {item.tradeCashDifference !== null && item.tradeCashDifference !== 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Cash Difference</p>
+                  <p className={`font-mono font-semibold ${item.tradeCashDifference > 0 ? 'text-destructive' : 'text-chart-2'}`}>
+                    {item.tradeCashDifference > 0 ? `You paid $${item.tradeCashDifference}` : `You received $${Math.abs(item.tradeCashDifference)}`}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         ) : isEditing ? (
           <div className="mt-6 space-y-4">
-            {/* Image in Edit Mode */}
             <div>
               <Label>Photo</Label>
               {currentImageUrl ? (
@@ -293,7 +339,6 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
           </div>
         ) : (
           <div className="mt-6 space-y-6">
-            {/* Image Display */}
             {item.imageUrl ? (
               <img 
                 src={item.imageUrl} 
@@ -326,6 +371,12 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
               <div className="flex gap-2 mt-2 flex-wrap">
                 {item.size && <Badge variant="outline">Size {item.size}</Badge>}
                 <Badge variant="outline" className="capitalize">{item.status.replace(/-/g, ' ')}</Badge>
+                {item.inConvention && (
+                  <Badge className="bg-primary/10 text-primary">
+                    <CalendarCheck className="h-3 w-3 mr-1" />
+                    Convention
+                  </Badge>
+                )}
               </div>
             </div>
 
@@ -373,11 +424,28 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
               </div>
             )}
 
+            {/* Convention Toggle */}
+            <Button 
+              variant={item.inConvention ? "secondary" : "outline"} 
+              className="w-full"
+              onClick={handleConventionToggle}
+            >
+              <CalendarCheck className="h-4 w-4 mr-2" />
+              {item.inConvention ? 'Remove from Convention' : 'Add to Convention'}
+            </Button>
+
             <div className="flex gap-3 pt-4 border-t border-border">
               {!isLostItem && (
-                <Button onClick={() => onSell(item)} className="flex-1">
-                  <DollarSign className="h-4 w-4 mr-2" />Record Sale
-                </Button>
+                <>
+                  <Button onClick={() => onSell(item)} className="flex-1">
+                    <DollarSign className="h-4 w-4 mr-2" />Record Sale
+                  </Button>
+                  {onTrade && (
+                    <Button variant="outline" onClick={() => onTrade(item)}>
+                      <ArrowRightLeft className="h-4 w-4 mr-2" />Trade
+                    </Button>
+                  )}
+                </>
               )}
               <Button variant="outline" onClick={handleEdit}>Edit</Button>
               <Button variant="ghost" size="icon" onClick={handleDelete}>

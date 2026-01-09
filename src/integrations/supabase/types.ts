@@ -81,6 +81,7 @@ export type Database = {
           goal_price: number | null
           id: string
           image_url: string | null
+          in_convention: boolean | null
           lowest_acceptable_price: number | null
           name: string
           notes: string | null
@@ -91,6 +92,8 @@ export type Database = {
           source: string | null
           source_platform: string | null
           status: Database["public"]["Enums"]["item_status"]
+          trade_cash_difference: number | null
+          traded_for_item_id: string | null
           updated_at: string
         }
         Insert: {
@@ -105,6 +108,7 @@ export type Database = {
           goal_price?: number | null
           id?: string
           image_url?: string | null
+          in_convention?: boolean | null
           lowest_acceptable_price?: number | null
           name: string
           notes?: string | null
@@ -115,6 +119,8 @@ export type Database = {
           source?: string | null
           source_platform?: string | null
           status?: Database["public"]["Enums"]["item_status"]
+          trade_cash_difference?: number | null
+          traded_for_item_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -129,6 +135,7 @@ export type Database = {
           goal_price?: number | null
           id?: string
           image_url?: string | null
+          in_convention?: boolean | null
           lowest_acceptable_price?: number | null
           name?: string
           notes?: string | null
@@ -139,9 +146,19 @@ export type Database = {
           source?: string | null
           source_platform?: string | null
           status?: Database["public"]["Enums"]["item_status"]
+          trade_cash_difference?: number | null
+          traded_for_item_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_traded_for_item_id_fkey"
+            columns: ["traded_for_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transactions: {
         Row: {

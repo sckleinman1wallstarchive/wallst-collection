@@ -5,13 +5,14 @@ import { TaskList } from '@/components/tasks/TaskList';
 import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
 import { mockTasks } from '@/data/mockData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, DollarSign, TrendingUp, Clock, AlertTriangle } from 'lucide-react';
+import { Package, DollarSign, TrendingUp, Clock, AlertTriangle, Ruler, Image, Tag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Index = () => {
-  const { inventory, getFinancialSummary, getActiveItems } = useSupabaseInventory();
+  const { inventory, getFinancialSummary, getActiveItems, getIncompleteItems } = useSupabaseInventory();
   const summary = getFinancialSummary();
   const activeItems = getActiveItems();
+  const incompleteItems = getIncompleteItems();
   
   const avgDaysHeld = activeItems.length > 0 
     ? Math.round(activeItems.reduce((sum, i) => sum + (i.daysHeld || 0), 0) / activeItems.length)
@@ -130,6 +131,7 @@ const Index = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              {/* Critical: Stagnant items */}
               {stagnantItems.length > 0 && (
                 <Link to="/inventory" className="block p-3 rounded-md bg-destructive/10 border border-destructive/20 hover:bg-destructive/15 transition-colors">
                   <p className="text-sm font-medium">{stagnantItems.length} items over 30 days</p>
@@ -138,16 +140,60 @@ const Index = () => {
                   </p>
                 </Link>
               )}
-              {inventory.filter(i => i.status === 'in-closet').length > 0 && (
-                <Link to="/inventory" className="block p-3 rounded-md bg-muted border border-border hover:bg-muted/80 transition-colors">
-                  <p className="text-sm font-medium">
-                    {inventory.filter(i => i.status === 'in-closet').length} unlisted items
-                  </p>
+
+              {/* Warning: Missing sizes */}
+              {incompleteItems.missingSize.length > 0 && (
+                <Link to="/inventory" className="block p-3 rounded-md bg-chart-5/10 border border-chart-5/20 hover:bg-chart-5/15 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Ruler className="h-4 w-4 text-chart-5" />
+                    <p className="text-sm font-medium">{incompleteItems.missingSize.length} items need sizes</p>
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Capital not working until listed
+                    Add sizes for accurate tracking
                   </p>
                 </Link>
               )}
+
+              {/* Warning: Missing photos */}
+              {incompleteItems.missingImage.length > 0 && (
+                <Link to="/inventory" className="block p-3 rounded-md bg-chart-5/10 border border-chart-5/20 hover:bg-chart-5/15 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Image className="h-4 w-4 text-chart-5" />
+                    <p className="text-sm font-medium">{incompleteItems.missingImage.length} items need photos</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Add photos for quick identification
+                  </p>
+                </Link>
+              )}
+
+              {/* Warning: Missing floor prices */}
+              {incompleteItems.missingFloorPrice.length > 0 && (
+                <Link to="/inventory" className="block p-3 rounded-md bg-chart-5/10 border border-chart-5/20 hover:bg-chart-5/15 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-chart-5" />
+                    <p className="text-sm font-medium">{incompleteItems.missingFloorPrice.length} items need floor prices</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Set minimum acceptable prices
+                  </p>
+                </Link>
+              )}
+
+              {/* Warning: Missing asking prices */}
+              {incompleteItems.missingAskingPrice.length > 0 && (
+                <Link to="/inventory" className="block p-3 rounded-md bg-chart-5/10 border border-chart-5/20 hover:bg-chart-5/15 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-chart-5" />
+                    <p className="text-sm font-medium">{incompleteItems.missingAskingPrice.length} items need asking prices</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Set list prices for potential revenue
+                  </p>
+                </Link>
+              )}
+
+              {/* Info: Weekly meeting */}
               <Link to="/tasks" className="block p-3 rounded-md bg-muted border border-border hover:bg-muted/80 transition-colors">
                 <p className="text-sm font-medium">Weekly meeting</p>
                 <p className="text-xs text-muted-foreground mt-1">
