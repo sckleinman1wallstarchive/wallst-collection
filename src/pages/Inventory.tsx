@@ -4,11 +4,17 @@ import { InventoryTable } from '@/components/inventory/InventoryTable';
 import { AddItemDialog } from '@/components/inventory/AddItemDialog';
 import { SellItemDialog } from '@/components/inventory/SellItemDialog';
 import { ItemDetailSheet } from '@/components/inventory/ItemDetailSheet';
+import { TradeItemDialog } from '@/components/inventory/TradeItemDialog';
 import { useSupabaseInventory, InventoryItem } from '@/hooks/useSupabaseInventory';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { Database } from '@/integrations/supabase/types';
+import { CalendarCheck, Package } from 'lucide-react';
+import { toast } from 'sonner';
 
 type ItemStatus = Database['public']['Enums']['item_status'];
 
@@ -45,16 +51,23 @@ const Inventory = () => {
     updateItem, 
     deleteItem, 
     markAsSold,
-    getFinancialSummary 
+    markAsTraded,
+    toggleConvention,
+    getFinancialSummary,
+    getConventionItems,
   } = useSupabaseInventory();
 
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [sellItem, setSellItem] = useState<InventoryItem | null>(null);
   const [sellOpen, setSellOpen] = useState(false);
+  const [tradeItem, setTradeItem] = useState<InventoryItem | null>(null);
+  const [tradeOpen, setTradeOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [conventionMode, setConventionMode] = useState(false);
 
   const summary = getFinancialSummary();
+  const conventionItems = getConventionItems();
 
   // Calculate summaries by status
   const statusSummaries = useMemo((): StatusSummary[] => {
@@ -102,6 +115,7 @@ const Inventory = () => {
   };
 
   const handleItemClick = (item: InventoryItem) => {
+    if (conventionMode) return; // Don't open detail in convention mode
     setSelectedItem(item);
     setDetailOpen(true);
   };
@@ -109,6 +123,12 @@ const Inventory = () => {
   const handleOpenSell = (item: InventoryItem) => {
     setSellItem(item);
     setSellOpen(true);
+    setDetailOpen(false);
+  };
+
+  const handleOpenTrade = (item: InventoryItem) => {
+    setTradeItem(item);
+    setTradeOpen(true);
     setDetailOpen(false);
   };
 
@@ -131,6 +151,21 @@ const Inventory = () => {
     await markAsSold(id, salePrice, platformSold as any);
     setSellOpen(false);
     setSellItem(null);
+  };
+
+  const handleMarkAsTraded = async (
+    id: string, 
+    tradedForItemId: string | null, 
+    cashDifference: number
+  ) => {
+    await markAsTraded(id, tradedForItemId, cashDifference);
+    setTradeOpen(false);
+    setTradeItem(null);
+    toast.success('Trade recorded!');
+  };
+
+  const handleConventionToggle = async (id: string, inConvention: boolean) => {
+    await toggleConvention(id, inConvention);
   };
 
   if (isLoading) {
@@ -168,75 +203,112 @@ const Inventory = () => {
               {summary.activeItems} active items · {summary.itemsSold} sold
             </p>
           </div>
-          <AddItemDialog onAdd={handleAddItem} />
+          <div className="flex items-center gap-4">
+            {/* Convention Mode Toggle */}
+            <div className="flex items-center gap-2">
+              <Switch
+                id="convention-mode"
+                checked={conventionMode}
+                onCheckedChange={setConventionMode}
+              />
+              <Label htmlFor="convention-mode" className="flex items-center gap-1.5 cursor-pointer">
+                <CalendarCheck className="h-4 w-4" />
+                Convention Mode
+              </Label>
+            </div>
+            <AddItemDialog onAdd={handleAddItem} />
+          </div>
         </div>
+
+        {/* Convention Mode Banner */}
+        {conventionMode && (
+          <Card className="p-4 bg-primary/5 border-primary/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Package className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-medium">Convention Mode Active</p>
+                  <p className="text-sm text-muted-foreground">
+                    Check items to add them to your convention price sheet
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold">{conventionItems.length}</p>
+                <p className="text-xs text-muted-foreground">items selected</p>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Status Totals - Clickable Cards */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-muted-foreground">Status Breakdown</p>
-            {selectedStatus && (
-              <button 
-                onClick={() => setSelectedStatus(null)}
-                className="text-xs text-primary hover:underline"
-              >
-                Clear selection
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {statusSummaries.map((s) => {
-              const isSelected = selectedStatus === s.status;
-              const isSold = s.status === 'sold';
-              
-              return (
-                <Card 
-                  key={s.status}
-                  onClick={() => setSelectedStatus(isSelected ? null : s.status)}
-                  className={cn(
-                    "p-3 cursor-pointer transition-all hover:ring-2 hover:ring-primary/50",
-                    isSelected && "ring-2 ring-primary bg-primary/5"
-                  )}
+        {!conventionMode && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-muted-foreground">Status Breakdown</p>
+              {selectedStatus && (
+                <button 
+                  onClick={() => setSelectedStatus(null)}
+                  className="text-xs text-primary hover:underline"
                 >
-                  <p className="text-xs text-muted-foreground truncate">{s.label}</p>
-                  <p className="text-lg font-semibold mt-0.5">{s.count} items</p>
-                  <div className="mt-2 pt-2 border-t space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Cost</span>
-                      <span className="font-mono">{formatCurrency(s.totalCost)}</span>
-                    </div>
-                    {isSold ? (
-                      <>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Revenue</span>
-                          <span className="font-mono">{formatCurrency(s.totalRevenue)}</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Profit</span>
-                          <span className="font-mono text-chart-2">+{formatCurrency(s.totalProfit)}</span>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Asking</span>
-                          <span className="font-mono">{formatCurrency(s.totalAsking)}</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Floor</span>
-                          <span className="font-mono">{formatCurrency(s.totalFloor)}</span>
-                        </div>
-                      </>
+                  Clear selection
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {statusSummaries.map((s) => {
+                const isSelected = selectedStatus === s.status;
+                const isSold = s.status === 'sold';
+                
+                return (
+                  <Card 
+                    key={s.status}
+                    onClick={() => setSelectedStatus(isSelected ? null : s.status)}
+                    className={cn(
+                      "p-3 cursor-pointer transition-all hover:ring-2 hover:ring-primary/50",
+                      isSelected && "ring-2 ring-primary bg-primary/5"
                     )}
-                  </div>
-                </Card>
-              );
-            })}
+                  >
+                    <p className="text-xs text-muted-foreground truncate">{s.label}</p>
+                    <p className="text-lg font-semibold mt-0.5">{s.count} items</p>
+                    <div className="mt-2 pt-2 border-t space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Cost</span>
+                        <span className="font-mono">{formatCurrency(s.totalCost)}</span>
+                      </div>
+                      {isSold ? (
+                        <>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Revenue</span>
+                            <span className="font-mono">{formatCurrency(s.totalRevenue)}</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Profit</span>
+                            <span className="font-mono text-chart-2">+{formatCurrency(s.totalProfit)}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Asking</span>
+                            <span className="font-mono">{formatCurrency(s.totalAsking)}</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Floor</span>
+                            <span className="font-mono">{formatCurrency(s.totalFloor)}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Selected Status Detail */}
-        {selectedStatus && (
+        {selectedStatus && !conventionMode && (
           <Card className="p-4 bg-primary/5 border-primary/20">
             {(() => {
               const s = statusSummaries.find(x => x.status === selectedStatus);
@@ -295,7 +367,12 @@ const Inventory = () => {
           </Card>
         )}
 
-        <InventoryTable items={inventory} onItemClick={handleItemClick} />
+        <InventoryTable 
+          items={inventory} 
+          onItemClick={handleItemClick}
+          selectionMode={conventionMode}
+          onConventionToggle={handleConventionToggle}
+        />
 
         <ItemDetailSheet
           item={selectedItem}
@@ -304,6 +381,8 @@ const Inventory = () => {
           onUpdate={handleUpdateItem}
           onDelete={handleDeleteItem}
           onSell={handleOpenSell}
+          onTrade={handleOpenTrade}
+          allItems={inventory}
         />
 
         <SellItemDialog
@@ -311,6 +390,14 @@ const Inventory = () => {
           open={sellOpen}
           onOpenChange={setSellOpen}
           onSell={handleMarkAsSold}
+        />
+
+        <TradeItemDialog
+          item={tradeItem}
+          open={tradeOpen}
+          onOpenChange={setTradeOpen}
+          availableItems={inventory}
+          onTrade={handleMarkAsTraded}
         />
       </div>
     </DashboardLayout>

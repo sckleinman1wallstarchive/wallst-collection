@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -18,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, ArrowUpDown, Eye } from 'lucide-react';
+import { Search, ArrowUpDown, Eye, CalendarCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 type ItemStatus = Database['public']['Enums']['item_status'];
@@ -26,6 +27,8 @@ type ItemStatus = Database['public']['Enums']['item_status'];
 interface InventoryTableProps {
   items: InventoryItem[];
   onItemClick: (item: InventoryItem) => void;
+  selectionMode?: boolean;
+  onConventionToggle?: (id: string, inConvention: boolean) => void;
 }
 
 const statusColors: Record<ItemStatus, string> = {
@@ -58,7 +61,12 @@ const statusLabels: Record<ItemStatus, string> = {
 
 type SortField = 'daysHeld' | 'askingPrice' | 'profitPotential' | 'dateAdded';
 
-export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
+export function InventoryTable({ 
+  items, 
+  onItemClick,
+  selectionMode = false,
+  onConventionToggle,
+}: InventoryTableProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('active');
   const [sortField, setSortField] = useState<SortField>('dateAdded');
@@ -124,6 +132,12 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
     }).format(amount);
   };
 
+  const handleConventionCheck = (item: InventoryItem, checked: boolean) => {
+    if (onConventionToggle) {
+      onConventionToggle(item.id, checked);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-4">
@@ -157,6 +171,11 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
+              {selectionMode && (
+                <TableHead className="w-12">
+                  <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+                </TableHead>
+              )}
               <TableHead className="font-medium">Item</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Cost</TableHead>
@@ -174,37 +193,62 @@ export function InventoryTable({ items, onItemClick }: InventoryTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredAndSortedItems.map((item) => (
-              <TableRow key={item.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => onItemClick(item)}>
-                <TableCell>
-                  <div>
-                    <p className="font-medium text-sm">{item.name}</p>
-                    {item.size && <p className="text-xs text-muted-foreground">Size {item.size}</p>}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary" className={statusColors[item.status]}>
-                    {statusLabels[item.status]}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right font-mono text-sm text-muted-foreground">
-                  {formatCurrency(item.acquisitionCost)}
-                </TableCell>
-                <TableCell className="text-right font-mono text-sm">
-                  {item.status === 'sold' ? formatCurrency(item.salePrice || 0) : formatCurrency(item.askingPrice || 0)}
-                </TableCell>
-                <TableCell className="text-right font-mono text-sm">
-                  <span className={item.status === 'sold' ? 'text-chart-2' : ''}>
-                    {item.status === 'sold'
-                      ? `+${formatCurrency((item.salePrice || 0) - item.acquisitionCost)}`
-                      : formatCurrency((item.askingPrice || 0) - item.acquisitionCost)}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                </TableCell>
-              </TableRow>
-            ))}
+            {filteredAndSortedItems.map((item) => {
+              const isActiveItem = !['sold', 'scammed', 'refunded', 'traded'].includes(item.status);
+              
+              return (
+                <TableRow 
+                  key={item.id} 
+                  className={`hover:bg-muted/30 ${selectionMode ? '' : 'cursor-pointer'}`} 
+                  onClick={() => !selectionMode && onItemClick(item)}
+                >
+                  {selectionMode && (
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      {isActiveItem ? (
+                        <Checkbox
+                          checked={item.inConvention}
+                          onCheckedChange={(checked) => handleConventionCheck(item, !!checked)}
+                        />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  )}
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {!selectionMode && item.inConvention && (
+                        <CalendarCheck className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                      )}
+                      <div>
+                        <p className="font-medium text-sm">{item.name}</p>
+                        {item.size && <p className="text-xs text-muted-foreground">Size {item.size}</p>}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className={statusColors[item.status]}>
+                      {statusLabels[item.status]}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                    {formatCurrency(item.acquisitionCost)}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {item.status === 'sold' ? formatCurrency(item.salePrice || 0) : formatCurrency(item.askingPrice || 0)}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    <span className={item.status === 'sold' ? 'text-chart-2' : ''}>
+                      {item.status === 'sold'
+                        ? `+${formatCurrency((item.salePrice || 0) - item.acquisitionCost)}`
+                        : formatCurrency((item.askingPrice || 0) - item.acquisitionCost)}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    {!selectionMode && <Eye className="h-4 w-4 text-muted-foreground" />}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
         {filteredAndSortedItems.length === 0 && (

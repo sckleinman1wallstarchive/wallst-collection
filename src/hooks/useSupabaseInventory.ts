@@ -28,6 +28,9 @@ export interface InventoryItem {
   dateAdded: string | null;
   dateSold: string | null;
   imageUrl: string | null;
+  inConvention: boolean;
+  tradedForItemId: string | null;
+  tradeCashDifference: number | null;
 }
 
 // Transform database row to app format
@@ -52,6 +55,9 @@ const toAppItem = (row: DbInventoryItem): InventoryItem => ({
   dateAdded: row.date_added,
   dateSold: row.date_sold,
   imageUrl: (row as any).image_url || null,
+  inConvention: (row as any).in_convention || false,
+  tradedForItemId: (row as any).traded_for_item_id || null,
+  tradeCashDifference: (row as any).trade_cash_difference || null,
 });
 
 // Transform app format to database insert format
@@ -75,6 +81,9 @@ const toDbInsert = (item: Partial<InventoryItem>): DbInsertItem => ({
   date_added: item.dateAdded,
   date_sold: item.dateSold,
   image_url: item.imageUrl,
+  in_convention: item.inConvention ?? false,
+  traded_for_item_id: item.tradedForItemId,
+  trade_cash_difference: item.tradeCashDifference,
 } as DbInsertItem);
 
 // Transform app format to database update format
@@ -99,6 +108,9 @@ const toDbUpdate = (item: Partial<InventoryItem>): DbUpdateItem => {
   if (item.dateAdded !== undefined) update.date_added = item.dateAdded;
   if (item.dateSold !== undefined) update.date_sold = item.dateSold;
   if (item.imageUrl !== undefined) update.image_url = item.imageUrl;
+  if (item.inConvention !== undefined) update.in_convention = item.inConvention;
+  if (item.tradedForItemId !== undefined) update.traded_for_item_id = item.tradedForItemId;
+  if (item.tradeCashDifference !== undefined) update.trade_cash_difference = item.tradeCashDifference;
   return update as DbUpdateItem;
 };
 
@@ -218,8 +230,28 @@ export function useSupabaseInventory() {
         salePrice,
         platformSold,
         dateSold: new Date().toISOString().split('T')[0],
+        inConvention: false,
       },
     });
+
+  const markAsTraded = (
+    id: string, 
+    tradedForItemId: string | null, 
+    tradeCashDifference: number = 0
+  ) => 
+    updateMutation.mutateAsync({
+      id,
+      updates: {
+        status: 'traded',
+        tradedForItemId,
+        tradeCashDifference,
+        dateSold: new Date().toISOString().split('T')[0],
+        inConvention: false,
+      },
+    });
+
+  const toggleConvention = (id: string, inConvention: boolean) =>
+    updateMutation.mutateAsync({ id, updates: { inConvention } });
 
   const bulkInsert = (items: Partial<InventoryItem>[]) => bulkInsertMutation.mutateAsync(items);
 
@@ -228,6 +260,21 @@ export function useSupabaseInventory() {
   );
   
   const getSoldItems = () => inventory.filter((i) => i.status === 'sold');
+
+  const getConventionItems = () => inventory.filter((i) => 
+    i.inConvention && i.status !== 'sold' && i.status !== 'scammed' && i.status !== 'refunded' && i.status !== 'traded'
+  );
+
+  const getIncompleteItems = () => {
+    const active = getActiveItems();
+    return {
+      missingSize: active.filter(i => !i.size),
+      missingImage: active.filter(i => !i.imageUrl),
+      missingFloorPrice: active.filter(i => !i.lowestAcceptablePrice),
+      missingGoalPrice: active.filter(i => !i.goalPrice),
+      missingAskingPrice: active.filter(i => !i.askingPrice),
+    };
+  };
 
   const getFinancialSummary = () => {
     const sold = getSoldItems();
@@ -264,9 +311,13 @@ export function useSupabaseInventory() {
     updateItem,
     deleteItem,
     markAsSold,
+    markAsTraded,
+    toggleConvention,
     bulkInsert,
     getActiveItems,
     getSoldItems,
+    getConventionItems,
+    getIncompleteItems,
     getFinancialSummary,
   };
 }
