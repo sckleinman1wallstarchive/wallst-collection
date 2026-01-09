@@ -15,6 +15,7 @@ export interface InventoryItem {
   size: string | null;
   acquisitionCost: number;
   askingPrice: number | null;
+  goalPrice: number | null;
   lowestAcceptablePrice: number | null;
   salePrice: number | null;
   status: Database['public']['Enums']['item_status'];
@@ -38,6 +39,7 @@ const toAppItem = (row: DbInventoryItem): InventoryItem => ({
   size: row.size,
   acquisitionCost: row.acquisition_cost,
   askingPrice: row.asking_price,
+  goalPrice: (row as any).goal_price || null,
   lowestAcceptablePrice: row.lowest_acceptable_price,
   salePrice: row.sale_price,
   status: row.status,
@@ -60,6 +62,7 @@ const toDbInsert = (item: Partial<InventoryItem>): DbInsertItem => ({
   size: item.size,
   acquisition_cost: item.acquisitionCost || 0,
   asking_price: item.askingPrice,
+  goal_price: item.goalPrice,
   lowest_acceptable_price: item.lowestAcceptablePrice,
   sale_price: item.salePrice,
   status: item.status || 'in-closet-parker',
@@ -83,6 +86,7 @@ const toDbUpdate = (item: Partial<InventoryItem>): DbUpdateItem => {
   if (item.size !== undefined) update.size = item.size;
   if (item.acquisitionCost !== undefined) update.acquisition_cost = item.acquisitionCost;
   if (item.askingPrice !== undefined) update.asking_price = item.askingPrice;
+  if (item.goalPrice !== undefined) update.goal_price = item.goalPrice;
   if (item.lowestAcceptablePrice !== undefined) update.lowest_acceptable_price = item.lowestAcceptablePrice;
   if (item.salePrice !== undefined) update.sale_price = item.salePrice;
   if (item.status !== undefined) update.status = item.status;
