@@ -222,7 +222,11 @@ export function useSupabaseInventory() {
   
   const deleteItem = (id: string) => deleteMutation.mutateAsync(id);
   
-  const markAsSold = (id: string, salePrice: number, platformSold?: Database['public']['Enums']['platform']) => 
+  const markAsSold = (
+    id: string,
+    salePrice: number,
+    platformSold?: Database['public']['Enums']['platform']
+  ) =>
     updateMutation.mutateAsync({
       id,
       updates: {
@@ -230,15 +234,27 @@ export function useSupabaseInventory() {
         salePrice,
         platformSold,
         dateSold: new Date().toISOString().split('T')[0],
-        inConvention: false,
+        // IMPORTANT: do NOT clear inConvention here.
+        // Items sold at the convention should still count toward Got Sole sold stats.
+      },
+    });
+
+  const markAsUnsold = (id: string) =>
+    updateMutation.mutateAsync({
+      id,
+      updates: {
+        status: 'listed',
+        salePrice: null,
+        platformSold: null,
+        dateSold: null,
       },
     });
 
   const markAsTraded = (
-    id: string, 
-    tradedForItemId: string | null, 
+    id: string,
+    tradedForItemId: string | null,
     tradeCashDifference: number = 0
-  ) => 
+  ) =>
     updateMutation.mutateAsync({
       id,
       updates: {
@@ -246,7 +262,7 @@ export function useSupabaseInventory() {
         tradedForItemId,
         tradeCashDifference,
         dateSold: new Date().toISOString().split('T')[0],
-        inConvention: false,
+        // IMPORTANT: do NOT clear inConvention here.
       },
     });
 
@@ -311,6 +327,7 @@ export function useSupabaseInventory() {
     updateItem,
     deleteItem,
     markAsSold,
+    markAsUnsold,
     markAsTraded,
     toggleConvention,
     bulkInsert,
