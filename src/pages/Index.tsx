@@ -162,7 +162,7 @@ const Index = () => {
                     {incompleteItems.missingSize.map((item) => (
                       <Link
                         key={item.id}
-                        to={`/inventory?item=${item.id}`}
+                        to={`/inventory?item=${item.id}&edit=true`}
                         className="block px-3 py-2 text-xs rounded bg-muted/50 hover:bg-muted transition-colors truncate"
                       >
                         {item.name}

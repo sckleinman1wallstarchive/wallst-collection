@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { InventoryTable } from '@/components/inventory/InventoryTable';
 import { AddItemDialog } from '@/components/inventory/AddItemDialog';
@@ -44,6 +45,7 @@ interface StatusSummary {
 }
 
 const Inventory = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { 
     inventory, 
     isLoading,
@@ -59,12 +61,30 @@ const Inventory = () => {
 
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [startInEditMode, setStartInEditMode] = useState(false);
   const [sellItem, setSellItem] = useState<InventoryItem | null>(null);
   const [sellOpen, setSellOpen] = useState(false);
   const [tradeItem, setTradeItem] = useState<InventoryItem | null>(null);
   const [tradeOpen, setTradeOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [conventionMode, setConventionMode] = useState(false);
+
+  // Handle URL params to open item detail directly
+  useEffect(() => {
+    const itemId = searchParams.get('item');
+    const editMode = searchParams.get('edit') === 'true';
+    
+    if (itemId && inventory.length > 0) {
+      const item = inventory.find(i => i.id === itemId);
+      if (item) {
+        setSelectedItem(item);
+        setStartInEditMode(editMode);
+        setDetailOpen(true);
+        // Clear the params after opening
+        setSearchParams({});
+      }
+    }
+  }, [searchParams, inventory, setSearchParams]);
 
   const summary = getFinancialSummary();
   const conventionItems = getConventionItems();
@@ -378,12 +398,16 @@ const Inventory = () => {
         <ItemDetailSheet
           item={selectedItem}
           open={detailOpen}
-          onOpenChange={setDetailOpen}
+          onOpenChange={(open) => {
+            setDetailOpen(open);
+            if (!open) setStartInEditMode(false);
+          }}
           onUpdate={handleUpdateItem}
           onDelete={handleDeleteItem}
           onSell={handleOpenSell}
           onTrade={handleOpenTrade}
           allItems={inventory}
+          startInEditMode={startInEditMode}
         />
 
         <SellItemDialog
