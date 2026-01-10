@@ -85,7 +85,14 @@ export function InventoryTable({
       return matchesSearch && matchesStatus;
     });
 
+    // Sort: in selection mode, convention items go first
     return filtered.sort((a, b) => {
+      // If in selection mode, prioritize convention items
+      if (selectionMode) {
+        if (a.inConvention && !b.inConvention) return -1;
+        if (!a.inConvention && b.inConvention) return 1;
+      }
+
       let aValue: number | string;
       let bValue: number | string;
 
