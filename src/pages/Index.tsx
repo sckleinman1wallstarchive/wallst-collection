@@ -12,6 +12,10 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 const Index = () => {
   const { inventory, getFinancialSummary, getActiveItems, getIncompleteItems } = useSupabaseInventory();
   const [showSizeList, setShowSizeList] = useState(false);
+  const [showPhotoList, setShowPhotoList] = useState(false);
+  const [showFloorPriceList, setShowFloorPriceList] = useState(false);
+  const [showAskingPriceList, setShowAskingPriceList] = useState(false);
+  const [showStagnantList, setShowStagnantList] = useState(false);
   const summary = getFinancialSummary();
   const activeItems = getActiveItems();
   const incompleteItems = getIncompleteItems();
@@ -135,12 +139,31 @@ const Index = () => {
             <CardContent className="space-y-3">
               {/* Critical: Stagnant items */}
               {stagnantItems.length > 0 && (
-                <Link to="/inventory" className="block p-3 rounded-md bg-destructive/10 border border-destructive/20 hover:bg-destructive/15 transition-colors">
-                  <p className="text-sm font-medium">{stagnantItems.length} items over 30 days</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Consider price drops or relisting
-                  </p>
-                </Link>
+                <Collapsible open={showStagnantList} onOpenChange={setShowStagnantList}>
+                  <CollapsibleTrigger className="w-full text-left p-3 rounded-md bg-destructive/10 border border-destructive/20 hover:bg-destructive/15 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-destructive" />
+                        <p className="text-sm font-medium">{stagnantItems.length} items over 30 days</p>
+                      </div>
+                      {showStagnantList ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Consider price drops or relisting
+                    </p>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2 max-h-48 overflow-y-auto space-y-1">
+                    {stagnantItems.map((item) => (
+                      <Link
+                        key={item.id}
+                        to={`/inventory?item=${item.id}&edit=true`}
+                        className="block px-3 py-2 text-xs rounded bg-muted/50 hover:bg-muted transition-colors truncate"
+                      >
+                        {item.name} ({item.daysHeld} days)
+                      </Link>
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
               )}
 
               {/* Warning: Missing sizes */}
@@ -174,41 +197,89 @@ const Index = () => {
 
               {/* Warning: Missing photos */}
               {incompleteItems.missingImage.length > 0 && (
-                <Link to="/inventory" className="block p-3 rounded-md bg-chart-5/10 border border-chart-5/20 hover:bg-chart-5/15 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <Image className="h-4 w-4 text-chart-5" />
-                    <p className="text-sm font-medium">{incompleteItems.missingImage.length} items need photos</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Add photos for quick identification
-                  </p>
-                </Link>
+                <Collapsible open={showPhotoList} onOpenChange={setShowPhotoList}>
+                  <CollapsibleTrigger className="w-full text-left p-3 rounded-md bg-chart-5/10 border border-chart-5/20 hover:bg-chart-5/15 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Image className="h-4 w-4 text-chart-5" />
+                        <p className="text-sm font-medium">{incompleteItems.missingImage.length} items need photos</p>
+                      </div>
+                      {showPhotoList ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Click to view all items
+                    </p>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2 max-h-48 overflow-y-auto space-y-1">
+                    {incompleteItems.missingImage.map((item) => (
+                      <Link
+                        key={item.id}
+                        to={`/inventory?item=${item.id}&edit=true`}
+                        className="block px-3 py-2 text-xs rounded bg-muted/50 hover:bg-muted transition-colors truncate"
+                      >
+                        {item.name}
+                      </Link>
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
               )}
 
               {/* Warning: Missing floor prices */}
               {incompleteItems.missingFloorPrice.length > 0 && (
-                <Link to="/inventory" className="block p-3 rounded-md bg-chart-5/10 border border-chart-5/20 hover:bg-chart-5/15 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <Tag className="h-4 w-4 text-chart-5" />
-                    <p className="text-sm font-medium">{incompleteItems.missingFloorPrice.length} items need floor prices</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Set minimum acceptable prices
-                  </p>
-                </Link>
+                <Collapsible open={showFloorPriceList} onOpenChange={setShowFloorPriceList}>
+                  <CollapsibleTrigger className="w-full text-left p-3 rounded-md bg-chart-5/10 border border-chart-5/20 hover:bg-chart-5/15 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-chart-5" />
+                        <p className="text-sm font-medium">{incompleteItems.missingFloorPrice.length} items need floor prices</p>
+                      </div>
+                      {showFloorPriceList ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Click to view all items
+                    </p>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2 max-h-48 overflow-y-auto space-y-1">
+                    {incompleteItems.missingFloorPrice.map((item) => (
+                      <Link
+                        key={item.id}
+                        to={`/inventory?item=${item.id}&edit=true`}
+                        className="block px-3 py-2 text-xs rounded bg-muted/50 hover:bg-muted transition-colors truncate"
+                      >
+                        {item.name}
+                      </Link>
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
               )}
 
               {/* Warning: Missing asking prices */}
               {incompleteItems.missingAskingPrice.length > 0 && (
-                <Link to="/inventory" className="block p-3 rounded-md bg-chart-5/10 border border-chart-5/20 hover:bg-chart-5/15 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-chart-5" />
-                    <p className="text-sm font-medium">{incompleteItems.missingAskingPrice.length} items need asking prices</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Set list prices for potential revenue
-                  </p>
-                </Link>
+                <Collapsible open={showAskingPriceList} onOpenChange={setShowAskingPriceList}>
+                  <CollapsibleTrigger className="w-full text-left p-3 rounded-md bg-chart-5/10 border border-chart-5/20 hover:bg-chart-5/15 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4 text-chart-5" />
+                        <p className="text-sm font-medium">{incompleteItems.missingAskingPrice.length} items need asking prices</p>
+                      </div>
+                      {showAskingPriceList ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Click to view all items
+                    </p>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2 max-h-48 overflow-y-auto space-y-1">
+                    {incompleteItems.missingAskingPrice.map((item) => (
+                      <Link
+                        key={item.id}
+                        to={`/inventory?item=${item.id}&edit=true`}
+                        className="block px-3 py-2 text-xs rounded bg-muted/50 hover:bg-muted transition-colors truncate"
+                      >
+                        {item.name}
+                      </Link>
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
               )}
 
               {/* Info: Weekly meeting */}
