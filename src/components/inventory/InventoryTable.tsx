@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { Search, ArrowUpDown, Eye, CalendarCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { EditableCell } from '@/components/gotsole/EditableCell';
 
 type ItemStatus = Database['public']['Enums']['item_status'];
 
@@ -29,6 +30,7 @@ interface InventoryTableProps {
   onItemClick: (item: InventoryItem) => void;
   selectionMode?: boolean;
   onConventionToggle?: (id: string, inConvention: boolean) => void;
+  onUpdateItem?: (id: string, updates: Partial<InventoryItem>) => void;
 }
 
 const statusColors: Record<ItemStatus, string> = {
@@ -66,6 +68,7 @@ export function InventoryTable({
   onItemClick,
   selectionMode = false,
   onConventionToggle,
+  onUpdateItem,
 }: InventoryTableProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('active');
@@ -184,13 +187,19 @@ export function InventoryTable({
                 </TableHead>
               )}
               <TableHead className="font-medium">Item</TableHead>
-              <TableHead>Status</TableHead>
+              {!selectionMode && <TableHead>Status</TableHead>}
               <TableHead className="text-right">Cost</TableHead>
               <TableHead className="text-right">
                 <Button variant="ghost" size="sm" className="h-auto p-0 font-medium hover:bg-transparent" onClick={() => toggleSort('askingPrice')}>
-                  Asking <ArrowUpDown className="ml-1 h-3 w-3" />
+                  {selectionMode ? 'List' : 'Asking'} <ArrowUpDown className="ml-1 h-3 w-3" />
                 </Button>
               </TableHead>
+              {selectionMode && (
+                <>
+                  <TableHead className="text-right">Goal</TableHead>
+                  <TableHead className="text-right">Floor</TableHead>
+                </>
+              )}
               <TableHead className="text-right">
                 <Button variant="ghost" size="sm" className="h-auto p-0 font-medium hover:bg-transparent" onClick={() => toggleSort('profitPotential')}>
                   Profit <ArrowUpDown className="ml-1 h-3 w-3" />
@@ -232,17 +241,58 @@ export function InventoryTable({
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className={statusColors[item.status]}>
-                      {statusLabels[item.status]}
-                    </Badge>
-                  </TableCell>
+                  {!selectionMode && (
+                    <TableCell>
+                      <Badge variant="secondary" className={statusColors[item.status]}>
+                        {statusLabels[item.status]}
+                      </Badge>
+                    </TableCell>
+                  )}
                   <TableCell className="text-right font-mono text-sm text-muted-foreground">
                     {formatCurrency(item.acquisitionCost)}
                   </TableCell>
-                  <TableCell className="text-right font-mono text-sm">
-                    {item.status === 'sold' ? formatCurrency(item.salePrice || 0) : formatCurrency(item.askingPrice || 0)}
+                  <TableCell className="text-right" onClick={(e) => selectionMode && e.stopPropagation()}>
+                    {selectionMode && item.inConvention ? (
+                      <EditableCell
+                        value={item.askingPrice}
+                        onSave={(val) => onUpdateItem?.(item.id, { askingPrice: val as number | null })}
+                        isEditing={true}
+                        prefix="$"
+                      />
+                    ) : (
+                      <span className="font-mono text-sm">
+                        {item.status === 'sold' ? formatCurrency(item.salePrice || 0) : formatCurrency(item.askingPrice || 0)}
+                      </span>
+                    )}
                   </TableCell>
+                  {selectionMode && (
+                    <>
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        {item.inConvention ? (
+                          <EditableCell
+                            value={item.goalPrice ?? item.askingPrice}
+                            onSave={(val) => onUpdateItem?.(item.id, { goalPrice: val as number | null })}
+                            isEditing={true}
+                            prefix="$"
+                          />
+                        ) : (
+                          <span className="font-mono text-sm text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        {item.inConvention ? (
+                          <EditableCell
+                            value={item.lowestAcceptablePrice}
+                            onSave={(val) => onUpdateItem?.(item.id, { lowestAcceptablePrice: val as number | null })}
+                            isEditing={true}
+                            prefix="$"
+                          />
+                        ) : (
+                          <span className="font-mono text-sm text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                    </>
+                  )}
                   <TableCell className="text-right font-mono text-sm">
                     <span className={item.status === 'sold' ? 'text-chart-2' : ''}>
                       {item.status === 'sold'
