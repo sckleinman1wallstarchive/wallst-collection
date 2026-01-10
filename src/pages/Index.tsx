@@ -5,11 +5,13 @@ import { TaskList } from '@/components/tasks/TaskList';
 import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
 import { mockTasks } from '@/data/mockData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, DollarSign, TrendingUp, Clock, AlertTriangle, Ruler, Image, Tag } from 'lucide-react';
+import { Package, DollarSign, TrendingUp, Clock, AlertTriangle, Ruler, Image, Tag, ChevronDown, ChevronUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
+import { useState } from 'react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 const Index = () => {
   const { inventory, getFinancialSummary, getActiveItems, getIncompleteItems } = useSupabaseInventory();
+  const [showSizeList, setShowSizeList] = useState(false);
   const summary = getFinancialSummary();
   const activeItems = getActiveItems();
   const incompleteItems = getIncompleteItems();
@@ -143,15 +145,31 @@ const Index = () => {
 
               {/* Warning: Missing sizes */}
               {incompleteItems.missingSize.length > 0 && (
-                <Link to="/inventory" className="block p-3 rounded-md bg-chart-5/10 border border-chart-5/20 hover:bg-chart-5/15 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <Ruler className="h-4 w-4 text-chart-5" />
-                    <p className="text-sm font-medium">{incompleteItems.missingSize.length} items need sizes</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Add sizes for accurate tracking
-                  </p>
-                </Link>
+                <Collapsible open={showSizeList} onOpenChange={setShowSizeList}>
+                  <CollapsibleTrigger className="w-full text-left p-3 rounded-md bg-chart-5/10 border border-chart-5/20 hover:bg-chart-5/15 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Ruler className="h-4 w-4 text-chart-5" />
+                        <p className="text-sm font-medium">{incompleteItems.missingSize.length} items need sizes</p>
+                      </div>
+                      {showSizeList ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Click to view all items
+                    </p>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2 max-h-48 overflow-y-auto space-y-1">
+                    {incompleteItems.missingSize.map((item) => (
+                      <Link
+                        key={item.id}
+                        to={`/inventory?item=${item.id}`}
+                        className="block px-3 py-2 text-xs rounded bg-muted/50 hover:bg-muted transition-colors truncate"
+                      >
+                        {item.name}
+                      </Link>
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
               )}
 
               {/* Warning: Missing photos */}
