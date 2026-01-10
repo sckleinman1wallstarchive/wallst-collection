@@ -29,6 +29,7 @@ export interface InventoryItem {
   dateSold: string | null;
   imageUrl: string | null;
   inConvention: boolean;
+  everInConvention: boolean;
   tradedForItemId: string | null;
   tradeCashDifference: number | null;
 }
@@ -56,6 +57,7 @@ const toAppItem = (row: DbInventoryItem): InventoryItem => ({
   dateSold: row.date_sold,
   imageUrl: (row as any).image_url || null,
   inConvention: (row as any).in_convention || false,
+  everInConvention: (row as any).ever_in_convention || false,
   tradedForItemId: (row as any).traded_for_item_id || null,
   tradeCashDifference: (row as any).trade_cash_difference || null,
 });
@@ -82,6 +84,7 @@ const toDbInsert = (item: Partial<InventoryItem>): DbInsertItem => ({
   date_sold: item.dateSold,
   image_url: item.imageUrl,
   in_convention: item.inConvention ?? false,
+  ever_in_convention: item.everInConvention ?? false,
   traded_for_item_id: item.tradedForItemId,
   trade_cash_difference: item.tradeCashDifference,
 } as DbInsertItem);
@@ -109,6 +112,7 @@ const toDbUpdate = (item: Partial<InventoryItem>): DbUpdateItem => {
   if (item.dateSold !== undefined) update.date_sold = item.dateSold;
   if (item.imageUrl !== undefined) update.image_url = item.imageUrl;
   if (item.inConvention !== undefined) update.in_convention = item.inConvention;
+  if (item.everInConvention !== undefined) update.ever_in_convention = item.everInConvention;
   if (item.tradedForItemId !== undefined) update.traded_for_item_id = item.tradedForItemId;
   if (item.tradeCashDifference !== undefined) update.trade_cash_difference = item.tradeCashDifference;
   return update as DbUpdateItem;
@@ -267,7 +271,17 @@ export function useSupabaseInventory() {
     });
 
   const toggleConvention = (id: string, inConvention: boolean) =>
-    updateMutation.mutateAsync({ id, updates: { inConvention } });
+    updateMutation.mutateAsync({ 
+      id, 
+      updates: { 
+        inConvention,
+        // Once an item is added to a convention, it's forever tracked for convention analytics
+        ...(inConvention ? { everInConvention: true } : {})
+      } 
+    });
+
+  const tagAsConventionSale = (id: string) =>
+    updateMutation.mutateAsync({ id, updates: { everInConvention: true } });
 
   const bulkInsert = (items: Partial<InventoryItem>[]) => bulkInsertMutation.mutateAsync(items);
 
@@ -319,6 +333,11 @@ export function useSupabaseInventory() {
     };
   };
 
+  // Get all items ever in a convention that are now sold/shipped (for convention analytics)
+  const getConventionSoldItems = () => inventory.filter((i) => 
+    i.everInConvention && (i.status === 'sold' || i.status === 'shipped')
+  );
+
   return {
     inventory,
     isLoading,
@@ -330,10 +349,12 @@ export function useSupabaseInventory() {
     markAsUnsold,
     markAsTraded,
     toggleConvention,
+    tagAsConventionSale,
     bulkInsert,
     getActiveItems,
     getSoldItems,
     getConventionItems,
+    getConventionSoldItems,
     getIncompleteItems,
     getFinancialSummary,
   };

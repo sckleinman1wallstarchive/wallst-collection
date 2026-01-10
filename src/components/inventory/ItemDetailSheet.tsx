@@ -234,14 +234,23 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
             )}
 
             <div className="space-y-2">
-              {/* Allow fixing old sold items that got their convention flag cleared */}
+              {/* Tag sold items as convention sales for analytics */}
               <Button
-                variant={item.inConvention ? 'secondary' : 'outline'}
+                variant={item.everInConvention ? 'secondary' : 'outline'}
                 className="w-full"
-                onClick={handleConventionToggle}
+                onClick={() => {
+                  if (item.everInConvention) {
+                    // Already tagged - confirm before removing (rare case)
+                    if (!window.confirm('Remove from convention analytics? This sale won\'t count in Got Sole stats.')) return;
+                    onUpdate(item.id, { everInConvention: false, inConvention: false });
+                  } else {
+                    onUpdate(item.id, { everInConvention: true });
+                    toast.success('Tagged as convention sale');
+                  }
+                }}
               >
                 <CalendarCheck className="h-4 w-4 mr-2" />
-                {item.inConvention ? 'Remove from Convention' : 'Add to Convention'}
+                {item.everInConvention ? 'Convention Sale ✓' : 'Tag as Convention Sale'}
               </Button>
 
               <Button
