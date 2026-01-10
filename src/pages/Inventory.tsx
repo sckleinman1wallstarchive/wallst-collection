@@ -23,7 +23,7 @@ const statusLabels: Record<string, string> = {
   'in-closet': 'In Closet',
   'in-closet-parker': 'In Closet (Parker)',
   'in-closet-spencer': 'In Closet (Spencer)',
-  'listed': 'Listed',
+  'listed': 'For Sale',
   'sold': 'Sold',
   'otw': 'OTW',
   'refunded': 'Refunded',

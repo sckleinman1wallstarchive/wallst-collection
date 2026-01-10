@@ -29,7 +29,7 @@ const Analytics = () => {
 
   // Status distribution
   const statusData = [
-    { name: 'Listed', value: inventory.filter(i => i.status === 'listed').length },
+    { name: 'For Sale', value: inventory.filter(i => i.status === 'listed').length },
     { name: 'In Closet (Parker)', value: inventory.filter(i => i.status === 'in-closet-parker').length },
     { name: 'In Closet (Spencer)', value: inventory.filter(i => i.status === 'in-closet-spencer').length },
     { name: 'OTW', value: inventory.filter(i => i.status === 'otw').length },
