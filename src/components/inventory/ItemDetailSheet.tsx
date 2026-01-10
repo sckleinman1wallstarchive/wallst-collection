@@ -232,6 +232,34 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
                 <p className="text-sm">{item.notes}</p>
               </div>
             )}
+
+            <div className="space-y-2">
+              {/* Allow fixing old sold items that got their convention flag cleared */}
+              <Button
+                variant={item.inConvention ? 'secondary' : 'outline'}
+                className="w-full"
+                onClick={handleConventionToggle}
+              >
+                <CalendarCheck className="h-4 w-4 mr-2" />
+                {item.inConvention ? 'Remove from Convention' : 'Add to Convention'}
+              </Button>
+
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  if (!window.confirm('Mark this item as unsold? This will clear sale price and date sold.')) return;
+                  onUpdate(item.id, {
+                    status: 'listed',
+                    salePrice: null,
+                    platformSold: null,
+                    dateSold: null,
+                  });
+                }}
+              >
+                Mark Unsold
+              </Button>
+            </div>
           </div>
         ) : isTradedItem ? (
           <div className="mt-6 space-y-4">
