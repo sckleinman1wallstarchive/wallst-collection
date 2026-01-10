@@ -129,9 +129,20 @@ export function PriceSheetTable({ items, isEditing, onUpdateItem, onSellItem }: 
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline" className="font-mono text-xs">
-                    {item.size || '-'}
-                  </Badge>
+                  {isEditing ? (
+                    <EditableCell
+                      value={item.size}
+                      onSave={(val) => onUpdateItem(item.id, { size: val as string | null })}
+                      isEditing={true}
+                      type="text"
+                      placeholder="—"
+                      className="w-16 text-xs"
+                    />
+                  ) : (
+                    <Badge variant="outline" className="font-mono text-xs">
+                      {item.size || '-'}
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   <span className="font-mono text-sm">${item.acquisitionCost}</span>
