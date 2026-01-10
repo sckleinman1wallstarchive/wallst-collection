@@ -74,10 +74,32 @@ const Analytics = () => {
           </p>
         </div>
 
-        {/* Quick Stats */}
+        {/* All-Time Totals */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-4">
-            <p className="text-xs text-muted-foreground">Total Inventory Cost</p>
+            <p className="text-xs text-muted-foreground">Total Revenue</p>
+            <p className="text-xl font-semibold mt-1">{formatCurrency(summary.totalRevenue)}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-muted-foreground">Total COGS</p>
+            <p className="text-xl font-semibold mt-1">{formatCurrency(summary.totalCostOfSold)}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-muted-foreground">Total Profit</p>
+            <p className={`text-xl font-semibold mt-1 ${summary.totalProfit >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
+              {summary.totalProfit >= 0 ? '+' : ''}{formatCurrency(summary.totalProfit)}
+            </p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-muted-foreground">Items Sold</p>
+            <p className="text-xl font-semibold mt-1">{summary.itemsSold}</p>
+          </Card>
+        </div>
+
+        {/* Active Inventory Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="p-4">
+            <p className="text-xs text-muted-foreground">Active Inventory Cost</p>
             <p className="text-xl font-semibold mt-1">{formatCurrency(summary.activeInventoryCost)}</p>
           </Card>
           <Card className="p-4">
