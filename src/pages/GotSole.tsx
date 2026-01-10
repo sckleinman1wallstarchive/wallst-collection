@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Printer, Edit2, Package, DollarSign, TrendingDown, Settings2, Search, TrendingUp, BarChart3, Percent } from 'lucide-react';
+import { Printer, Edit2, Package, DollarSign, TrendingDown, Settings2, Search, Percent } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function GotSole() {
@@ -74,51 +74,6 @@ export default function GotSole() {
   const avgFloorMargin = totalCost > 0 ? Math.round(((totalFloorValue - totalCost) / totalCost) * 100) : 0;
   const avgItemCost = totalItems > 0 ? Math.round(totalCost / totalItems) : 0;
   const avgItemGoal = totalItems > 0 ? Math.round(totalGoalValue / totalItems) : 0;
-
-  // Category breakdown
-  const categoryBreakdown = conventionItems.reduce((acc, item) => {
-    const cat = item.category || 'other';
-    if (!acc[cat]) {
-      acc[cat] = { count: 0, cost: 0, goalValue: 0, floorValue: 0 };
-    }
-    acc[cat].count++;
-    acc[cat].cost += item.acquisitionCost;
-    acc[cat].goalValue += item.goalPrice ?? item.askingPrice ?? 0;
-    acc[cat].floorValue += item.lowestAcceptablePrice ?? 0;
-    return acc;
-  }, {} as Record<string, { count: number; cost: number; goalValue: number; floorValue: number }>);
-
-  // Items missing prices
-  const missingGoalPrice = conventionItems.filter(i => !i.goalPrice && !i.askingPrice).length;
-  const missingFloorPrice = conventionItems.filter(i => !i.lowestAcceptablePrice).length;
-
-  // Price range analysis
-  const priceRanges = {
-    under50: conventionItems.filter(i => (i.goalPrice ?? i.askingPrice ?? 0) < 50).length,
-    '50to100': conventionItems.filter(i => {
-      const price = i.goalPrice ?? i.askingPrice ?? 0;
-      return price >= 50 && price < 100;
-    }).length,
-    '100to200': conventionItems.filter(i => {
-      const price = i.goalPrice ?? i.askingPrice ?? 0;
-      return price >= 100 && price < 200;
-    }).length,
-    '200to500': conventionItems.filter(i => {
-      const price = i.goalPrice ?? i.askingPrice ?? 0;
-      return price >= 200 && price < 500;
-    }).length,
-    over500: conventionItems.filter(i => (i.goalPrice ?? i.askingPrice ?? 0) >= 500).length,
-  };
-
-  const categoryLabels: Record<string, string> = {
-    footwear: 'Footwear',
-    tops: 'Tops',
-    bottoms: 'Bottoms',
-    outerwear: 'Outerwear',
-    accessories: 'Accessories',
-    bags: 'Bags',
-    other: 'Other',
-  };
 
   const eventDate = 'Saturday, January 11, 2025';
 
@@ -256,113 +211,43 @@ export default function GotSole() {
           </Card>
         </div>
 
-        {/* Analytics Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 no-print">
-          {/* Margin Analysis */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-muted-foreground text-xs mb-3">
-                <Percent className="h-4 w-4" />
-                Margin Analysis
+        {/* Margin Analysis Bar */}
+        <Card className="no-print">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-3">
+              <Percent className="h-4 w-4" />
+              Margin Analysis
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div>
+                <span className="text-sm text-muted-foreground">Goal Margin</span>
+                <p className={`text-xl font-bold ${avgMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
+                  {avgMargin}%
+                </p>
               </div>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Goal Margin</span>
-                  <span className={`font-bold ${avgMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
-                    {avgMargin}%
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Floor Margin</span>
-                  <span className={`font-bold ${avgFloorMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
-                    {avgFloorMargin}%
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Floor Profit</span>
-                  <span className={`font-bold ${potentialFloorProfit >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
-                    ${potentialFloorProfit.toLocaleString()}
-                  </span>
-                </div>
-                <div className="border-t pt-2 mt-2">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">Avg Cost</span>
-                    <span className="font-mono">${avgItemCost}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">Avg Goal</span>
-                    <span className="font-mono">${avgItemGoal}</span>
-                  </div>
-                </div>
+              <div>
+                <span className="text-sm text-muted-foreground">Floor Margin</span>
+                <p className={`text-xl font-bold ${avgFloorMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
+                  {avgFloorMargin}%
+                </p>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Category Breakdown */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-muted-foreground text-xs mb-3">
-                <BarChart3 className="h-4 w-4" />
-                Category Breakdown
+              <div>
+                <span className="text-sm text-muted-foreground">Floor Profit</span>
+                <p className={`text-xl font-bold font-mono ${potentialFloorProfit >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
+                  ${potentialFloorProfit.toLocaleString()}
+                </p>
               </div>
-              <div className="space-y-2">
-                {Object.entries(categoryBreakdown)
-                  .sort((a, b) => b[1].count - a[1].count)
-                  .map(([category, data]) => (
-                    <div key={category} className="flex justify-between items-center text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">{categoryLabels[category] || category}</span>
-                        <span className="text-xs bg-muted px-1.5 py-0.5 rounded">{data.count}</span>
-                      </div>
-                      <span className="font-mono text-xs">${data.goalValue.toLocaleString()}</span>
-                    </div>
-                  ))}
+              <div>
+                <span className="text-sm text-muted-foreground">Avg Cost</span>
+                <p className="text-xl font-bold font-mono">${avgItemCost}</p>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Price Distribution & Alerts */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-muted-foreground text-xs mb-3">
-                <TrendingUp className="h-4 w-4" />
-                Price Distribution
+              <div>
+                <span className="text-sm text-muted-foreground">Avg Goal</span>
+                <p className="text-xl font-bold font-mono">${avgItemGoal}</p>
               </div>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Under $50</span>
-                  <span className="font-mono">{priceRanges.under50}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">$50 - $100</span>
-                  <span className="font-mono">{priceRanges['50to100']}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">$100 - $200</span>
-                  <span className="font-mono">{priceRanges['100to200']}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">$200 - $500</span>
-                  <span className="font-mono">{priceRanges['200to500']}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">$500+</span>
-                  <span className="font-mono">{priceRanges.over500}</span>
-                </div>
-              </div>
-              {(missingGoalPrice > 0 || missingFloorPrice > 0) && (
-                <div className="border-t pt-2 mt-3 space-y-1">
-                  {missingGoalPrice > 0 && (
-                    <p className="text-xs text-chart-5">{missingGoalPrice} items missing goal/list price</p>
-                  )}
-                  {missingFloorPrice > 0 && (
-                    <p className="text-xs text-chart-5">{missingFloorPrice} items missing floor price</p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Editing indicator */}
         {isEditing && (
