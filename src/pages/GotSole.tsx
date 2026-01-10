@@ -69,11 +69,10 @@ export default function GotSole() {
   const potentialProfit = totalGoalValue - totalCost;
   const potentialFloorProfit = totalFloorValue - totalCost;
 
-  // Calculate analytics
-  const avgMargin = totalCost > 0 ? Math.round(((totalGoalValue - totalCost) / totalCost) * 100) : 0;
-  const avgFloorMargin = totalCost > 0 ? Math.round(((totalFloorValue - totalCost) / totalCost) * 100) : 0;
-  const avgItemCost = totalItems > 0 ? Math.round(totalCost / totalItems) : 0;
-  const avgItemGoal = totalItems > 0 ? Math.round(totalGoalValue / totalItems) : 0;
+  // Calculate margins
+  const goalMargin = totalCost > 0 ? Math.round(((totalGoalValue - totalCost) / totalCost) * 100) : 0;
+  const floorMargin = totalCost > 0 ? Math.round(((totalFloorValue - totalCost) / totalCost) * 100) : 0;
+  const profitMargin = totalGoalValue > 0 ? Math.round((potentialProfit / totalGoalValue) * 100) : 0;
 
   const eventDate = 'Saturday, January 11, 2025';
 
@@ -220,30 +219,30 @@ export default function GotSole() {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div>
-                <span className="text-sm text-muted-foreground">Goal Margin</span>
-                <p className={`text-xl font-bold ${avgMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
-                  {avgMargin}%
+                <span className="text-sm text-muted-foreground">Total Sales</span>
+                <p className="text-xl font-bold font-mono">${totalGoalValue.toLocaleString()}</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground">COGS</span>
+                <p className="text-xl font-bold font-mono">${totalCost.toLocaleString()}</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground">Profit Margin</span>
+                <p className={`text-xl font-bold ${profitMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
+                  {profitMargin}%
                 </p>
               </div>
               <div>
                 <span className="text-sm text-muted-foreground">Floor Margin</span>
-                <p className={`text-xl font-bold ${avgFloorMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
-                  {avgFloorMargin}%
+                <p className={`text-xl font-bold ${floorMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
+                  {floorMargin}%
                 </p>
               </div>
               <div>
-                <span className="text-sm text-muted-foreground">Floor Profit</span>
-                <p className={`text-xl font-bold font-mono ${potentialFloorProfit >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
-                  ${potentialFloorProfit.toLocaleString()}
+                <span className="text-sm text-muted-foreground">Goal Margin</span>
+                <p className={`text-xl font-bold ${goalMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
+                  {goalMargin}%
                 </p>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground">Avg Cost</span>
-                <p className="text-xl font-bold font-mono">${avgItemCost}</p>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground">Avg Goal</span>
-                <p className="text-xl font-bold font-mono">${avgItemGoal}</p>
               </div>
             </div>
           </CardContent>
