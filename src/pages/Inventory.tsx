@@ -372,6 +372,7 @@ const Inventory = () => {
           onItemClick={handleItemClick}
           selectionMode={conventionMode}
           onConventionToggle={handleConventionToggle}
+          onUpdateItem={handleUpdateItem}
         />
 
         <ItemDetailSheet
