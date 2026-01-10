@@ -237,7 +237,21 @@ export function InventoryTable({
                       )}
                       <div>
                         <p className="font-medium text-sm">{item.name}</p>
-                        {item.size && <p className="text-xs text-muted-foreground">Size {item.size}</p>}
+                        {selectionMode && item.inConvention ? (
+                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            <span className="text-xs text-muted-foreground">Size</span>
+                            <EditableCell
+                              value={item.size}
+                              onSave={(val) => onUpdateItem?.(item.id, { size: val as string | null })}
+                              isEditing={true}
+                              type="text"
+                              placeholder="—"
+                              className="w-16 h-6 text-xs"
+                            />
+                          </div>
+                        ) : (
+                          item.size && <p className="text-xs text-muted-foreground">Size {item.size}</p>
+                        )}
                       </div>
                     </div>
                   </TableCell>
