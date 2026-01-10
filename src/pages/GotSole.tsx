@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Printer, Edit2, Package, DollarSign, TrendingDown, Settings2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Printer, Edit2, Package, DollarSign, TrendingDown, Settings2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function GotSole() {
@@ -16,6 +17,7 @@ export default function GotSole() {
   const [isEditing, setIsEditing] = useState(false);
   const [sellDialogItem, setSellDialogItem] = useState<InventoryItem | null>(null);
   const [sellDialogOpen, setSellDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Filter for convention items only
   const conventionItems = getConventionItems();
@@ -46,7 +48,19 @@ export default function GotSole() {
     window.print();
   };
 
-  // Calculate stats from convention items
+  // Filter items by search query
+  const filteredItems = conventionItems.filter((item) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      item.name.toLowerCase().includes(query) ||
+      (item.brand?.toLowerCase().includes(query) ?? false) ||
+      (item.size?.toLowerCase().includes(query) ?? false) ||
+      (item.notes?.toLowerCase().includes(query) ?? false)
+    );
+  });
+
+  // Calculate stats from convention items (use all convention items for stats)
   const totalItems = conventionItems.length;
   const totalListValue = conventionItems.reduce((sum, item) => sum + (item.askingPrice || 0), 0);
   const totalFloorValue = conventionItems.reduce((sum, item) => sum + (item.lowestAcceptablePrice || 0), 0);
@@ -100,6 +114,15 @@ export default function GotSole() {
             <p className="text-muted-foreground">{eventDate}</p>
           </div>
           <div className="flex items-center gap-4">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 w-48"
+              />
+            </div>
             <Link to="/inventory">
               <Button variant="outline" size="sm">
                 <Settings2 className="h-4 w-4 mr-2" />
@@ -190,11 +213,18 @@ export default function GotSole() {
 
         {/* Table */}
         <PriceSheetTable
-          items={conventionItems}
+          items={filteredItems}
           isEditing={isEditing}
           onUpdateItem={handleUpdateItem}
           onSellItem={handleSellItem}
         />
+        
+        {/* Search results info */}
+        {searchQuery && (
+          <p className="text-sm text-muted-foreground no-print">
+            Showing {filteredItems.length} of {conventionItems.length} items
+          </p>
+        )}
 
         {/* Sell Dialog */}
         <SellItemDialog
