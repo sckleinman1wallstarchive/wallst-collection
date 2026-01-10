@@ -33,7 +33,7 @@ interface AddItemDialogProps {
 const statuses: { value: ItemStatus; label: string }[] = [
   { value: 'in-closet-parker', label: 'In Closet (Parker)' },
   { value: 'in-closet-spencer', label: 'In Closet (Spencer)' },
-  { value: 'listed', label: 'Listed' },
+  { value: 'listed', label: 'For Sale' },
   { value: 'otw', label: 'OTW' },
   { value: 'refunded', label: 'Refunded' },
   { value: 'traded', label: 'Traded' },

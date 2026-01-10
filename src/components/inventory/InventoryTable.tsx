@@ -51,7 +51,7 @@ const statusLabels: Record<ItemStatus, string> = {
   'in-closet': 'In Closet',
   'in-closet-parker': 'In Closet (Parker)',
   'in-closet-spencer': 'In Closet (Spencer)',
-  'listed': 'Listed',
+  'listed': 'For Sale',
   'sold': 'Sold',
   'shipped': 'Shipped',
   'otw': 'OTW',
@@ -171,7 +171,7 @@ export function InventoryTable({
             <SelectItem value="issues">Issues (Scammed/Refunded)</SelectItem>
             <SelectItem value="in-closet-parker">In Closet (Parker)</SelectItem>
             <SelectItem value="in-closet-spencer">In Closet (Spencer)</SelectItem>
-            <SelectItem value="listed">Listed</SelectItem>
+            <SelectItem value="listed">For Sale</SelectItem>
             <SelectItem value="otw">OTW</SelectItem>
           </SelectContent>
         </Select>
