@@ -78,6 +78,7 @@ export type Database = {
           date_added: string | null
           date_sold: string | null
           days_held: number | null
+          ever_in_convention: boolean | null
           goal_price: number | null
           id: string
           image_url: string | null
@@ -105,6 +106,7 @@ export type Database = {
           date_added?: string | null
           date_sold?: string | null
           days_held?: number | null
+          ever_in_convention?: boolean | null
           goal_price?: number | null
           id?: string
           image_url?: string | null
@@ -132,6 +134,7 @@ export type Database = {
           date_added?: string | null
           date_sold?: string | null
           days_held?: number | null
+          ever_in_convention?: boolean | null
           goal_price?: number | null
           id?: string
           image_url?: string | null

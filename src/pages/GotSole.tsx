@@ -13,7 +13,7 @@ import { Printer, Edit2, Package, DollarSign, TrendingDown, Settings2, Search, P
 import { toast } from 'sonner';
 
 export default function GotSole() {
-  const { inventory, updateItem, markAsSold, getConventionItems } = useSupabaseInventory();
+  const { inventory, updateItem, markAsSold, getConventionItems, getConventionSoldItems, tagAsConventionSale } = useSupabaseInventory();
   const [isEditing, setIsEditing] = useState(false);
   const [sellDialogItem, setSellDialogItem] = useState<InventoryItem | null>(null);
   const [sellDialogOpen, setSellDialogOpen] = useState(false);
@@ -69,11 +69,8 @@ export default function GotSole() {
   const potentialProfit = totalGoalValue - totalCost;
   const potentialFloorProfit = totalFloorValue - totalCost;
 
-  // Get items sold at convention (any item ever marked as in_convention that has been sold)
-  const soldConventionItems = inventory.filter(item => 
-    item.inConvention === true && 
-    (item.status === 'sold' || item.status === 'shipped')
-  );
+  // Get items sold at convention (any item ever marked for convention that has been sold)
+  const soldConventionItems = getConventionSoldItems();
 
   // Calculate sold stats for Margin Analysis
   const soldTotalSales = soldConventionItems.reduce((sum, item) => sum + (item.salePrice || 0), 0);
