@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { InventoryItem } from '@/hooks/useSupabaseInventory';
 import { Database } from '@/integrations/supabase/types';
 import {
@@ -35,6 +35,7 @@ interface ItemDetailSheetProps {
   onSell: (item: InventoryItem) => void;
   onTrade?: (item: InventoryItem) => void;
   allItems?: InventoryItem[];
+  startInEditMode?: boolean;
 }
 
 const statuses: { value: ItemStatus; label: string }[] = [
@@ -58,11 +59,35 @@ const platforms: { value: Platform; label: string }[] = [
   { value: 'trade', label: 'Trade' },
 ];
 
-export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, onSell, onTrade, allItems = [] }: ItemDetailSheetProps) {
+export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, onSell, onTrade, allItems = [], startInEditMode = false }: ItemDetailSheetProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<InventoryItem>>({});
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [hasAutoStarted, setHasAutoStarted] = useState(false);
+
+  // Auto-start edit mode when requested
+  React.useEffect(() => {
+    if (open && startInEditMode && item && !hasAutoStarted && item.status !== 'sold' && item.status !== 'traded') {
+      setEditData({
+        name: item.name,
+        size: item.size,
+        acquisitionCost: item.acquisitionCost,
+        askingPrice: item.askingPrice,
+        lowestAcceptablePrice: item.lowestAcceptablePrice,
+        status: item.status,
+        platform: item.platform,
+        notes: item.notes,
+        imageUrl: item.imageUrl,
+        inConvention: item.inConvention,
+      });
+      setIsEditing(true);
+      setHasAutoStarted(true);
+    }
+    if (!open) {
+      setHasAutoStarted(false);
+    }
+  }, [open, startInEditMode, item, hasAutoStarted]);
 
   if (!item) return null;
 
