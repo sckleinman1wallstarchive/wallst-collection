@@ -39,6 +39,7 @@ export function TradeItemDialog({
   availableItems,
   onTrade,
 }: TradeItemDialogProps) {
+  const [receivedOption, setReceivedOption] = useState<'new' | 'existing'>('new');
   const [selectedItemId, setSelectedItemId] = useState<string>('');
   const [cashDirection, setCashDirection] = useState<'paid' | 'received'>('paid');
   const [cashAmount, setCashAmount] = useState<string>('0');
@@ -50,9 +51,10 @@ export function TradeItemDialog({
     // Positive = you paid extra, Negative = they paid you extra
     const cashDifference = cashDirection === 'paid' ? cash : -cash;
     
-    onTrade(item.id, selectedItemId || null, cashDifference);
+    onTrade(item.id, receivedOption === 'existing' ? selectedItemId || null : null, cashDifference);
     
     // Reset state
+    setReceivedOption('new');
     setSelectedItemId('');
     setCashDirection('paid');
     setCashAmount('0');
@@ -78,24 +80,53 @@ export function TradeItemDialog({
         </DialogHeader>
 
         <div className="space-y-4 pt-4">
-          {/* Item received selection */}
+          {/* Item received - two options side by side */}
           <div className="space-y-2">
             <Label>Item Received</Label>
-            <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select item received in trade..." />
-              </SelectTrigger>
-              <SelectContent>
-                {selectableItems.map((i) => (
-                  <SelectItem key={i.id} value={i.id}>
-                    {i.name} {i.size ? `(${i.size})` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Select an existing item from your inventory that you received
-            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Add New Item */}
+              <Button
+                type="button"
+                variant={receivedOption === 'new' ? 'default' : 'outline'}
+                className="h-auto py-3 flex flex-col items-center gap-1"
+                onClick={() => {
+                  setReceivedOption('new');
+                  setSelectedItemId('');
+                }}
+              >
+                <Plus className="h-5 w-5" />
+                <span className="text-sm font-medium">Add New Item</span>
+                <span className="text-xs text-muted-foreground">Create after trade</span>
+              </Button>
+              
+              {/* Select Existing */}
+              <Button
+                type="button"
+                variant={receivedOption === 'existing' ? 'default' : 'outline'}
+                className="h-auto py-3 flex flex-col items-center gap-1"
+                onClick={() => setReceivedOption('existing')}
+              >
+                <ArrowRightLeft className="h-5 w-5" />
+                <span className="text-sm font-medium">Select Existing</span>
+                <span className="text-xs text-muted-foreground">From inventory</span>
+              </Button>
+            </div>
+            
+            {/* Dropdown only shows when "existing" is selected */}
+            {receivedOption === 'existing' && (
+              <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Select item received in trade..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectableItems.map((i) => (
+                    <SelectItem key={i.id} value={i.id}>
+                      {i.name} {i.size ? `(${i.size})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* Cash difference */}
@@ -146,7 +177,9 @@ export function TradeItemDialog({
           <div className="p-3 bg-muted rounded-lg space-y-1">
             <p className="text-sm font-medium">Trade Summary</p>
             <p className="text-xs text-muted-foreground">
-              {item.name} → {selectedItemId ? selectableItems.find(i => i.id === selectedItemId)?.name : '(no item selected)'}
+              {item.name} → {receivedOption === 'existing' && selectedItemId 
+                ? selectableItems.find(i => i.id === selectedItemId)?.name 
+                : '(will add new item after)'}
             </p>
             {parseFloat(cashAmount) > 0 && (
               <p className="text-xs">
