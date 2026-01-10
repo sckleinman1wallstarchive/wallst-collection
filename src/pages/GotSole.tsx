@@ -69,10 +69,19 @@ export default function GotSole() {
   const potentialProfit = totalGoalValue - totalCost;
   const potentialFloorProfit = totalFloorValue - totalCost;
 
-  // Calculate margins
-  const goalMargin = totalCost > 0 ? Math.round(((totalGoalValue - totalCost) / totalCost) * 100) : 0;
-  const floorMargin = totalCost > 0 ? Math.round(((totalFloorValue - totalCost) / totalCost) * 100) : 0;
-  const profitMargin = totalGoalValue > 0 ? Math.round((potentialProfit / totalGoalValue) * 100) : 0;
+  // Get items sold at convention (any item ever marked as in_convention that has been sold)
+  const soldConventionItems = inventory.filter(item => 
+    item.inConvention === true && 
+    (item.status === 'sold' || item.status === 'shipped')
+  );
+
+  // Calculate sold stats for Margin Analysis
+  const soldTotalSales = soldConventionItems.reduce((sum, item) => sum + (item.salePrice || 0), 0);
+  const soldCOGS = soldConventionItems.reduce((sum, item) => sum + item.acquisitionCost, 0);
+  const soldProfit = soldTotalSales - soldCOGS;
+  const soldProfitMargin = soldTotalSales > 0 ? Math.round((soldProfit / soldTotalSales) * 100) : 0;
+  const soldFloorMargin = soldCOGS > 0 ? Math.round(((soldConventionItems.reduce((sum, item) => sum + (item.lowestAcceptablePrice || 0), 0) - soldCOGS) / soldCOGS) * 100) : 0;
+  const soldGoalMargin = soldCOGS > 0 ? Math.round(((soldConventionItems.reduce((sum, item) => sum + (item.goalPrice || 0), 0) - soldCOGS) / soldCOGS) * 100) : 0;
 
   const eventDate = 'Saturday, January 11, 2025';
 
@@ -220,28 +229,28 @@ export default function GotSole() {
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div>
                 <span className="text-sm text-muted-foreground">Total Sales</span>
-                <p className="text-xl font-bold font-mono">${totalGoalValue.toLocaleString()}</p>
+                <p className="text-xl font-bold font-mono">${soldTotalSales.toLocaleString()}</p>
               </div>
               <div>
                 <span className="text-sm text-muted-foreground">COGS</span>
-                <p className="text-xl font-bold font-mono">${totalCost.toLocaleString()}</p>
+                <p className="text-xl font-bold font-mono">${soldCOGS.toLocaleString()}</p>
               </div>
               <div>
                 <span className="text-sm text-muted-foreground">Profit Margin</span>
-                <p className={`text-xl font-bold ${profitMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
-                  {profitMargin}%
+                <p className={`text-xl font-bold ${soldProfitMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
+                  {soldProfitMargin}%
                 </p>
               </div>
               <div>
                 <span className="text-sm text-muted-foreground">Floor Margin</span>
-                <p className={`text-xl font-bold ${floorMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
-                  {floorMargin}%
+                <p className={`text-xl font-bold ${soldFloorMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
+                  {soldFloorMargin}%
                 </p>
               </div>
               <div>
                 <span className="text-sm text-muted-foreground">Goal Margin</span>
-                <p className={`text-xl font-bold ${goalMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
-                  {goalMargin}%
+                <p className={`text-xl font-bold ${soldGoalMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
+                  {soldGoalMargin}%
                 </p>
               </div>
             </div>
