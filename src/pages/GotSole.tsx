@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Printer, Edit2, Package, DollarSign, TrendingDown, Settings2, Search, Percent } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -18,6 +19,7 @@ export default function GotSole() {
   const [sellDialogItem, setSellDialogItem] = useState<InventoryItem | null>(null);
   const [sellDialogOpen, setSellDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'active' | 'sold'>('active');
 
   // Filter for convention items only
   const conventionItems = getConventionItems();
@@ -48,8 +50,14 @@ export default function GotSole() {
     window.print();
   };
 
+  // Get sold convention items
+  const soldConventionItems = getConventionSoldItems();
+
+  // Determine which items to display based on view mode
+  const displayItems = viewMode === 'active' ? conventionItems : soldConventionItems;
+
   // Filter items by search query
-  const filteredItems = conventionItems.filter((item) => {
+  const filteredItems = displayItems.filter((item) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -68,9 +76,6 @@ export default function GotSole() {
   const totalGoalValue = conventionItems.reduce((sum, item) => sum + (item.goalPrice ?? item.askingPrice ?? 0), 0);
   const potentialProfit = totalGoalValue - totalCost;
   const potentialFloorProfit = totalFloorValue - totalCost;
-
-  // Get items sold at convention (any item ever marked for convention that has been sold)
-  const soldConventionItems = getConventionSoldItems();
 
   // Calculate sold stats for Margin Analysis
   const soldTotalSales = soldConventionItems.reduce((sum, item) => sum + (item.salePrice || 0), 0);
@@ -126,6 +131,16 @@ export default function GotSole() {
             <p className="text-muted-foreground">{eventDate}</p>
           </div>
           <div className="flex items-center gap-4">
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'active' | 'sold')}>
+              <TabsList>
+                <TabsTrigger value="active">
+                  Active ({conventionItems.length})
+                </TabsTrigger>
+                <TabsTrigger value="sold">
+                  Sold ({soldConventionItems.length})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -272,7 +287,7 @@ export default function GotSole() {
         {/* Search results info */}
         {searchQuery && (
           <p className="text-sm text-muted-foreground no-print">
-            Showing {filteredItems.length} of {conventionItems.length} items
+            Showing {filteredItems.length} of {displayItems.length} items
           </p>
         )}
 
