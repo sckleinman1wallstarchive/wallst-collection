@@ -341,7 +341,7 @@ export function useSupabaseInventory() {
 
   // Get all items ever in a convention that are now sold/shipped (for convention analytics)
   const getConventionSoldItems = () => inventory.filter((i) => 
-    i.everInConvention && (i.status === 'sold' || i.status === 'shipped')
+    i.everInConvention && i.status === 'sold'
   );
 
   return {

@@ -43,7 +43,7 @@ const statuses: { value: ItemStatus; label: string }[] = [
   { value: 'in-closet-spencer', label: 'In Closet (Spencer)' },
   { value: 'listed', label: 'For Sale' },
   { value: 'otw', label: 'OTW' },
-  { value: 'shipped', label: 'Shipped' },
+  
   { value: 'refunded', label: 'Refunded' },
   { value: 'scammed', label: 'Scammed' },
 ];

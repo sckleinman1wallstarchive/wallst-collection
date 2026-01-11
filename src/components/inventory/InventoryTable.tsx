@@ -33,13 +33,12 @@ interface InventoryTableProps {
   onUpdateItem?: (id: string, updates: Partial<InventoryItem>) => void;
 }
 
-const statusColors: Record<ItemStatus, string> = {
+const statusColors: Partial<Record<ItemStatus, string>> = {
   'in-closet': 'bg-muted text-muted-foreground',
   'in-closet-parker': 'bg-chart-1/20 text-chart-1',
   'in-closet-spencer': 'bg-chart-3/20 text-chart-3',
   'listed': 'bg-primary/10 text-primary',
   'sold': 'bg-chart-2/20 text-chart-2',
-  'shipped': 'bg-chart-1/20 text-chart-1',
   'otw': 'bg-chart-5/20 text-chart-5',
   'archive-hold': 'bg-accent text-accent-foreground',
   'scammed': 'bg-destructive/20 text-destructive',
@@ -47,13 +46,12 @@ const statusColors: Record<ItemStatus, string> = {
   'traded': 'bg-chart-4/20 text-chart-4',
 };
 
-const statusLabels: Record<ItemStatus, string> = {
+const statusLabels: Partial<Record<ItemStatus, string>> = {
   'in-closet': 'In Closet',
   'in-closet-parker': 'In Closet (Parker)',
   'in-closet-spencer': 'In Closet (Spencer)',
   'listed': 'For Sale',
   'sold': 'Sold',
-  'shipped': 'Shipped',
   'otw': 'OTW',
   'archive-hold': 'Archive',
   'scammed': 'Scammed',
