@@ -194,18 +194,58 @@ export const CashFlowStatement = ({ onBack }: CashFlowStatementProps) => {
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
-          <div className="flex justify-between items-center py-2 px-3">
-            <span className="text-sm">Spencer capital contribution</span>
-            <span className={`font-mono text-sm ${getAmountColor(financing.spencerContributions)}`}>
-              {formatCurrency(financing.spencerContributions)}
-            </span>
-          </div>
-          <div className="flex justify-between items-center py-2 px-3">
-            <span className="text-sm">Parker capital contribution</span>
-            <span className={`font-mono text-sm ${getAmountColor(financing.parkerContributions)}`}>
-              {formatCurrency(financing.parkerContributions)}
-            </span>
-          </div>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="spencer" className="border-none">
+              <AccordionTrigger className="py-2 hover:no-underline">
+                <div className="flex justify-between items-center w-full pr-4">
+                  <span className="text-sm">Spencer capital contribution</span>
+                  <span className={`font-mono text-sm font-medium ${getAmountColor(financing.spencerContributions)}`}>
+                    {formatCurrency(financing.spencerContributions)}
+                  </span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="pl-4 space-y-1 max-h-48 overflow-y-auto">
+                  {details.spencerContributions.length > 0 ? (
+                    details.spencerContributions.map((item, i) => (
+                      <div key={i} className="flex justify-between text-xs text-muted-foreground py-1 border-b border-border/50 last:border-0">
+                        <span className="truncate flex-1">{item.date} - {item.description}</span>
+                        <span className="font-mono ml-2">{formatCurrency(item.amount)}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">No contributions recorded</p>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="parker" className="border-none">
+              <AccordionTrigger className="py-2 hover:no-underline">
+                <div className="flex justify-between items-center w-full pr-4">
+                  <span className="text-sm">Parker capital contribution</span>
+                  <span className={`font-mono text-sm font-medium ${getAmountColor(financing.parkerContributions)}`}>
+                    {formatCurrency(financing.parkerContributions)}
+                  </span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="pl-4 space-y-1 max-h-48 overflow-y-auto">
+                  {details.parkerContributions.length > 0 ? (
+                    details.parkerContributions.map((item, i) => (
+                      <div key={i} className="flex justify-between text-xs text-muted-foreground py-1 border-b border-border/50 last:border-0">
+                        <span className="truncate flex-1">{item.date} - {item.description}</span>
+                        <span className="font-mono ml-2">{formatCurrency(item.amount)}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">No contributions recorded</p>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+          
           <div className="flex justify-between items-center py-2 px-3">
             <span className="text-sm text-muted-foreground">Partner distributions</span>
             <span className="font-mono text-sm">{formatCurrency(-financing.distributions)}</span>
