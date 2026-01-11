@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      allowed_emails: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+        }
+        Relationships: []
+      }
       capital_accounts: {
         Row: {
           cash_on_hand: number
@@ -234,7 +252,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_allowed_user: { Args: never; Returns: boolean }
     }
     Enums: {
       expense_category: "supplies" | "shipping" | "platform-fees" | "other"
