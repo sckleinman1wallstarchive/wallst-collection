@@ -311,6 +311,7 @@ export function useSupabaseInventory() {
     const active = getActiveItems();
     const scammed = inventory.filter((i) => i.status === 'scammed');
 
+    const totalSpent = inventory.reduce((sum, i) => sum + i.acquisitionCost, 0);
     const totalRevenue = sold.reduce((sum, i) => sum + (i.salePrice || 0), 0);
     const totalCostOfSold = sold.reduce((sum, i) => sum + i.acquisitionCost, 0);
     const totalProfit = totalRevenue - totalCostOfSold;
@@ -320,6 +321,7 @@ export function useSupabaseInventory() {
     const lostToScams = scammed.reduce((sum, i) => sum + i.acquisitionCost, 0);
 
     return {
+      totalSpent,
       totalRevenue,
       totalCostOfSold,
       totalProfit,

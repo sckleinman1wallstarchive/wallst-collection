@@ -75,7 +75,11 @@ const Analytics = () => {
         </div>
 
         {/* All-Time Totals */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <Card className="p-4">
+            <p className="text-xs text-muted-foreground">Total Spent</p>
+            <p className="text-xl font-semibold mt-1">{formatCurrency(summary.totalSpent)}</p>
+          </Card>
           <Card className="p-4">
             <p className="text-xs text-muted-foreground">Total Revenue</p>
             <p className="text-xl font-semibold mt-1">{formatCurrency(summary.totalRevenue)}</p>
