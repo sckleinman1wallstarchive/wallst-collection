@@ -2,6 +2,12 @@ import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+interface ContributionDetail {
+  date: string;
+  description: string;
+  amount: number;
+}
+
 interface CashFlowData {
   operating: {
     cashFromSales: number;
@@ -27,6 +33,8 @@ interface CashFlowData {
   details: {
     salesItems: Array<{ date: string; name: string; amount: number }>;
     purchaseItems: Array<{ date: string; name: string; amount: number }>;
+    spencerContributions: ContributionDetail[];
+    parkerContributions: ContributionDetail[];
   };
 }
 
@@ -43,6 +51,21 @@ export const useCashFlow = () => {
       
       if (error) throw error;
       return data;
+    },
+  });
+
+  // Fetch capital contribution transactions
+  const { data: contributionTransactions = [], isLoading: contributionsLoading } = useQuery({
+    queryKey: ['capital_contributions_for_cashflow'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('type', 'capital_contribution')
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
     },
   });
 
@@ -84,6 +107,23 @@ export const useCashFlow = () => {
   const distributions = 0; // Placeholder for future distributions tracking
   const netFinancing = spencerContributions + parkerContributions - distributions;
 
+  // Parse contribution details by partner
+  const spencerContributionDetails: ContributionDetail[] = contributionTransactions
+    .filter((t) => t.category === 'Spencer Kleinman')
+    .map((t) => ({
+      date: t.date,
+      description: t.description,
+      amount: Number(t.amount),
+    }));
+
+  const parkerContributionDetails: ContributionDetail[] = contributionTransactions
+    .filter((t) => t.category === 'Parker Kleinman')
+    .map((t) => ({
+      date: t.date,
+      description: t.description,
+      amount: Number(t.amount),
+    }));
+
   // Summary
   const netCashChange = netOperating + netInvesting + netFinancing;
   const beginningCash = 0; // Starting point
@@ -114,11 +154,13 @@ export const useCashFlow = () => {
     details: {
       salesItems,
       purchaseItems,
+      spencerContributions: spencerContributionDetails,
+      parkerContributions: parkerContributionDetails,
     },
   };
 
   return {
     cashFlowData,
-    isLoading: inventoryLoading || capitalLoading,
+    isLoading: inventoryLoading || capitalLoading || contributionsLoading,
   };
 };

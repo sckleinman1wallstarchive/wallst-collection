@@ -14,13 +14,15 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, Tooltip } from 'recharts';
-import { DollarSign, TrendingUp, Users, Package, FileText } from 'lucide-react';
+import { DollarSign, TrendingUp, Users, Package, FileText, PlusCircle } from 'lucide-react';
 import { CashFlowStatement } from '@/components/accounting/CashFlowStatement';
+import { RecordContributionDialog } from '@/components/accounting/RecordContributionDialog';
 
 type View = 'dashboard' | 'cash-flow';
 
 const Accounting = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
+  const [contributionDialogOpen, setContributionDialogOpen] = useState(false);
   const { inventory, isLoading, getSoldItems, getFinancialSummary } = useSupabaseInventory();
   const soldItems = getSoldItems();
   const summary = getFinancialSummary();
@@ -109,14 +111,24 @@ const Accounting = () => {
               Financial overview and P&L tracking
             </p>
           </div>
-          <Button 
-            variant="outline" 
-            onClick={() => setCurrentView('cash-flow')}
-            className="gap-2"
-          >
-            <FileText className="h-4 w-4" />
-            Statement of Cash Flows
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setContributionDialogOpen(true)}
+              className="gap-2"
+            >
+              <PlusCircle className="h-4 w-4" />
+              Record Contribution
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setCurrentView('cash-flow')}
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              Statement of Cash Flows
+            </Button>
+          </div>
         </div>
 
         {/* Key Financial Metrics */}
@@ -345,6 +357,11 @@ const Accounting = () => {
             )}
           </CardContent>
         </Card>
+
+        <RecordContributionDialog 
+          open={contributionDialogOpen} 
+          onOpenChange={setContributionDialogOpen} 
+        />
       </div>
     </DashboardLayout>
   );
