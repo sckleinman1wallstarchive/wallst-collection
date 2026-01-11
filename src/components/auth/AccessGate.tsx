@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import gateBackground from '@/assets/gate-background.png';
 
-const ACCESS_KEY = "kleinman";
+const ACCESS_KEY = "Winslowsp5";
 
 interface AccessGateProps {
   children: React.ReactNode;
