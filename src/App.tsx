@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Inventory from "./pages/Inventory";
 import GotSole from "./pages/GotSole";
+import Contacts from "./pages/Contacts";
 import Accounting from "./pages/Accounting";
 import Goals from "./pages/Goals";
 import Analytics from "./pages/Analytics";
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/got-sole" element={<GotSole />} />
+          <Route path="/contacts" element={<Contacts />} />
           <Route path="/accounting" element={<Accounting />} />
           <Route path="/goals" element={<Goals />} />
           <Route path="/analytics" element={<Analytics />} />
