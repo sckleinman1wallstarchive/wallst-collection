@@ -15,6 +15,7 @@ export function AccessGate({ children }: AccessGateProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +41,14 @@ export function AccessGate({ children }: AccessGateProps) {
     setIsSubmitting(true);
 
     try {
-      if (isSignUp) {
+      if (isForgotPassword) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}`,
+        });
+        if (error) throw error;
+        toast.success('Password reset email sent! Check your inbox.');
+        setIsForgotPassword(false);
+      } else if (isSignUp) {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -115,28 +123,30 @@ export function AccessGate({ children }: AccessGateProps) {
             />
           </div>
 
-          <div className="space-y-3">
-            <label 
-              htmlFor="password" 
-              className="block text-xs tracking-[0.2em] uppercase text-[#f5f5f0]/70 font-light"
-            >
-              Password
-            </label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setError(null);
-              }}
-              className="h-12 bg-transparent border-0 border-b-2 border-[#f5f5f0]/50 rounded-none px-0 text-lg font-light tracking-wide text-[#f5f5f0] focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#f5f5f0] placeholder:text-[#f5f5f0]/40"
-              placeholder="•••••••"
-              autoComplete={isSignUp ? 'new-password' : 'current-password'}
-              minLength={6}
-              required
-            />
-          </div>
+          {!isForgotPassword && (
+            <div className="space-y-3">
+              <label 
+                htmlFor="password" 
+                className="block text-xs tracking-[0.2em] uppercase text-[#f5f5f0]/70 font-light"
+              >
+                Password
+              </label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError(null);
+                }}
+                className="h-12 bg-transparent border-0 border-b-2 border-[#f5f5f0]/50 rounded-none px-0 text-lg font-light tracking-wide text-[#f5f5f0] focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#f5f5f0] placeholder:text-[#f5f5f0]/40"
+                placeholder="•••••••"
+                autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                minLength={6}
+                required
+              />
+            </div>
+          )}
 
           {error && (
             <p className="text-xs tracking-wide text-red-400 font-light">
@@ -152,21 +162,38 @@ export function AccessGate({ children }: AccessGateProps) {
             {isSubmitting ? (
               <div className="w-4 h-4 border-2 border-[#1a1a1a] border-t-transparent rounded-full animate-spin" />
             ) : (
-              isSignUp ? 'Create Account' : 'Sign In'
+              isForgotPassword ? 'Send Reset Email' : isSignUp ? 'Create Account' : 'Sign In'
             )}
           </Button>
+
+          {!isSignUp && !isForgotPassword && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsForgotPassword(true);
+                setError(null);
+              }}
+              className="w-full text-center text-xs tracking-[0.1em] text-[#f5f5f0]/60 hover:text-[#f5f5f0] font-light transition-colors"
+            >
+              Forgot password?
+            </button>
+          )}
         </form>
 
-        {/* Toggle sign up / sign in */}
+        {/* Toggle sign up / sign in / back */}
         <button
           type="button"
           onClick={() => {
-            setIsSignUp(!isSignUp);
+            if (isForgotPassword) {
+              setIsForgotPassword(false);
+            } else {
+              setIsSignUp(!isSignUp);
+            }
             setError(null);
           }}
           className="mt-6 w-full text-center text-xs tracking-[0.1em] text-[#f5f5f0]/60 hover:text-[#f5f5f0] font-light transition-colors"
         >
-          {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Create one"}
+          {isForgotPassword ? 'Back to sign in' : isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Create one"}
         </button>
 
         {/* Minimal footer */}
