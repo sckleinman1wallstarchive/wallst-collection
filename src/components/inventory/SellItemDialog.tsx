@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { InventoryItem } from '@/hooks/useSupabaseInventory';
 import {
   Dialog,
@@ -20,6 +20,13 @@ interface SellItemDialogProps {
 export function SellItemDialog({ item, open, onOpenChange, onSell }: SellItemDialogProps) {
   const [salePrice, setSalePrice] = useState('');
   const [soldTo, setSoldTo] = useState('');
+
+  // Pre-fill with asking price when item changes
+  useEffect(() => {
+    if (item && open) {
+      setSalePrice((item.askingPrice || 0).toString());
+    }
+  }, [item, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
