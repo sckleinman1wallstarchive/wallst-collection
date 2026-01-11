@@ -28,7 +28,7 @@ const statusLabels: Record<string, string> = {
   'otw': 'OTW',
   'refunded': 'Refunded',
   'traded': 'Traded',
-  'shipped': 'Shipped',
+  
   'archive-hold': 'Archive',
   'scammed': 'Scammed',
 };
@@ -120,7 +120,7 @@ const Inventory = () => {
     });
     
     // Order: active statuses first, then sold, then issues
-    const order = ['in-closet-parker', 'in-closet-spencer', 'in-closet', 'listed', 'otw', 'shipped', 'sold', 'traded', 'refunded', 'scammed', 'archive-hold'];
+    const order = ['in-closet-parker', 'in-closet-spencer', 'in-closet', 'listed', 'otw', 'sold', 'traded', 'refunded', 'scammed', 'archive-hold'];
     return order
       .filter(s => summaryMap.has(s))
       .map(s => summaryMap.get(s)!);
