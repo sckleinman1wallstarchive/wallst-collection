@@ -1,8 +1,10 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
+import { useExpenses } from '@/hooks/useExpenses';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -12,10 +14,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, Tooltip } from 'recharts';
-import { DollarSign, TrendingUp, Users, Package } from 'lucide-react';
+import { DollarSign, TrendingUp, Users, Package, Receipt } from 'lucide-react';
+import { ExpenseTrackerSheet } from '@/components/accounting/ExpenseTrackerSheet';
 
 const Accounting = () => {
   const { inventory, isLoading, getSoldItems, getFinancialSummary } = useSupabaseInventory();
+  const { totalExpenses, isLoading: expensesLoading } = useExpenses();
   const soldItems = getSoldItems();
   const summary = getFinancialSummary();
 
@@ -93,7 +97,7 @@ const Accounting = () => {
         </div>
 
         {/* Key Financial Metrics */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-muted rounded-lg">
@@ -116,6 +120,21 @@ const Accounting = () => {
               </div>
             </div>
           </Card>
+          <ExpenseTrackerSheet>
+            <Card className="p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-destructive/10 rounded-lg">
+                  <Receipt className="h-5 w-5 text-destructive" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total Spent</p>
+                  <p className="text-xl font-semibold text-destructive">
+                    {expensesLoading ? '...' : `-${formatCurrency(totalExpenses)}`}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </ExpenseTrackerSheet>
           <Card className="p-4 bg-chart-2/5 border-chart-2/20">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-chart-2/20 rounded-lg">
