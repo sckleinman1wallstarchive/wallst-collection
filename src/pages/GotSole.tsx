@@ -180,53 +180,85 @@ export default function GotSole() {
           <p className="text-center text-sm mb-4">{eventDate}</p>
         </div>
 
-        {/* Stats */}
+        {/* Stats (toggle with view mode) */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 no-print">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 text-muted-foreground text-xs">
                 <Package className="h-4 w-4" />
-                Items
+                {viewMode === 'active' ? 'Items' : 'Items Sold'}
               </div>
-              <p className="text-2xl font-bold mt-1">{totalItems}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                <DollarSign className="h-4 w-4" />
-                Total Cost
-              </div>
-              <p className="text-2xl font-bold mt-1 font-mono">${totalCost.toLocaleString()}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                <DollarSign className="h-4 w-4" />
-                List Value
-              </div>
-              <p className="text-2xl font-bold mt-1 font-mono">${totalListValue.toLocaleString()}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                <TrendingDown className="h-4 w-4" />
-                Floor Value
-              </div>
-              <p className="text-2xl font-bold mt-1 font-mono">${totalFloorValue.toLocaleString()}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                <DollarSign className="h-4 w-4" />
-                Goal Profit
-              </div>
-              <p className={`text-2xl font-bold mt-1 font-mono ${potentialProfit >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
-                {potentialProfit >= 0 ? '+' : ''}${potentialProfit.toLocaleString()}
+              <p className="text-2xl font-bold mt-1">
+                {viewMode === 'active' ? totalItems : soldConventionItems.length}
               </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                <DollarSign className="h-4 w-4" />
+                {viewMode === 'active' ? 'Total Cost' : 'COGS'}
+              </div>
+              <p className="text-2xl font-bold mt-1 font-mono">
+                ${viewMode === 'active' ? totalCost.toLocaleString() : soldCOGS.toLocaleString()}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                <DollarSign className="h-4 w-4" />
+                {viewMode === 'active' ? 'List Value' : 'Total Sales'}
+              </div>
+              <p className="text-2xl font-bold mt-1 font-mono">
+                ${viewMode === 'active' ? totalListValue.toLocaleString() : soldTotalSales.toLocaleString()}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                {viewMode === 'active' ? (
+                  <TrendingDown className="h-4 w-4" />
+                ) : (
+                  <DollarSign className="h-4 w-4" />
+                )}
+                {viewMode === 'active' ? 'Floor Value' : 'Profit'}
+              </div>
+              {viewMode === 'active' ? (
+                <p className="text-2xl font-bold mt-1 font-mono">${totalFloorValue.toLocaleString()}</p>
+              ) : (
+                <p
+                  className={`text-2xl font-bold mt-1 font-mono ${soldProfit >= 0 ? 'text-chart-2' : 'text-destructive'}`}
+                >
+                  {soldProfit >= 0 ? '+' : ''}${soldProfit.toLocaleString()}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                <Percent className="h-4 w-4" />
+                {viewMode === 'active' ? 'Goal Profit' : 'Profit Margin'}
+              </div>
+              {viewMode === 'active' ? (
+                <p
+                  className={`text-2xl font-bold mt-1 font-mono ${potentialProfit >= 0 ? 'text-chart-2' : 'text-destructive'}`}
+                >
+                  {potentialProfit >= 0 ? '+' : ''}${potentialProfit.toLocaleString()}
+                </p>
+              ) : (
+                <p
+                  className={`text-2xl font-bold mt-1 ${soldProfitMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}
+                >
+                  {soldProfitMargin}%
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
