@@ -9,6 +9,7 @@ import {
   FileText,
   Calculator,
   Ticket,
+  Users,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -27,6 +28,7 @@ const navigation = [
   { title: 'Overview', url: '/', icon: LayoutDashboard },
   { title: 'Inventory', url: '/inventory', icon: Package },
   { title: 'Got Sole', url: '/got-sole', icon: Ticket },
+  { title: 'Contacts', url: '/contacts', icon: Users },
   { title: 'Accounting', url: '/accounting', icon: Calculator },
   { title: 'Goals', url: '/goals', icon: Target },
   { title: 'Analytics', url: '/analytics', icon: BarChart3 },
