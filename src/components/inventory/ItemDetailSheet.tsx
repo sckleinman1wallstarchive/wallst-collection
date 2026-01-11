@@ -22,9 +22,9 @@ import {
 import { Trash2, DollarSign, Save, ImagePlus, X, Loader2, ArrowRightLeft, CalendarCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { PlatformMultiSelect } from './PlatformMultiSelect';
 
 type ItemStatus = Database['public']['Enums']['item_status'];
-type Platform = Database['public']['Enums']['platform'];
 
 interface ItemDetailSheetProps {
   item: InventoryItem | null;
@@ -47,18 +47,6 @@ const statuses: { value: ItemStatus; label: string }[] = [
   { value: 'refunded', label: 'Refunded' },
   { value: 'scammed', label: 'Scammed' },
 ];
-
-const platforms: { value: Platform; label: string }[] = [
-  { value: 'none', label: 'Not Listed' },
-  { value: 'grailed', label: 'Grailed' },
-  { value: 'depop', label: 'Depop' },
-  { value: 'ebay', label: 'eBay' },
-  { value: 'poshmark', label: 'Poshmark' },
-  { value: 'vinted', label: 'Vinted' },
-  { value: 'mercari', label: 'Mercari' },
-  { value: 'trade', label: 'Trade' },
-];
-
 export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, onSell, onTrade, allItems = [], startInEditMode = false }: ItemDetailSheetProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<InventoryItem>>({});
@@ -76,7 +64,7 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
         askingPrice: item.askingPrice,
         lowestAcceptablePrice: item.lowestAcceptablePrice,
         status: item.status,
-        platform: item.platform,
+        platforms: item.platforms || [],
         notes: item.notes,
         imageUrl: item.imageUrl,
         inConvention: item.inConvention,
@@ -144,7 +132,7 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
       askingPrice: item.askingPrice,
       lowestAcceptablePrice: item.lowestAcceptablePrice,
       status: item.status,
-      platform: item.platform,
+      platforms: item.platforms || [],
       notes: item.notes,
       imageUrl: item.imageUrl,
       inConvention: item.inConvention,
@@ -370,26 +358,19 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
                 <Input type="number" value={editData.lowestAcceptablePrice || ''} onChange={(e) => setEditData({ ...editData, lowestAcceptablePrice: parseFloat(e.target.value) })} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Status</Label>
-                <Select value={editData.status} onValueChange={(value: ItemStatus) => setEditData({ ...editData, status: value })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {statuses.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Platform</Label>
-                <Select value={editData.platform} onValueChange={(value: Platform) => setEditData({ ...editData, platform: value })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {platforms.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label>Status</Label>
+              <Select value={editData.status} onValueChange={(value: ItemStatus) => setEditData({ ...editData, status: value })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {statuses.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
+            <PlatformMultiSelect
+              value={editData.platforms || []}
+              onChange={(platforms) => setEditData({ ...editData, platforms })}
+            />
             <div>
               <Label>Notes</Label>
               <Textarea value={editData.notes || ''} onChange={(e) => setEditData({ ...editData, notes: e.target.value })} rows={3} />

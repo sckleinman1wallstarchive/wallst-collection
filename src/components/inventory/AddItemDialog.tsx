@@ -22,9 +22,9 @@ import {
 import { Plus, ImagePlus, X, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { PlatformMultiSelect } from './PlatformMultiSelect';
 
 type ItemStatus = Database['public']['Enums']['item_status'];
-type Platform = Database['public']['Enums']['platform'];
 
 interface AddItemDialogProps {
   onAdd: (item: Partial<InventoryItem>) => void;
@@ -39,16 +39,6 @@ const statuses: { value: ItemStatus; label: string }[] = [
   { value: 'traded', label: 'Traded' },
 ];
 
-const platforms: { value: Platform; label: string }[] = [
-  { value: 'none', label: 'Not Listed' },
-  { value: 'grailed', label: 'Grailed' },
-  { value: 'depop', label: 'Depop' },
-  { value: 'ebay', label: 'eBay' },
-  { value: 'poshmark', label: 'Poshmark' },
-  { value: 'vinted', label: 'Vinted' },
-  { value: 'mercari', label: 'Mercari' },
-];
-
 export function AddItemDialog({ onAdd }: AddItemDialogProps) {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -58,7 +48,7 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
     askingPrice: '',
     lowestAcceptablePrice: '',
     status: 'in-closet-parker' as ItemStatus,
-    platform: 'none' as Platform,
+    platforms: [] as string[],
     sourcePlatform: '',
     notes: '',
     imageUrl: null as string | null,
@@ -123,7 +113,7 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
       askingPrice: asking || cost * 2,
       lowestAcceptablePrice: lowest || cost * 1.5,
       status: formData.status,
-      platform: formData.platform,
+      platforms: formData.platforms,
       sourcePlatform: formData.sourcePlatform || null,
       notes: formData.notes || null,
       dateAdded: new Date().toISOString().split('T')[0],
@@ -137,7 +127,7 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
       askingPrice: '',
       lowestAcceptablePrice: '',
       status: 'in-closet-parker',
-      platform: 'none',
+      platforms: [],
       sourcePlatform: '',
       notes: '',
       imageUrl: null,
@@ -259,19 +249,18 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
               </Select>
             </div>
             <div>
-              <Label htmlFor="platform">Listed On</Label>
-              <Select value={formData.platform} onValueChange={(value: Platform) => setFormData({ ...formData, platform: value })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {platforms.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="sourcePlatform">Sourced From</Label>
+              <Input id="sourcePlatform" value={formData.sourcePlatform} onChange={(e) => setFormData({ ...formData, sourcePlatform: e.target.value })} placeholder="e.g. Grailed, Estate Sale" />
             </div>
           </div>
 
+          <PlatformMultiSelect
+            value={formData.platforms}
+            onChange={(platforms) => setFormData({ ...formData, platforms })}
+          />
           <div>
-            <Label htmlFor="sourcePlatform">Sourced From</Label>
-            <Input id="sourcePlatform" value={formData.sourcePlatform} onChange={(e) => setFormData({ ...formData, sourcePlatform: e.target.value })} placeholder="e.g. Grailed, Estate Sale, Trade" />
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea id="notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Season, condition, sizing notes, comps..." rows={3} />
           </div>
 
           <div>
