@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { ContactList } from '@/components/contacts/ContactList';
 import { AddContactDialog } from '@/components/contacts/AddContactDialog';
-import { MessageComposer } from '@/components/contacts/MessageComposer';
 import { useContacts, Contact, ContactInsert } from '@/hooks/useContacts';
 import { Button } from '@/components/ui/button';
 import { UserPlus } from 'lucide-react';
@@ -23,8 +22,6 @@ export default function Contacts() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-
-  const selectedContacts = contacts.filter((c) => selectedIds.includes(c.id));
 
   const handleEdit = (contact: Contact) => {
     setEditingContact(contact);
@@ -54,20 +51,6 @@ export default function Contacts() {
     }
   };
 
-  const openInstagramProfiles = () => {
-    const instagramContacts = selectedContacts.filter((c) => c.instagram_handle);
-    instagramContacts.forEach((contact) => {
-      window.open(`https://instagram.com/${contact.instagram_handle}`, '_blank');
-    });
-  };
-
-  const openIMessages = () => {
-    const phoneContacts = selectedContacts.filter((c) => c.phone_number);
-    phoneContacts.forEach((contact) => {
-      window.open(`sms:${contact.phone_number}`, '_blank');
-    });
-  };
-
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -86,7 +69,7 @@ export default function Contacts() {
           <div>
             <h1 className="text-2xl font-semibold">Contacts</h1>
             <p className="text-sm text-muted-foreground">
-              Manage buyer contacts and send bulk messages
+              Manage buyer contacts
             </p>
           </div>
           <Button onClick={() => setDialogOpen(true)}>
@@ -95,27 +78,15 @@ export default function Contacts() {
           </Button>
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Left Panel - Contact List */}
-          <div className="w-1/2 border-r border-border overflow-hidden">
-            <ContactList
-              contacts={contacts}
-              selectedIds={selectedIds}
-              onSelectionChange={setSelectedIds}
-              onEdit={handleEdit}
-              onDelete={setDeleteConfirmId}
-            />
-          </div>
-
-          {/* Right Panel - Message Composer */}
-          <div className="w-1/2 overflow-auto">
-            <MessageComposer
-              selectedContacts={selectedContacts}
-              onOpenInstagramProfiles={openInstagramProfiles}
-              onOpenIMessages={openIMessages}
-            />
-          </div>
+        {/* Contact List */}
+        <div className="flex-1 overflow-hidden">
+          <ContactList
+            contacts={contacts}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
+            onEdit={handleEdit}
+            onDelete={setDeleteConfirmId}
+          />
         </div>
       </div>
 
