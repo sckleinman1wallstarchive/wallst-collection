@@ -1,6 +1,6 @@
+import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
-import { useExpenses } from '@/hooks/useExpenses';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,12 +14,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, Tooltip } from 'recharts';
-import { DollarSign, TrendingUp, Users, Package, Receipt } from 'lucide-react';
-import { ExpenseTrackerSheet } from '@/components/accounting/ExpenseTrackerSheet';
+import { DollarSign, TrendingUp, Users, Package, FileText } from 'lucide-react';
+import { CashFlowStatement } from '@/components/accounting/CashFlowStatement';
+
+type View = 'dashboard' | 'cash-flow';
 
 const Accounting = () => {
+  const [currentView, setCurrentView] = useState<View>('dashboard');
   const { inventory, isLoading, getSoldItems, getFinancialSummary } = useSupabaseInventory();
-  const { totalExpenses, isLoading: expensesLoading } = useExpenses();
   const soldItems = getSoldItems();
   const summary = getFinancialSummary();
 
@@ -86,18 +88,39 @@ const Accounting = () => {
     );
   }
 
+  // Render Cash Flow Statement view
+  if (currentView === 'cash-flow') {
+    return (
+      <DashboardLayout>
+        <div className="max-w-4xl mx-auto">
+          <CashFlowStatement onBack={() => setCurrentView('dashboard')} />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Accounting</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Financial overview and P&L tracking
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Accounting</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Financial overview and P&L tracking
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => setCurrentView('cash-flow')}
+            className="gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Statement of Cash Flows
+          </Button>
         </div>
 
         {/* Key Financial Metrics */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-muted rounded-lg">
@@ -120,21 +143,6 @@ const Accounting = () => {
               </div>
             </div>
           </Card>
-          <ExpenseTrackerSheet>
-            <Card className="p-4 cursor-pointer hover:bg-muted/50 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-destructive/10 rounded-lg">
-                  <Receipt className="h-5 w-5 text-destructive" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Total Spent</p>
-                  <p className="text-xl font-semibold text-destructive">
-                    {expensesLoading ? '...' : `-${formatCurrency(totalExpenses)}`}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </ExpenseTrackerSheet>
           <Card className="p-4 bg-chart-2/5 border-chart-2/20">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-chart-2/20 rounded-lg">
