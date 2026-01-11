@@ -21,6 +21,7 @@ export interface InventoryItem {
   status: Database['public']['Enums']['item_status'];
   daysHeld: number | null;
   platform: Database['public']['Enums']['platform'];
+  platforms: string[];
   platformSold: Database['public']['Enums']['platform'] | null;
   sourcePlatform: string | null;
   source: string | null;
@@ -49,6 +50,7 @@ const toAppItem = (row: DbInventoryItem): InventoryItem => ({
   status: row.status,
   daysHeld: row.days_held,
   platform: row.platform,
+  platforms: (row as any).platforms || [],
   platformSold: row.platform_sold,
   sourcePlatform: row.source_platform,
   source: row.source,
@@ -76,6 +78,7 @@ const toDbInsert = (item: Partial<InventoryItem>): DbInsertItem => ({
   status: item.status || 'in-closet-parker',
   days_held: item.daysHeld,
   platform: item.platform || 'none',
+  platforms: item.platforms || [],
   platform_sold: item.platformSold,
   source_platform: item.sourcePlatform,
   source: item.source,
@@ -104,6 +107,7 @@ const toDbUpdate = (item: Partial<InventoryItem>): DbUpdateItem => {
   if (item.status !== undefined) update.status = item.status;
   if (item.daysHeld !== undefined) update.days_held = item.daysHeld;
   if (item.platform !== undefined) update.platform = item.platform;
+  if (item.platforms !== undefined) update.platforms = item.platforms;
   if (item.platformSold !== undefined) update.platform_sold = item.platformSold;
   if (item.sourcePlatform !== undefined) update.source_platform = item.sourcePlatform;
   if (item.source !== undefined) update.source = item.source;
