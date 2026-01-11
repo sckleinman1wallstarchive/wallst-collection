@@ -231,41 +231,66 @@ export default function GotSole() {
           </Card>
         </div>
 
-        {/* Margin Analysis Bar */}
+        {/* Margin Analysis Bar - toggles based on view mode */}
         <Card className="no-print">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-3">
               <Percent className="h-4 w-4" />
-              Margin Analysis
+              {viewMode === 'active' ? 'Projected Margins' : 'Sold Statistics'}
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div>
-                <span className="text-sm text-muted-foreground">Total Sales</span>
-                <p className="text-xl font-bold font-mono">${soldTotalSales.toLocaleString()}</p>
+            {viewMode === 'active' ? (
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div>
+                  <span className="text-sm text-muted-foreground">Total Cost</span>
+                  <p className="text-xl font-bold font-mono">${totalCost.toLocaleString()}</p>
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">List Value</span>
+                  <p className="text-xl font-bold font-mono">${totalListValue.toLocaleString()}</p>
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">Goal Value</span>
+                  <p className="text-xl font-bold font-mono">${totalGoalValue.toLocaleString()}</p>
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">Floor Value</span>
+                  <p className="text-xl font-bold font-mono">${totalFloorValue.toLocaleString()}</p>
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">Goal Profit</span>
+                  <p className={`text-xl font-bold ${potentialProfit >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
+                    {potentialProfit >= 0 ? '+' : ''}${potentialProfit.toLocaleString()}
+                  </p>
+                </div>
               </div>
-              <div>
-                <span className="text-sm text-muted-foreground">COGS</span>
-                <p className="text-xl font-bold font-mono">${soldCOGS.toLocaleString()}</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div>
+                  <span className="text-sm text-muted-foreground">Total Sales</span>
+                  <p className="text-xl font-bold font-mono">${soldTotalSales.toLocaleString()}</p>
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">COGS</span>
+                  <p className="text-xl font-bold font-mono">${soldCOGS.toLocaleString()}</p>
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">Profit</span>
+                  <p className={`text-xl font-bold font-mono ${soldProfit >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
+                    {soldProfit >= 0 ? '+' : ''}${soldProfit.toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">Profit Margin</span>
+                  <p className={`text-xl font-bold ${soldProfitMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
+                    {soldProfitMargin}%
+                  </p>
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">Items Sold</span>
+                  <p className="text-xl font-bold">{soldConventionItems.length}</p>
+                </div>
               </div>
-              <div>
-                <span className="text-sm text-muted-foreground">Profit Margin</span>
-                <p className={`text-xl font-bold ${soldProfitMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
-                  {soldProfitMargin}%
-                </p>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground">Floor Margin</span>
-                <p className={`text-xl font-bold ${soldFloorMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
-                  {soldFloorMargin}%
-                </p>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground">Goal Margin</span>
-                <p className={`text-xl font-bold ${soldGoalMargin >= 0 ? 'text-chart-2' : 'text-destructive'}`}>
-                  {soldGoalMargin}%
-                </p>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
