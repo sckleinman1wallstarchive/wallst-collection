@@ -134,8 +134,8 @@ export function AssignPurchasesDialog({ open, onOpenChange }: AssignPurchasesDia
           )}
         </div>
 
-        <ScrollArea className="flex-1 min-h-0 max-h-[300px]">
-          <div className="space-y-1">
+        <ScrollArea className="flex-1 min-h-0 h-[300px]">
+          <div className="space-y-1 pr-4">
             {unassignedItems.map((item) => (
               <div
                 key={item.id}
@@ -149,9 +149,20 @@ export function AssignPurchasesDialog({ open, onOpenChange }: AssignPurchasesDia
                     {item.brand} • {item.dateAdded || 'No date'}
                   </p>
                 </div>
-                <span className="text-sm font-mono text-muted-foreground">
-                  {formatCurrency(item.acquisitionCost)}
-                </span>
+                <div className="flex items-center gap-2">
+                  {item.paidBy === 'Spencer Kleinman' && (
+                    <Badge variant="outline" className="text-xs">Spencer</Badge>
+                  )}
+                  {item.paidBy === 'Parker Kleinman' && (
+                    <Badge variant="outline" className="text-xs">Parker</Badge>
+                  )}
+                  {item.paidBy === 'Shared' && (
+                    <Badge className="text-xs bg-blue-500/20 text-blue-500 border-0">WSA</Badge>
+                  )}
+                  <span className="text-sm font-mono text-muted-foreground">
+                    {formatCurrency(item.acquisitionCost)}
+                  </span>
+                </div>
               </div>
             ))}
             {unassignedItems.length === 0 && (
@@ -162,32 +173,43 @@ export function AssignPurchasesDialog({ open, onOpenChange }: AssignPurchasesDia
           </div>
         </ScrollArea>
 
-        <div className="flex justify-between gap-2 pt-4 border-t border-border">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
+        <div className="flex flex-col gap-3 pt-4 border-t border-border">
+          <div className="text-xs text-muted-foreground font-medium">
+            Personal Purchases (before shared account)
+          </div>
           <div className="flex gap-2">
             <Button
               variant="outline"
+              className="flex-1"
               onClick={() => handleAssign('Spencer Kleinman')}
               disabled={selectedIds.size === 0 || isAssigning}
             >
-              Assign to Spencer
+              Spencer Paid
             </Button>
             <Button
               variant="outline"
+              className="flex-1"
               onClick={() => handleAssign('Parker Kleinman')}
               disabled={selectedIds.size === 0 || isAssigning}
             >
-              Assign to Parker
-            </Button>
-            <Button
-              onClick={() => handleAssign('Shared')}
-              disabled={selectedIds.size === 0 || isAssigning}
-            >
-              Mark as Shared
+              Parker Paid
             </Button>
           </div>
+          
+          <div className="text-xs text-muted-foreground font-medium pt-2">
+            Shared Account (WSA Bank)
+          </div>
+          <Button
+            onClick={() => handleAssign('Shared')}
+            disabled={selectedIds.size === 0 || isAssigning}
+            className="w-full"
+          >
+            Mark as Shared (WSA Account)
+          </Button>
+          
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
