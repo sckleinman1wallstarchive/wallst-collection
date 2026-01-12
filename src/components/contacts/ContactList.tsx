@@ -51,11 +51,19 @@ export function ContactList({
   };
 
   const openInstagram = (handle: string) => {
-    window.open(`https://instagram.com/${handle}`, '_blank');
+    // Sanitize handle to prevent injection
+    const sanitized = handle.replace(/[^a-zA-Z0-9._]/g, '');
+    if (sanitized && sanitized.length <= 30) {
+      window.open(`https://instagram.com/${encodeURIComponent(sanitized)}`, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const openIMessage = (phone: string) => {
-    window.open(`sms:${phone}`, '_self');
+    // Sanitize phone to prevent injection - only allow digits, +, -, spaces, parentheses
+    const sanitized = phone.replace(/[^\d+\-\s()]/g, '');
+    if (sanitized) {
+      window.open(`sms:${encodeURIComponent(sanitized)}`, '_self');
+    }
   };
 
   return (

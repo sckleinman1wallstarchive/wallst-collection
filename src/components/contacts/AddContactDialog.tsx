@@ -22,11 +22,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 
 const formSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  instagram_handle: z.string().optional(),
-  phone_number: z.string().optional(),
-  email: z.string().email().optional().or(z.literal('')),
-  notes: z.string().optional(),
+  name: z.string().min(1, 'Name is required').max(100, 'Name must be less than 100 characters'),
+  instagram_handle: z
+    .string()
+    .regex(/^[a-zA-Z0-9._]{0,30}$/, 'Invalid Instagram handle (letters, numbers, periods, underscores only, max 30 chars)')
+    .optional()
+    .or(z.literal('')),
+  phone_number: z.string().max(20, 'Phone number too long').optional(),
+  email: z.string().email('Invalid email address').max(255, 'Email too long').optional().or(z.literal('')),
+  notes: z.string().max(1000, 'Notes must be less than 1000 characters').optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;

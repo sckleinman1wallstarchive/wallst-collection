@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { mapDatabaseError } from '@/lib/errorHandler';
 
 export interface Contact {
   id: string;
@@ -55,7 +56,7 @@ export function useContacts() {
     onError: (error) => {
       toast({
         title: 'Failed to add contact',
-        description: error.message,
+        description: mapDatabaseError(error),
         variant: 'destructive',
       });
     },
@@ -80,7 +81,7 @@ export function useContacts() {
     onError: (error) => {
       toast({
         title: 'Failed to update contact',
-        description: error.message,
+        description: mapDatabaseError(error),
         variant: 'destructive',
       });
     },
@@ -98,7 +99,7 @@ export function useContacts() {
     onError: (error) => {
       toast({
         title: 'Failed to delete contact',
-        description: error.message,
+        description: mapDatabaseError(error),
         variant: 'destructive',
       });
     },

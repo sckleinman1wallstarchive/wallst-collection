@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
 import {
   LayoutDashboard,
@@ -10,6 +10,7 @@ import {
   Calculator,
   Ticket,
   Users,
+  LogOut,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -21,8 +22,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const navigation = [
   { title: 'Overview', url: '/', icon: LayoutDashboard },
@@ -40,6 +45,16 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error('Failed to sign out');
+    } else {
+      navigate('/');
+    }
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -82,6 +97,16 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="border-t border-sidebar-border p-2">
+        <Button
+          variant="ghost"
+          onClick={handleLogout}
+          className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+        >
+          <LogOut className="h-4 w-4" />
+          {!collapsed && <span>Sign Out</span>}
+        </Button>
+      </SidebarFooter>
     </Sidebar>
   );
 }
