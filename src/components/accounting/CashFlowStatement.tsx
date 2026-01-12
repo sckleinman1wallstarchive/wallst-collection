@@ -114,7 +114,7 @@ export const CashFlowStatement = ({ onBack }: CashFlowStatementProps) => {
             <AccordionItem value="purchases" className="border-none">
               <AccordionTrigger className="py-2 hover:no-underline">
                 <div className="flex justify-between items-center w-full pr-4">
-                  <span className="text-sm">Cash paid for inventory</span>
+                  <span className="text-sm">Cash paid for inventory (WSA Account)</span>
                   <span className={`font-mono text-sm font-medium ${getAmountColor(-operating.cashPaidForInventory)}`}>
                     {formatCurrency(-operating.cashPaidForInventory)}
                   </span>
@@ -122,15 +122,15 @@ export const CashFlowStatement = ({ onBack }: CashFlowStatementProps) => {
               </AccordionTrigger>
               <AccordionContent>
                 <div className="pl-4 space-y-1 max-h-48 overflow-y-auto">
-                  {details.purchaseItems.length > 0 ? (
-                    details.purchaseItems.map((item, i) => (
+                  {details.wsaPurchaseItems && details.wsaPurchaseItems.length > 0 ? (
+                    details.wsaPurchaseItems.map((item, i) => (
                       <div key={i} className="flex justify-between text-xs text-muted-foreground py-1 border-b border-border/50 last:border-0">
                         <span className="truncate flex-1">{item.date} - {item.name}</span>
                         <span className="font-mono ml-2">{formatCurrency(item.amount)}</span>
                       </div>
                     ))
                   ) : (
-                    <p className="text-xs text-muted-foreground italic">No purchases recorded</p>
+                    <p className="text-xs text-muted-foreground italic">No WSA purchases recorded</p>
                   )}
                 </div>
               </AccordionContent>
@@ -271,10 +271,39 @@ export const CashFlowStatement = ({ onBack }: CashFlowStatementProps) => {
             </AccordionItem>
           </Accordion>
           
-          <div className="flex justify-between items-center py-2 px-3">
-            <span className="text-sm text-muted-foreground">Partner distributions</span>
-            <span className="font-mono text-sm">{formatCurrency(-financing.distributions)}</span>
-          </div>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="distributions" className="border-none">
+              <AccordionTrigger className="py-2 hover:no-underline">
+                <div className="flex justify-between items-center w-full pr-4">
+                  <span className="text-sm">Distributions to Partners</span>
+                  <span className={`font-mono text-sm font-medium ${getAmountColor(-financing.distributions)}`}>
+                    {formatCurrency(-financing.distributions)}
+                  </span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="pl-4 space-y-2 text-xs text-muted-foreground">
+                  <p className="italic">
+                    Revenue paid directly to partners and spent (not retained in WSA account)
+                  </p>
+                  <div className="space-y-1 pt-2 border-t border-border/50">
+                    <div className="flex justify-between">
+                      <span>Expected cash (based on activity)</span>
+                      <span className="font-mono">{formatCurrency(summary.expectedCash)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Actual cash on hand</span>
+                      <span className="font-mono">{formatCurrency(summary.endingCash)}</span>
+                    </div>
+                    <div className="flex justify-between font-medium pt-1 border-t border-border/50">
+                      <span>Difference (distributed)</span>
+                      <span className="font-mono">{formatCurrency(financing.distributions)}</span>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
           
           <Separator className="my-2" />
           <div className="flex justify-between items-center py-2 bg-muted/50 px-3 rounded-md">
