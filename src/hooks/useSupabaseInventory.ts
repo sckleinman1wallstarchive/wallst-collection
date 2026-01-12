@@ -33,6 +33,7 @@ export interface InventoryItem {
   everInConvention: boolean;
   tradedForItemId: string | null;
   tradeCashDifference: number | null;
+  paidBy: Database['public']['Enums']['item_owner'] | null;
 }
 
 // Transform database row to app format
@@ -62,6 +63,7 @@ const toAppItem = (row: DbInventoryItem): InventoryItem => ({
   everInConvention: (row as any).ever_in_convention || false,
   tradedForItemId: (row as any).traded_for_item_id || null,
   tradeCashDifference: (row as any).trade_cash_difference || null,
+  paidBy: row.paid_by,
 });
 
 // Transform app format to database insert format
