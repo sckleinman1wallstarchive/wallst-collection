@@ -74,6 +74,10 @@ export function AssignPurchasesDialog({ open, onOpenChange }: AssignPurchasesDia
 
     setIsAssigning(true);
     try {
+      // Get the selected items with their details
+      const selectedItems = unassignedItems.filter((item) => selectedIds.has(item.id));
+
+      // Update inventory items with paid_by
       const { error } = await supabase
         .from('inventory_items')
         .update({ paid_by: owner })
@@ -81,9 +85,64 @@ export function AssignPurchasesDialog({ open, onOpenChange }: AssignPurchasesDia
 
       if (error) throw error;
 
+      // If assigned to Spencer or Parker (personal purchase), create contribution entries
+      if (owner !== 'Shared') {
+        // Check for existing contribution entries to avoid duplicates
+        const { data: existingContributions } = await supabase
+          .from('transactions')
+          .select('reference')
+          .eq('type', 'capital_contribution')
+          .in('reference', Array.from(selectedIds));
+
+        const existingRefs = new Set((existingContributions || []).map((c) => c.reference));
+
+        // Create contribution entries for items that don't already have one
+        const newContributions = selectedItems
+          .filter((item) => !existingRefs.has(item.id))
+          .map((item) => ({
+            type: 'capital_contribution' as const,
+            category: owner,
+            amount: item.acquisitionCost,
+            date: item.dateAdded || new Date().toISOString().split('T')[0],
+            description: `Purchase: ${item.name}`,
+            reference: item.id,
+          }));
+
+        if (newContributions.length > 0) {
+          const { error: txError } = await supabase
+            .from('transactions')
+            .insert(newContributions);
+
+          if (txError) throw txError;
+
+          // Update capital_accounts with the total
+          const totalAmount = newContributions.reduce((sum, c) => sum + c.amount, 0);
+
+          const { data: account } = await supabase
+            .from('capital_accounts')
+            .select('*')
+            .maybeSingle();
+
+          if (account) {
+            const isSpencer = owner === 'Spencer Kleinman';
+            const updateData = isSpencer
+              ? { spencer_investment: Number(account.spencer_investment) + totalAmount }
+              : { parker_investment: Number(account.parker_investment) + totalAmount };
+
+            await supabase
+              .from('capital_accounts')
+              .update(updateData)
+              .eq('id', account.id);
+          }
+        }
+      }
+
       toast.success(`Assigned ${selectedIds.size} items to ${owner === 'Shared' ? 'Shared' : owner.split(' ')[0]}`);
       setSelectedIds(new Set());
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['capital_contributions'] });
+      queryClient.invalidateQueries({ queryKey: ['capital_contributions_for_cashflow'] });
+      queryClient.invalidateQueries({ queryKey: ['capital_accounts'] });
     } catch (error: any) {
       toast.error('Failed to assign items: ' + error.message);
     } finally {

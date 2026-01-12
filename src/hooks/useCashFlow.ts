@@ -38,10 +38,12 @@ interface CashFlowData {
     netCashChange: number;
     beginningCash: number;
     endingCash: number;
+    expectedCash: number;
   };
   details: {
     salesItems: Array<{ date: string; name: string; amount: number }>;
-    purchaseItems: Array<{ date: string; name: string; amount: number }>;
+    purchaseItems: Array<{ date: string; name: string; amount: number; paidBy: string }>;
+    wsaPurchaseItems: Array<{ date: string; name: string; amount: number }>;
     expenseItems: ExpenseDetail[];
     spencerContributions: ContributionDetail[];
     parkerContributions: ContributionDetail[];
@@ -84,7 +86,12 @@ export const useCashFlow = () => {
 
   // Calculate Operating Activities
   const cashFromSales = soldItems.reduce((sum, item) => sum + (item.salePrice || 0), 0);
-  const cashPaidForInventory = inventory.reduce((sum, item) => sum + item.acquisitionCost, 0);
+  
+  // Separate WSA purchases (Shared) from personal purchases (Spencer/Parker)
+  // Personal purchases don't come from WSA cash - they come from contributions
+  const wsaPurchases = inventory.filter((item) => item.paidBy === 'Shared');
+  const cashPaidForInventory = wsaPurchases.reduce((sum, item) => sum + item.acquisitionCost, 0);
+  
   const cashPaidForExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   const netOperating = cashFromSales - cashPaidForInventory - cashPaidForExpenses;
 
@@ -98,8 +105,19 @@ export const useCashFlow = () => {
     }))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  // Purchase details for breakdown
+  // All purchase details for breakdown (for reference)
   const purchaseItems = inventory
+    .filter(item => item.acquisitionCost > 0)
+    .map(item => ({
+      date: item.dateAdded || '',
+      name: item.name,
+      amount: -item.acquisitionCost,
+      paidBy: item.paidBy || 'Shared',
+    }))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  // WSA-only purchases for operating section
+  const wsaPurchaseItems = wsaPurchases
     .filter(item => item.acquisitionCost > 0)
     .map(item => ({
       date: item.dateAdded || '',
@@ -121,10 +139,23 @@ export const useCashFlow = () => {
   const equipmentSales = 0;
   const netInvesting = equipmentSales - equipmentPurchases;
 
-  // Financing Activities
-  const spencerContributions = capitalAccount?.spencer_investment || 0;
-  const parkerContributions = capitalAccount?.parker_investment || 0;
-  const distributions = 0; // Placeholder for future distributions tracking
+  // Financing Activities - Get from contribution transactions, not capital_accounts
+  // This ensures we count the actual recorded contributions
+  const spencerContributions = contributionTransactions
+    .filter((t) => t.category === 'Spencer Kleinman')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+  
+  const parkerContributions = contributionTransactions
+    .filter((t) => t.category === 'Parker Kleinman')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  // Calculate distributions as the difference between expected and actual cash
+  // Expected Cash = Beginning Cash + Contributions + Revenue - COGS (WSA only) - Expenses
+  const beginningCash = 0;
+  const expectedCash = beginningCash + spencerContributions + parkerContributions + cashFromSales - cashPaidForInventory - cashPaidForExpenses;
+  const actualCash = capitalAccount?.cash_on_hand || 0;
+  const distributions = Math.max(0, expectedCash - actualCash); // Only positive if money was taken out
+
   const netFinancing = spencerContributions + parkerContributions - distributions;
 
   // Parse contribution details by partner
@@ -146,8 +177,7 @@ export const useCashFlow = () => {
 
   // Summary
   const netCashChange = netOperating + netInvesting + netFinancing;
-  const beginningCash = 0; // Starting point
-  const endingCash = capitalAccount?.cash_on_hand || 0;
+  const endingCash = actualCash;
 
   const cashFlowData: CashFlowData = {
     operating: {
@@ -171,10 +201,12 @@ export const useCashFlow = () => {
       netCashChange,
       beginningCash,
       endingCash,
+      expectedCash,
     },
     details: {
       salesItems,
       purchaseItems,
+      wsaPurchaseItems,
       expenseItems,
       spencerContributions: spencerContributionDetails,
       parkerContributions: parkerContributionDetails,
