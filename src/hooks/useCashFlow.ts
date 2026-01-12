@@ -43,7 +43,7 @@ interface CashFlowData {
   details: {
     salesItems: Array<{ date: string; name: string; amount: number }>;
     purchaseItems: Array<{ date: string; name: string; amount: number; paidBy: string }>;
-    wsaPurchaseItems: Array<{ date: string; name: string; amount: number }>;
+    wscPurchaseItems: Array<{ date: string; name: string; amount: number }>;
     expenseItems: ExpenseDetail[];
     spencerContributions: ContributionDetail[];
     parkerContributions: ContributionDetail[];
@@ -87,10 +87,10 @@ export const useCashFlow = () => {
   // Calculate Operating Activities
   const cashFromSales = soldItems.reduce((sum, item) => sum + (item.salePrice || 0), 0);
   
-  // Separate WSA purchases (Shared) from personal purchases (Spencer/Parker)
-  // Personal purchases don't come from WSA cash - they come from contributions
-  const wsaPurchases = inventory.filter((item) => item.paidBy === 'Shared');
-  const cashPaidForInventory = wsaPurchases.reduce((sum, item) => sum + item.acquisitionCost, 0);
+  // Separate WSC purchases (Shared) from personal purchases (Spencer/Parker)
+  // Personal purchases don't come from WSC cash - they come from contributions
+  const wscPurchases = inventory.filter((item) => item.paidBy === 'Shared');
+  const cashPaidForInventory = wscPurchases.reduce((sum, item) => sum + item.acquisitionCost, 0);
   
   const cashPaidForExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   const netOperating = cashFromSales - cashPaidForInventory - cashPaidForExpenses;
@@ -116,8 +116,8 @@ export const useCashFlow = () => {
     }))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  // WSA-only purchases for operating section
-  const wsaPurchaseItems = wsaPurchases
+  // WSC-only purchases for operating section
+  const wscPurchaseItems = wscPurchases
     .filter(item => item.acquisitionCost > 0)
     .map(item => ({
       date: item.dateAdded || '',
@@ -206,7 +206,7 @@ export const useCashFlow = () => {
     details: {
       salesItems,
       purchaseItems,
-      wsaPurchaseItems,
+      wscPurchaseItems,
       expenseItems,
       spencerContributions: spencerContributionDetails,
       parkerContributions: parkerContributionDetails,

@@ -216,7 +216,7 @@ export function AssignPurchasesDialog({ open, onOpenChange }: AssignPurchasesDia
                     <Badge variant="outline" className="text-xs">Parker</Badge>
                   )}
                   {item.paidBy === 'Shared' && (
-                    <Badge className="text-xs bg-blue-500/20 text-blue-500 border-0">WSA</Badge>
+                    <Badge className="text-xs bg-blue-500/20 text-blue-500 border-0">WSC</Badge>
                   )}
                   <span className="text-sm font-mono text-muted-foreground">
                     {formatCurrency(item.acquisitionCost)}
@@ -256,14 +256,14 @@ export function AssignPurchasesDialog({ open, onOpenChange }: AssignPurchasesDia
           </div>
           
           <div className="text-xs text-muted-foreground font-medium pt-2">
-            Shared Account (WSA Bank)
+            Shared Account (WSC Bank)
           </div>
           <Button
             onClick={() => handleAssign('Shared')}
             disabled={selectedIds.size === 0 || isAssigning}
             className="w-full"
           >
-            Mark as Shared (WSA Account)
+            Mark as Shared (WSC Account)
           </Button>
           
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
