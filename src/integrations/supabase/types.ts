@@ -141,6 +141,7 @@ export type Database = {
           platform: Database["public"]["Enums"]["platform"]
           platform_sold: Database["public"]["Enums"]["platform"] | null
           platforms: string[] | null
+          priority_sale: boolean | null
           sale_price: number | null
           size: string | null
           source: string | null
@@ -171,6 +172,7 @@ export type Database = {
           platform?: Database["public"]["Enums"]["platform"]
           platform_sold?: Database["public"]["Enums"]["platform"] | null
           platforms?: string[] | null
+          priority_sale?: boolean | null
           sale_price?: number | null
           size?: string | null
           source?: string | null
@@ -201,6 +203,7 @@ export type Database = {
           platform?: Database["public"]["Enums"]["platform"]
           platform_sold?: Database["public"]["Enums"]["platform"] | null
           platforms?: string[] | null
+          priority_sale?: boolean | null
           sale_price?: number | null
           size?: string | null
           source?: string | null

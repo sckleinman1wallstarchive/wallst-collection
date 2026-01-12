@@ -34,6 +34,8 @@ export interface InventoryItem {
   tradedForItemId: string | null;
   tradeCashDifference: number | null;
   paidBy: Database['public']['Enums']['item_owner'] | null;
+  prioritySale: boolean;
+  createdAt: string;
 }
 
 // Transform database row to app format
@@ -64,6 +66,8 @@ const toAppItem = (row: DbInventoryItem): InventoryItem => ({
   tradedForItemId: (row as any).traded_for_item_id || null,
   tradeCashDifference: (row as any).trade_cash_difference || null,
   paidBy: row.paid_by,
+  prioritySale: (row as any).priority_sale || false,
+  createdAt: row.created_at,
 });
 
 // Transform app format to database insert format
@@ -92,6 +96,7 @@ const toDbInsert = (item: Partial<InventoryItem>): DbInsertItem => ({
   ever_in_convention: item.everInConvention ?? false,
   traded_for_item_id: item.tradedForItemId,
   trade_cash_difference: item.tradeCashDifference,
+  priority_sale: item.prioritySale ?? false,
 } as DbInsertItem);
 
 // Transform app format to database update format
@@ -121,6 +126,7 @@ const toDbUpdate = (item: Partial<InventoryItem>): DbUpdateItem => {
   if (item.everInConvention !== undefined) update.ever_in_convention = item.everInConvention;
   if (item.tradedForItemId !== undefined) update.traded_for_item_id = item.tradedForItemId;
   if (item.tradeCashDifference !== undefined) update.trade_cash_difference = item.tradeCashDifference;
+  if (item.prioritySale !== undefined) update.priority_sale = item.prioritySale;
   return update as DbUpdateItem;
 };
 
