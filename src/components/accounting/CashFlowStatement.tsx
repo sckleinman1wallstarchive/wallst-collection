@@ -135,6 +135,31 @@ export const CashFlowStatement = ({ onBack }: CashFlowStatementProps) => {
                 </div>
               </AccordionContent>
             </AccordionItem>
+
+            <AccordionItem value="expenses" className="border-none">
+              <AccordionTrigger className="py-2 hover:no-underline">
+                <div className="flex justify-between items-center w-full pr-4">
+                  <span className="text-sm">Cash paid for expenses</span>
+                  <span className={`font-mono text-sm font-medium ${getAmountColor(-operating.cashPaidForExpenses)}`}>
+                    {formatCurrency(-operating.cashPaidForExpenses)}
+                  </span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="pl-4 space-y-1 max-h-48 overflow-y-auto">
+                  {details.expenseItems.length > 0 ? (
+                    details.expenseItems.map((item, i) => (
+                      <div key={i} className="flex justify-between text-xs text-muted-foreground py-1 border-b border-border/50 last:border-0">
+                        <span className="truncate flex-1">{item.date} - {item.description} ({item.category})</span>
+                        <span className="font-mono ml-2">{formatCurrency(item.amount)}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">No expenses recorded</p>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
           </Accordion>
           
           <Separator className="my-2" />

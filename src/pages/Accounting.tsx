@@ -13,16 +13,27 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, Tooltip } from 'recharts';
-import { DollarSign, TrendingUp, Users, Package, FileText, PlusCircle } from 'lucide-react';
+import { DollarSign, TrendingUp, Package, FileText, PlusCircle, Receipt, ChevronDown, ChevronUp, BarChart3, Users } from 'lucide-react';
 import { CashFlowStatement } from '@/components/accounting/CashFlowStatement';
 import { RecordContributionDialog } from '@/components/accounting/RecordContributionDialog';
+import { ExpenseTrackerDialog } from '@/components/accounting/ExpenseTrackerDialog';
+import { ExpenseList } from '@/components/accounting/ExpenseList';
+import { AssignPurchasesDialog } from '@/components/accounting/AssignPurchasesDialog';
 
 type View = 'dashboard' | 'cash-flow';
 
 const Accounting = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [contributionDialogOpen, setContributionDialogOpen] = useState(false);
+  const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
+  const [assignPurchasesOpen, setAssignPurchasesOpen] = useState(false);
+  const [chartsExpanded, setChartsExpanded] = useState(false);
   const { inventory, isLoading, getSoldItems, getFinancialSummary } = useSupabaseInventory();
   const soldItems = getSoldItems();
   const summary = getFinancialSummary();
@@ -75,16 +86,11 @@ const Accounting = () => {
             <Skeleton className="h-8 w-32" />
             <Skeleton className="h-4 w-48 mt-2" />
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <Card key={i} className="p-4">
-                <Skeleton className="h-10 w-10 rounded-lg mb-2" />
-                <Skeleton className="h-4 w-20 mb-1" />
-                <Skeleton className="h-6 w-24" />
-              </Card>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-32 w-full" />
             ))}
           </div>
-          <Skeleton className="h-48 w-full" />
         </div>
       </DashboardLayout>
     );
@@ -104,32 +110,118 @@ const Accounting = () => {
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Accounting</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Financial overview and P&L tracking
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setContributionDialogOpen(true)}
-              className="gap-2"
-            >
-              <PlusCircle className="h-4 w-4" />
-              Record Contribution
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => setCurrentView('cash-flow')}
-              className="gap-2"
-            >
-              <FileText className="h-4 w-4" />
-              Statement of Cash Flows
-            </Button>
-          </div>
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Accounting</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Financial overview and P&L tracking
+          </p>
         </div>
+
+        {/* Quick Action Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card 
+            className="cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => setContributionDialogOpen(true)}
+          >
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 bg-chart-1/20 rounded-lg">
+                <PlusCircle className="h-6 w-6 text-chart-1" />
+              </div>
+              <div>
+                <p className="font-medium">Record Contribution</p>
+                <p className="text-xs text-muted-foreground">Add partner capital</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => setCurrentView('cash-flow')}
+          >
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 bg-chart-2/20 rounded-lg">
+                <FileText className="h-6 w-6 text-chart-2" />
+              </div>
+              <div>
+                <p className="font-medium">Cash Flow Statement</p>
+                <p className="text-xs text-muted-foreground">View detailed flows</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => setExpenseDialogOpen(true)}
+          >
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 bg-destructive/20 rounded-lg">
+                <Receipt className="h-6 w-6 text-destructive" />
+              </div>
+              <div>
+                <p className="font-medium">Record Expense</p>
+                <p className="text-xs text-muted-foreground">Track business costs</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => setAssignPurchasesOpen(true)}
+          >
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 bg-primary/20 rounded-lg">
+                <Users className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium">Assign Purchases</p>
+                <p className="text-xs text-muted-foreground">Tag who paid</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Compact Monthly Goal Progress */}
+        <Card className="p-4">
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Monthly Goal: {formatCurrency(monthlyTarget)}</span>
+                <span className="text-sm font-semibold">{progressPercent.toFixed(0)}%</span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all duration-500"
+                  style={{ width: `${Math.min(progressPercent, 100)}%` }}
+                />
+              </div>
+            </div>
+            <div className="w-px h-8 bg-border hidden md:block" />
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Stretch: {formatCurrency(stretchTarget)}</span>
+                <span className="text-sm font-semibold">{((summary.totalProfit / stretchTarget) * 100).toFixed(0)}%</span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-chart-1 transition-all duration-500"
+                  style={{ width: `${Math.min((summary.totalProfit / stretchTarget) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+            <div className="w-px h-8 bg-border hidden md:block" />
+            <div className="flex gap-6 text-sm">
+              <div>
+                <p className="text-muted-foreground">Profit</p>
+                <p className="font-semibold text-chart-2">+{formatCurrency(summary.totalProfit)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Remaining</p>
+                <p className="font-semibold">{formatCurrency(Math.max(0, monthlyTarget - summary.totalProfit))}</p>
+              </div>
+            </div>
+          </div>
+        </Card>
 
         {/* Key Financial Metrics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -169,7 +261,7 @@ const Accounting = () => {
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-muted rounded-lg">
-                <Users className="h-5 w-5 text-muted-foreground" />
+                <BarChart3 className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Avg Margin</p>
@@ -179,127 +271,93 @@ const Accounting = () => {
           </Card>
         </div>
 
-        {/* Progress to Goal */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-medium">Monthly Goal Progress</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">Baseline Target: {formatCurrency(monthlyTarget)}</span>
-                  <span className="font-medium">{progressPercent.toFixed(0)}%</span>
-                </div>
-                <div className="h-3 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all duration-500"
-                    style={{ width: `${Math.min(progressPercent, 100)}%` }}
-                  />
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">Stretch Target: {formatCurrency(stretchTarget)}</span>
-                  <span className="font-medium">{((summary.totalProfit / stretchTarget) * 100).toFixed(0)}%</span>
-                </div>
-                <div className="h-3 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-chart-1 transition-all duration-500"
-                    style={{ width: `${Math.min((summary.totalProfit / stretchTarget) * 100, 100)}%` }}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4 pt-4 border-t border-border">
-                <div>
-                  <p className="text-xs text-muted-foreground">Items Sold</p>
-                  <p className="text-lg font-semibold">{summary.itemsSold}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Avg Margin</p>
-                  <p className="text-lg font-semibold">{summary.avgMargin}%</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Remaining to Target</p>
-                  <p className="text-lg font-semibold">{formatCurrency(Math.max(0, monthlyTarget - summary.totalProfit))}</p>
-                </div>
-              </div>
+        {/* Collapsible Charts */}
+        <Collapsible open={chartsExpanded} onOpenChange={setChartsExpanded}>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="w-full gap-2">
+              <BarChart3 className="h-4 w-4" />
+              {chartsExpanded ? 'Hide' : 'Show'} Analytics Charts
+              {chartsExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Profit Over Time */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base font-medium">Cumulative Profit</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {profitOverTime.length > 0 ? (
+                    <div className="h-48">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={profitOverTime}>
+                          <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                          <YAxis tickFormatter={(v) => `$${v}`} tick={{ fontSize: 11 }} />
+                          <Tooltip 
+                            formatter={(value: number) => [`$${value}`, 'Total Profit']}
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--card))', 
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: 'var(--radius)',
+                            }}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="profit" 
+                            stroke="hsl(var(--chart-2))" 
+                            strokeWidth={2}
+                            dot={{ fill: 'hsl(var(--chart-2))' }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">No sales yet</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Daily Revenue */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base font-medium">Revenue by Day</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {salesChartData.length > 0 ? (
+                    <div className="h-48">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={salesChartData}>
+                          <XAxis 
+                            dataKey="date" 
+                            tick={{ fontSize: 11 }}
+                            tickFormatter={(d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          />
+                          <YAxis tickFormatter={(v) => `$${v}`} tick={{ fontSize: 11 }} />
+                          <Tooltip 
+                            formatter={(value: number) => [`$${value}`, 'Revenue']}
+                            labelFormatter={(d) => new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--card))', 
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: 'var(--radius)',
+                            }}
+                          />
+                          <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">No sales yet</p>
+                  )}
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
+          </CollapsibleContent>
+        </Collapsible>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Profit Over Time */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-medium">Cumulative Profit</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {profitOverTime.length > 0 ? (
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={profitOverTime}>
-                      <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                      <YAxis tickFormatter={(v) => `$${v}`} tick={{ fontSize: 11 }} />
-                      <Tooltip 
-                        formatter={(value: number) => [`$${value}`, 'Total Profit']}
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))', 
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: 'var(--radius)',
-                        }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="profit" 
-                        stroke="hsl(var(--chart-2))" 
-                        strokeWidth={2}
-                        dot={{ fill: 'hsl(var(--chart-2))' }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">No sales yet</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Daily Revenue */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-medium">Revenue by Day</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {salesChartData.length > 0 ? (
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={salesChartData}>
-                      <XAxis 
-                        dataKey="date" 
-                        tick={{ fontSize: 11 }}
-                        tickFormatter={(d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      />
-                      <YAxis tickFormatter={(v) => `$${v}`} tick={{ fontSize: 11 }} />
-                      <Tooltip 
-                        formatter={(value: number) => [`$${value}`, 'Revenue']}
-                        labelFormatter={(d) => new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))', 
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: 'var(--radius)',
-                        }}
-                      />
-                      <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">No sales yet</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        {/* Expenses List */}
+        <ExpenseList />
 
         {/* Sales Ledger */}
         <Card>
@@ -358,9 +416,18 @@ const Accounting = () => {
           </CardContent>
         </Card>
 
+        {/* Dialogs */}
         <RecordContributionDialog 
           open={contributionDialogOpen} 
           onOpenChange={setContributionDialogOpen} 
+        />
+        <ExpenseTrackerDialog
+          open={expenseDialogOpen}
+          onOpenChange={setExpenseDialogOpen}
+        />
+        <AssignPurchasesDialog
+          open={assignPurchasesOpen}
+          onOpenChange={setAssignPurchasesOpen}
         />
       </div>
     </DashboardLayout>
