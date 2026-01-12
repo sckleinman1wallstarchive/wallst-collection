@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -99,7 +99,7 @@ export function AssignPurchasesDialog({ open, onOpenChange }: AssignPurchasesDia
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col">
+      <DialogContent className="sm:max-w-2xl h-[80vh] max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Assign Historical Purchases</DialogTitle>
           <DialogDescription>
@@ -134,8 +134,8 @@ export function AssignPurchasesDialog({ open, onOpenChange }: AssignPurchasesDia
           )}
         </div>
 
-        <ScrollArea className="flex-1 min-h-0 h-[300px]">
-          <div className="space-y-1 pr-4">
+        <div className="flex-1 min-h-0 overflow-y-auto pr-4 overscroll-contain touch-pan-y">
+          <div className="space-y-1">
             {unassignedItems.map((item) => (
               <div
                 key={item.id}
@@ -171,7 +171,7 @@ export function AssignPurchasesDialog({ open, onOpenChange }: AssignPurchasesDia
               </p>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         <div className="flex flex-col gap-3 pt-4 border-t border-border">
           <div className="text-xs text-muted-foreground font-medium">
