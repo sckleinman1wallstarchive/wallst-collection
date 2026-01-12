@@ -137,6 +137,7 @@ export type Database = {
           lowest_acceptable_price: number | null
           name: string
           notes: string | null
+          paid_by: Database["public"]["Enums"]["item_owner"] | null
           platform: Database["public"]["Enums"]["platform"]
           platform_sold: Database["public"]["Enums"]["platform"] | null
           platforms: string[] | null
@@ -166,6 +167,7 @@ export type Database = {
           lowest_acceptable_price?: number | null
           name: string
           notes?: string | null
+          paid_by?: Database["public"]["Enums"]["item_owner"] | null
           platform?: Database["public"]["Enums"]["platform"]
           platform_sold?: Database["public"]["Enums"]["platform"] | null
           platforms?: string[] | null
@@ -195,6 +197,7 @@ export type Database = {
           lowest_acceptable_price?: number | null
           name?: string
           notes?: string | null
+          paid_by?: Database["public"]["Enums"]["item_owner"] | null
           platform?: Database["public"]["Enums"]["platform"]
           platform_sold?: Database["public"]["Enums"]["platform"] | null
           platforms?: string[] | null

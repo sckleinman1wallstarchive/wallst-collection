@@ -1,4 +1,5 @@
 import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
+import { useExpenses } from '@/hooks/useExpenses';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -8,10 +9,18 @@ interface ContributionDetail {
   amount: number;
 }
 
+interface ExpenseDetail {
+  date: string;
+  description: string;
+  amount: number;
+  category: string;
+}
+
 interface CashFlowData {
   operating: {
     cashFromSales: number;
     cashPaidForInventory: number;
+    cashPaidForExpenses: number;
     netOperating: number;
   };
   investing: {
@@ -33,6 +42,7 @@ interface CashFlowData {
   details: {
     salesItems: Array<{ date: string; name: string; amount: number }>;
     purchaseItems: Array<{ date: string; name: string; amount: number }>;
+    expenseItems: ExpenseDetail[];
     spencerContributions: ContributionDetail[];
     parkerContributions: ContributionDetail[];
   };
@@ -40,6 +50,7 @@ interface CashFlowData {
 
 export const useCashFlow = () => {
   const { inventory, isLoading: inventoryLoading, getSoldItems } = useSupabaseInventory();
+  const { expenses, isLoading: expensesLoading } = useExpenses();
 
   const { data: capitalAccount, isLoading: capitalLoading } = useQuery({
     queryKey: ['capital_accounts'],
@@ -74,7 +85,8 @@ export const useCashFlow = () => {
   // Calculate Operating Activities
   const cashFromSales = soldItems.reduce((sum, item) => sum + (item.salePrice || 0), 0);
   const cashPaidForInventory = inventory.reduce((sum, item) => sum + item.acquisitionCost, 0);
-  const netOperating = cashFromSales - cashPaidForInventory;
+  const cashPaidForExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const netOperating = cashFromSales - cashPaidForInventory - cashPaidForExpenses;
 
   // Sales details for breakdown
   const salesItems = soldItems
@@ -95,6 +107,14 @@ export const useCashFlow = () => {
       amount: -item.acquisitionCost,
     }))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  // Expense details for breakdown
+  const expenseItems: ExpenseDetail[] = expenses.map(exp => ({
+    date: exp.date,
+    description: exp.description,
+    amount: -exp.amount,
+    category: exp.category,
+  }));
 
   // Investing Activities (placeholder - can be expanded later)
   const equipmentPurchases = 0;
@@ -133,6 +153,7 @@ export const useCashFlow = () => {
     operating: {
       cashFromSales,
       cashPaidForInventory,
+      cashPaidForExpenses,
       netOperating,
     },
     investing: {
@@ -154,6 +175,7 @@ export const useCashFlow = () => {
     details: {
       salesItems,
       purchaseItems,
+      expenseItems,
       spencerContributions: spencerContributionDetails,
       parkerContributions: parkerContributionDetails,
     },
@@ -161,6 +183,6 @@ export const useCashFlow = () => {
 
   return {
     cashFlowData,
-    isLoading: inventoryLoading || capitalLoading || contributionsLoading,
+    isLoading: inventoryLoading || capitalLoading || contributionsLoading || expensesLoading,
   };
 };
