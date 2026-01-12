@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
+import { mapDatabaseError } from '@/lib/errorHandler';
 
 type DbInventoryItem = Database['public']['Tables']['inventory_items']['Row'];
 type DbInsertItem = Database['public']['Tables']['inventory_items']['Insert'];
@@ -164,7 +165,7 @@ export function useSupabaseInventory() {
       toast.success('Item added');
     },
     onError: (error) => {
-      toast.error('Failed to add item: ' + error.message);
+      toast.error(mapDatabaseError(error));
     },
   });
 
@@ -186,7 +187,7 @@ export function useSupabaseInventory() {
       toast.success('Item updated');
     },
     onError: (error) => {
-      toast.error('Failed to update item: ' + error.message);
+      toast.error(mapDatabaseError(error));
     },
   });
 
@@ -205,7 +206,7 @@ export function useSupabaseInventory() {
       toast.success('Item deleted');
     },
     onError: (error) => {
-      toast.error('Failed to delete item: ' + error.message);
+      toast.error(mapDatabaseError(error));
     },
   });
 
@@ -226,7 +227,7 @@ export function useSupabaseInventory() {
       toast.success(`Imported ${data.length} items`);
     },
     onError: (error) => {
-      toast.error('Failed to import items: ' + error.message);
+      toast.error(mapDatabaseError(error));
     },
   });
 

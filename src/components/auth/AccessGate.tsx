@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import gateBackground from '@/assets/gate-background.png';
 import { toast } from 'sonner';
+import { mapAuthError } from '@/lib/errorHandler';
 
 interface AccessGateProps {
   children: React.ReactNode;
@@ -68,7 +69,7 @@ export function AccessGate({ children }: AccessGateProps) {
         if (error) throw error;
       }
     } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+      setError(mapAuthError(err));
     } finally {
       setIsSubmitting(false);
     }
