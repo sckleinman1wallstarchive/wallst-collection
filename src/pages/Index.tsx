@@ -1,16 +1,18 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { ProgressBar } from '@/components/dashboard/ProgressBar';
-import { TaskList } from '@/components/tasks/TaskList';
 import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
-import { mockTasks } from '@/data/mockData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, DollarSign, TrendingUp, Clock, AlertTriangle, Ruler, Image, Tag, ChevronDown, ChevronUp } from 'lucide-react';
+import { Package, DollarSign, TrendingUp, Clock, AlertTriangle, Ruler, Image, Tag, ChevronDown, ChevronUp, ShoppingBag, Flame, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
 const Index = () => {
-  const { inventory, getFinancialSummary, getActiveItems, getIncompleteItems } = useSupabaseInventory();
+  const { inventory, getFinancialSummary, getActiveItems, getIncompleteItems, updateItem } = useSupabaseInventory();
   const [showSizeList, setShowSizeList] = useState(false);
   const [showPhotoList, setShowPhotoList] = useState(false);
   const [showFloorPriceList, setShowFloorPriceList] = useState(false);
@@ -24,7 +26,29 @@ const Index = () => {
     ? Math.round(activeItems.reduce((sum, i) => sum + (i.daysHeld || 0), 0) / activeItems.length)
     : 0;
   const stagnantItems = activeItems.filter(i => (i.daysHeld || 0) > 30);
-  const upcomingTasks = mockTasks.filter(t => t.status !== 'done').slice(0, 4);
+
+  // Recent cops - last 10 items sorted by date_added (or created_at as fallback)
+  const recentCops = [...(inventory || [])]
+    .filter(i => !['sold', 'traded', 'refunded', 'scammed'].includes(i.status))
+    .sort((a, b) => {
+      const dateA = a.dateAdded || a.createdAt;
+      const dateB = b.dateAdded || b.createdAt;
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
+    })
+    .slice(0, 10);
+
+  // Priority items - marked with priority_sale = true
+  const priorityItems = activeItems.filter(i => i.prioritySale);
+
+  // Handler to add priority
+  const handleAddPriority = async (itemId: string) => {
+    await updateItem(itemId, { prioritySale: true });
+  };
+
+  // Handler to remove priority
+  const removePriority = async (itemId: string) => {
+    await updateItem(itemId, { prioritySale: false });
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -293,18 +317,95 @@ const Index = () => {
           </Card>
         </div>
 
-        {/* Tasks Section */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base font-medium">Upcoming Tasks</CardTitle>
-            <Link to="/tasks" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              View all →
-            </Link>
-          </CardHeader>
-          <CardContent>
-            <TaskList tasks={upcomingTasks} />
-          </CardContent>
-        </Card>
+        {/* Recent Cops & Need Gone Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent Cops */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4" />
+                Recent Cops
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[200px]">
+                <div className="space-y-2 pr-4">
+                  {recentCops.length > 0 ? (
+                    recentCops.map((item) => (
+                      <Link
+                        key={item.id}
+                        to={`/inventory?item=${item.id}`}
+                        className="flex justify-between items-center p-2 rounded hover:bg-muted transition-colors"
+                      >
+                        <span className="text-sm truncate flex-1">{item.name}</span>
+                        <span className="text-xs text-muted-foreground ml-2">
+                          {formatCurrency(item.acquisitionCost)}
+                        </span>
+                      </Link>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">No recent purchases</p>
+                  )}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+
+          {/* Need Gone */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <Flame className="h-4 w-4 text-orange-500" />
+                Need Gone
+              </CardTitle>
+              <Select onValueChange={handleAddPriority}>
+                <SelectTrigger className="w-[180px] h-8">
+                  <SelectValue placeholder="Add item..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeItems.filter(i => !i.prioritySale).map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[200px]">
+                <div className="space-y-2 pr-4">
+                  {priorityItems.length > 0 ? (
+                    priorityItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex justify-between items-center p-2 rounded bg-orange-500/10 border border-orange-500/20"
+                      >
+                        <Link
+                          to={`/inventory?item=${item.id}`}
+                          className="text-sm truncate flex-1 hover:underline"
+                        >
+                          {item.name}
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 ml-2"
+                          onClick={() => removePriority(item.id)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No priority items. Use the dropdown to add items you need to move fast.
+                    </p>
+                  )}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </DashboardLayout>
   );
