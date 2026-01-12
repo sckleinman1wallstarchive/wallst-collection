@@ -61,7 +61,7 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border p-4">
         {!collapsed && (
           <div className="flex flex-col">
-            <span className="font-semibold text-sidebar-foreground tracking-tight">WSA</span>
+            <span className="font-semibold text-sidebar-foreground tracking-tight">WSC</span>
             <span className="text-xs text-sidebar-foreground/60">Internal Dashboard</span>
           </div>
         )}

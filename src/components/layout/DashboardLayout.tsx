@@ -15,7 +15,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <header className="h-14 border-b border-border flex items-center px-4 bg-background">
             <SidebarTrigger className="mr-4" />
             <span className="text-sm font-medium text-muted-foreground tracking-wide uppercase">
-              Wall St Archive
+              Wall St Collection
             </span>
           </header>
           <div className="flex-1 p-6 bg-muted/30">
