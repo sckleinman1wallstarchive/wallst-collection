@@ -43,7 +43,6 @@ interface CashFlowData {
   details: {
     salesItems: Array<{ date: string; name: string; amount: number }>;
     purchaseItems: Array<{ date: string; name: string; amount: number; paidBy: string }>;
-    wscPurchaseItems: Array<{ date: string; name: string; amount: number }>;
     expenseItems: ExpenseDetail[];
     spencerContributions: ContributionDetail[];
     parkerContributions: ContributionDetail[];
@@ -87,10 +86,8 @@ export const useCashFlow = () => {
   // Calculate Operating Activities
   const cashFromSales = soldItems.reduce((sum, item) => sum + (item.salePrice || 0), 0);
   
-  // Separate WSC purchases (Shared) from personal purchases (Spencer/Parker)
-  // Personal purchases don't come from WSC cash - they come from contributions
-  const wscPurchases = inventory.filter((item) => item.paidBy === 'Shared');
-  const cashPaidForInventory = wscPurchases.reduce((sum, item) => sum + item.acquisitionCost, 0);
+  // ALL inventory purchases are cash outflows - partner purchases are offset by their contributions
+  const cashPaidForInventory = inventory.reduce((sum, item) => sum + item.acquisitionCost, 0);
   
   const cashPaidForExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   const netOperating = cashFromSales - cashPaidForInventory - cashPaidForExpenses;
@@ -116,15 +113,6 @@ export const useCashFlow = () => {
     }))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  // WSC-only purchases for operating section
-  const wscPurchaseItems = wscPurchases
-    .filter(item => item.acquisitionCost > 0)
-    .map(item => ({
-      date: item.dateAdded || '',
-      name: item.name,
-      amount: -item.acquisitionCost,
-    }))
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // Expense details for breakdown
   const expenseItems: ExpenseDetail[] = expenses.map(exp => ({
@@ -139,17 +127,13 @@ export const useCashFlow = () => {
   const equipmentSales = 0;
   const netInvesting = equipmentSales - equipmentPurchases;
 
-  // Financing Activities - Only count ACTUAL cash contributions, not purchase-assignment contributions
-  // Purchase contributions have a "reference" field linking to inventory item
-  const actualContributions = contributionTransactions.filter(
-    (t) => !t.reference // No reference = manual cash contribution
-  );
-
-  const spencerContributions = actualContributions
+  // Financing Activities - Include ALL contributions (cash + purchase assignments)
+  // This offsets the inventory purchases made by partners personally
+  const spencerContributions = contributionTransactions
     .filter((t) => t.category === 'Spencer Kleinman')
     .reduce((sum, t) => sum + Number(t.amount), 0);
   
-  const parkerContributions = actualContributions
+  const parkerContributions = contributionTransactions
     .filter((t) => t.category === 'Parker Kleinman')
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
@@ -162,8 +146,8 @@ export const useCashFlow = () => {
 
   const netFinancing = spencerContributions + parkerContributions - distributions;
 
-  // Parse contribution details by partner (only actual cash contributions)
-  const spencerContributionDetails: ContributionDetail[] = actualContributions
+  // Parse contribution details by partner (all contributions including purchase assignments)
+  const spencerContributionDetails: ContributionDetail[] = contributionTransactions
     .filter((t) => t.category === 'Spencer Kleinman')
     .map((t) => ({
       date: t.date,
@@ -171,7 +155,7 @@ export const useCashFlow = () => {
       amount: Number(t.amount),
     }));
 
-  const parkerContributionDetails: ContributionDetail[] = actualContributions
+  const parkerContributionDetails: ContributionDetail[] = contributionTransactions
     .filter((t) => t.category === 'Parker Kleinman')
     .map((t) => ({
       date: t.date,
@@ -210,7 +194,6 @@ export const useCashFlow = () => {
     details: {
       salesItems,
       purchaseItems,
-      wscPurchaseItems,
       expenseItems,
       spencerContributions: spencerContributionDetails,
       parkerContributions: parkerContributionDetails,
