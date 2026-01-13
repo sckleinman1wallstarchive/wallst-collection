@@ -30,6 +30,7 @@ export interface InventoryItem {
   dateAdded: string | null;
   dateSold: string | null;
   imageUrl: string | null;
+  imageUrls: string[];
   inConvention: boolean;
   everInConvention: boolean;
   tradedForItemId: string | null;
@@ -63,6 +64,7 @@ const toAppItem = (row: DbInventoryItem): InventoryItem => ({
   dateAdded: row.date_added,
   dateSold: row.date_sold,
   imageUrl: (row as any).image_url || null,
+  imageUrls: (row as any).image_urls || [],
   inConvention: (row as any).in_convention || false,
   everInConvention: (row as any).ever_in_convention || false,
   tradedForItemId: (row as any).traded_for_item_id || null,
@@ -95,6 +97,7 @@ const toDbInsert = (item: Partial<InventoryItem>): DbInsertItem => ({
   date_added: item.dateAdded,
   date_sold: item.dateSold,
   image_url: item.imageUrl,
+  image_urls: item.imageUrls || [],
   in_convention: item.inConvention ?? false,
   ever_in_convention: item.everInConvention ?? false,
   traded_for_item_id: item.tradedForItemId,
@@ -126,6 +129,7 @@ const toDbUpdate = (item: Partial<InventoryItem>): DbUpdateItem => {
   if (item.dateAdded !== undefined) update.date_added = item.dateAdded;
   if (item.dateSold !== undefined) update.date_sold = item.dateSold;
   if (item.imageUrl !== undefined) update.image_url = item.imageUrl;
+  if (item.imageUrls !== undefined) update.image_urls = item.imageUrls;
   if (item.inConvention !== undefined) update.in_convention = item.inConvention;
   if (item.everInConvention !== undefined) update.ever_in_convention = item.everInConvention;
   if (item.tradedForItemId !== undefined) update.traded_for_item_id = item.tradedForItemId;
@@ -316,7 +320,7 @@ export function useSupabaseInventory() {
     const active = getActiveItems();
     return {
       missingSize: active.filter(i => !i.size),
-      missingImage: active.filter(i => !i.imageUrl),
+      missingImage: active.filter(i => !i.imageUrl && (!i.imageUrls || i.imageUrls.length === 0)),
       missingFloorPrice: active.filter(i => !i.lowestAcceptablePrice),
       missingGoalPrice: active.filter(i => !i.goalPrice),
       missingAskingPrice: active.filter(i => !i.askingPrice),

@@ -134,6 +134,7 @@ export type Database = {
           goal_price: number | null
           id: string
           image_url: string | null
+          image_urls: string[] | null
           in_convention: boolean | null
           lowest_acceptable_price: number | null
           name: string
@@ -166,6 +167,7 @@ export type Database = {
           goal_price?: number | null
           id?: string
           image_url?: string | null
+          image_urls?: string[] | null
           in_convention?: boolean | null
           lowest_acceptable_price?: number | null
           name: string
@@ -198,6 +200,7 @@ export type Database = {
           goal_price?: number | null
           id?: string
           image_url?: string | null
+          image_urls?: string[] | null
           in_convention?: boolean | null
           lowest_acceptable_price?: number | null
           name?: string
