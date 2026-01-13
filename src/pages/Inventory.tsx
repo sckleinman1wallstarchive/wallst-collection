@@ -279,97 +279,6 @@ const Inventory = () => {
           </Card>
         )}
 
-        {/* Needs Attention Banner */}
-        {attentionItems.length > 0 && !conventionMode && (
-          <Collapsible open={attentionOpen} onOpenChange={setAttentionOpen}>
-            <Card className="border-amber-500/30 bg-amber-500/5">
-              <CollapsibleTrigger className="w-full p-3 flex items-center justify-between hover:bg-amber-500/5 transition-colors rounded-t-lg">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  <span className="font-medium text-sm">{attentionItems.length} item{attentionItems.length !== 1 ? 's' : ''} flagged</span>
-                </div>
-                {attentionOpen ? (
-                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                )}
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="px-3 pb-3 space-y-2">
-                  {attentionItems.map((item) => (
-                    <div 
-                      key={item.id} 
-                      className="flex items-center gap-3 p-2 bg-background rounded-lg border border-border"
-                    >
-                      <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                      <button
-                        onClick={() => {
-                          setSelectedItem(item);
-                          setDetailOpen(true);
-                        }}
-                        className="font-medium text-sm hover:underline truncate flex-shrink-0 max-w-[140px]"
-                      >
-                        {item.name}
-                      </button>
-                      
-                      {editingAttentionId === item.id ? (
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <Input
-                            value={editingAttentionNote}
-                            onChange={(e) => setEditingAttentionNote(e.target.value)}
-                            placeholder="Quick note..."
-                            className="h-7 text-sm flex-1"
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveAttentionNote(item.id, editingAttentionNote);
-                              if (e.key === 'Escape') setEditingAttentionId(null);
-                            }}
-                          />
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="h-7 w-7 p-0"
-                            onClick={() => handleSaveAttentionNote(item.id, editingAttentionNote)}
-                          >
-                            <Check className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <>
-                          <span className="text-sm text-muted-foreground italic truncate flex-1 min-w-0">
-                            "{item.attentionNote}"
-                          </span>
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-7 w-7 p-0"
-                              onClick={() => {
-                                setEditingAttentionId(item.id);
-                                setEditingAttentionNote(item.attentionNote || '');
-                              }}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-7 w-7 p-0 text-chart-2 hover:text-chart-2"
-                              onClick={() => handleClearAttention(item.id)}
-                            >
-                              <Check className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
-        )}
-
         {/* Status Totals - Clickable Cards */}
         {!conventionMode && (
           <div className="space-y-2">
@@ -384,7 +293,7 @@ const Inventory = () => {
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               {statusSummaries.map((s) => {
                 const isSelected = selectedStatus === s.status;
                 const isSold = s.status === 'sold';
@@ -432,6 +341,94 @@ const Inventory = () => {
                   </Card>
                 );
               })}
+
+              {/* Flagged Items Card - positioned after Sold */}
+              {attentionItems.length > 0 && (
+                <Collapsible open={attentionOpen} onOpenChange={setAttentionOpen}>
+                  <Card 
+                    className={cn(
+                      "p-3 border-amber-500/30 bg-amber-500/5 transition-all",
+                      attentionOpen && "ring-2 ring-amber-500/50"
+                    )}
+                  >
+                    <CollapsibleTrigger className="w-full text-left">
+                      <div className="flex items-center gap-1.5">
+                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                        <p className="text-xs text-amber-600 truncate">Flagged</p>
+                      </div>
+                      <p className="text-lg font-semibold mt-0.5">{attentionItems.length} items</p>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="mt-2 pt-2 border-t border-amber-500/20 space-y-1.5 max-h-32 overflow-y-auto">
+                        {attentionItems.map((item) => (
+                          <div key={item.id} className="flex items-center gap-1.5 text-xs">
+                            {editingAttentionId === item.id ? (
+                              <div className="flex items-center gap-1 flex-1">
+                                <Input
+                                  value={editingAttentionNote}
+                                  onChange={(e) => setEditingAttentionNote(e.target.value)}
+                                  className="h-6 text-xs flex-1"
+                                  autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSaveAttentionNote(item.id, editingAttentionNote);
+                                    if (e.key === 'Escape') setEditingAttentionId(null);
+                                  }}
+                                />
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  className="h-5 w-5 p-0"
+                                  onClick={() => handleSaveAttentionNote(item.id, editingAttentionNote)}
+                                >
+                                  <Check className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setSelectedItem(item);
+                                    setDetailOpen(true);
+                                  }}
+                                  className="font-medium hover:underline truncate max-w-[80px]"
+                                >
+                                  {item.name}
+                                </button>
+                                <span className="text-muted-foreground italic truncate flex-1">
+                                  {item.attentionNote}
+                                </span>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  className="h-5 w-5 p-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingAttentionId(item.id);
+                                    setEditingAttentionNote(item.attentionNote || '');
+                                  }}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  className="h-5 w-5 p-0 text-chart-2 hover:text-chart-2"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleClearAttention(item.id);
+                                  }}
+                                >
+                                  <Check className="h-3 w-3" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Card>
+                </Collapsible>
+              )}
             </div>
           </div>
         )}
