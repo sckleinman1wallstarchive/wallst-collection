@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { InventoryItem } from '@/hooks/useSupabaseInventory';
 import { Database } from '@/integrations/supabase/types';
 import {
@@ -19,10 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, ImagePlus, X, Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { Plus } from 'lucide-react';
 import { PlatformMultiSelect } from './PlatformMultiSelect';
+import { ImageUpload } from './ImageUpload';
 
 type ItemStatus = Database['public']['Enums']['item_status'];
 
@@ -51,51 +50,8 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
     platforms: [] as string[],
     sourcePlatform: '',
     notes: '',
-    imageUrl: null as string | null,
+    imageUrls: [] as string[],
   });
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be less than 5MB');
-      return;
-    }
-
-    setIsUploading(true);
-
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `items/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('inventory-images')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('inventory-images')
-        .getPublicUrl(filePath);
-
-      setFormData({ ...formData, imageUrl: publicUrl });
-      toast.success('Image uploaded');
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      toast.error('Failed to upload image');
-    } finally {
-      setIsUploading(false);
-    }
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +73,8 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
       sourcePlatform: formData.sourcePlatform || null,
       notes: formData.notes || null,
       dateAdded: new Date().toISOString().split('T')[0],
-      imageUrl: formData.imageUrl,
+      imageUrl: formData.imageUrls[0] || null,
+      imageUrls: formData.imageUrls,
     });
 
     setFormData({
@@ -130,7 +87,7 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
       platforms: [],
       sourcePlatform: '',
       notes: '',
-      imageUrl: null,
+      imageUrls: [],
     });
     setOpen(false);
   };
@@ -142,129 +99,150 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm"><Plus className="h-4 w-4 mr-2" />Add Item</Button>
+        <Button size="sm">
+          <Plus className="h-4 w-4 mr-2" />
+          Add Item
+        </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Inventory Item</DialogTitle>
+          <DialogTitle>Add New Item</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Image Upload */}
+        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+          {/* Image Upload - Depop Style Grid */}
+          <ImageUpload
+            imageUrls={formData.imageUrls}
+            onImagesChange={(urls) => setFormData({ ...formData, imageUrls: urls })}
+          />
+
+          {/* Item Name */}
           <div>
-            <Label>Photo</Label>
-            {formData.imageUrl ? (
-              <div className="relative group mt-1">
-                <img 
-                  src={formData.imageUrl} 
-                  alt="Item" 
-                  className="w-full h-40 object-cover rounded-lg border border-border"
-                />
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="icon"
-                  className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => setFormData({ ...formData, imageUrl: null })}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                className="w-full h-32 mt-1 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-muted/50 transition-colors disabled:opacity-50"
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
-                    <span className="text-sm text-muted-foreground">Uploading...</span>
-                  </>
-                ) : (
-                  <>
-                    <ImagePlus className="h-6 w-6 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Add Photo</span>
-                  </>
-                )}
-              </button>
-            )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
+            <Label htmlFor="name">Item Name *</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Jordan 4 Retro Black Cat"
+              required
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <Label htmlFor="name">Item Name</Label>
-              <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Helmut Lang Bondage Jacket" required />
-            </div>
-            <div className="col-span-2">
-              <Label htmlFor="size">Size</Label>
-              <Input id="size" value={formData.size} onChange={(e) => setFormData({ ...formData, size: e.target.value })} placeholder="e.g. XL, 10, 44" />
-            </div>
+          {/* Size */}
+          <div>
+            <Label htmlFor="size">Size</Label>
+            <Input
+              id="size"
+              value={formData.size}
+              onChange={(e) => setFormData({ ...formData, size: e.target.value })}
+              placeholder="10.5"
+            />
           </div>
 
-          <div className="border-t border-border pt-4">
-            <h4 className="text-sm font-medium mb-3">Pricing</h4>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label htmlFor="cost">Cost (Paid)</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input id="cost" type="number" value={formData.acquisitionCost} onChange={(e) => setFormData({ ...formData, acquisitionCost: e.target.value })} placeholder="0" className="pl-7" required />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="asking">Asking Price</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input id="asking" type="number" value={formData.askingPrice} onChange={(e) => setFormData({ ...formData, askingPrice: e.target.value })} placeholder={suggestedAsking.toString()} className="pl-7" />
-                </div>
-                {cost > 0 && !formData.askingPrice && <p className="text-xs text-muted-foreground mt-1">Suggested: ${suggestedAsking}</p>}
-              </div>
-              <div>
-                <Label htmlFor="lowest">Lowest Accept</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input id="lowest" type="number" value={formData.lowestAcceptablePrice} onChange={(e) => setFormData({ ...formData, lowestAcceptablePrice: e.target.value })} placeholder={suggestedLowest.toString()} className="pl-7" />
-                </div>
-                {cost > 0 && !formData.lowestAcceptablePrice && <p className="text-xs text-muted-foreground mt-1">Suggested: ${suggestedLowest}</p>}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+          {/* Pricing Row */}
+          <div className="grid grid-cols-3 gap-3">
             <div>
-              <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(value: ItemStatus) => setFormData({ ...formData, status: value })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {statuses.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="cost">Cost *</Label>
+              <Input
+                id="cost"
+                type="number"
+                step="0.01"
+                value={formData.acquisitionCost}
+                onChange={(e) => setFormData({ ...formData, acquisitionCost: e.target.value })}
+                placeholder="200"
+                required
+              />
             </div>
             <div>
-              <Label htmlFor="sourcePlatform">Sourced From</Label>
-              <Input id="sourcePlatform" value={formData.sourcePlatform} onChange={(e) => setFormData({ ...formData, sourcePlatform: e.target.value })} placeholder="e.g. Grailed, Estate Sale" />
+              <Label htmlFor="asking">
+                Asking
+                {cost > 0 && (
+                  <span className="text-muted-foreground font-normal ml-1">
+                    (~${suggestedAsking.toFixed(0)})
+                  </span>
+                )}
+              </Label>
+              <Input
+                id="asking"
+                type="number"
+                step="0.01"
+                value={formData.askingPrice}
+                onChange={(e) => setFormData({ ...formData, askingPrice: e.target.value })}
+                placeholder={cost > 0 ? suggestedAsking.toFixed(0) : '400'}
+              />
+            </div>
+            <div>
+              <Label htmlFor="lowest">
+                Lowest
+                {cost > 0 && (
+                  <span className="text-muted-foreground font-normal ml-1">
+                    (~${suggestedLowest.toFixed(0)})
+                  </span>
+                )}
+              </Label>
+              <Input
+                id="lowest"
+                type="number"
+                step="0.01"
+                value={formData.lowestAcceptablePrice}
+                onChange={(e) => setFormData({ ...formData, lowestAcceptablePrice: e.target.value })}
+                placeholder={cost > 0 ? suggestedLowest.toFixed(0) : '300'}
+              />
             </div>
           </div>
 
+          {/* Status */}
+          <div>
+            <Label>Status</Label>
+            <Select
+              value={formData.status}
+              onValueChange={(value: ItemStatus) => setFormData({ ...formData, status: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {statuses.map((status) => (
+                  <SelectItem key={status.value} value={status.value}>
+                    {status.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Source Platform */}
+          <div>
+            <Label htmlFor="source">Source Platform</Label>
+            <Input
+              id="source"
+              value={formData.sourcePlatform}
+              onChange={(e) => setFormData({ ...formData, sourcePlatform: e.target.value })}
+              placeholder="Mercari, eBay, etc."
+            />
+          </div>
+
+          {/* Platforms */}
           <PlatformMultiSelect
             value={formData.platforms}
             onChange={(platforms) => setFormData({ ...formData, platforms })}
           />
+
+          {/* Notes */}
           <div>
             <Label htmlFor="notes">Notes</Label>
-            <Textarea id="notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Season, condition, sizing notes, comps..." rows={3} />
+            <Textarea
+              id="notes"
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              placeholder="Season, condition, sizing notes, comps..."
+              rows={3}
+            />
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
             <Button type="submit">Add Item</Button>
           </div>
         </form>
