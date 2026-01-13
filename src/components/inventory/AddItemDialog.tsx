@@ -263,11 +263,6 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
             <Textarea id="notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Season, condition, sizing notes, comps..." rows={3} />
           </div>
 
-          <div>
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea id="notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Season, condition, sizing notes, comps..." rows={3} />
-          </div>
-
           <div className="flex justify-end gap-3 pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button type="submit">Add Item</Button>
