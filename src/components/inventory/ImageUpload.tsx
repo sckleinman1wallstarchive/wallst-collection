@@ -1,6 +1,5 @@
 import { useState, useRef, DragEvent } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
 import { ImagePlus, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -11,10 +10,20 @@ interface ImageUploadProps {
   className?: string;
 }
 
+const photoSlots = [
+  { label: 'Add a photo', isUploader: true },
+  { label: 'Cover photo' },
+  { label: 'Front' },
+  { label: 'Back' },
+  { label: 'Side' },
+  { label: 'Label' },
+  { label: 'Detail' },
+  { label: 'Flaw' },
+];
+
 export function ImageUpload({ imageUrls, onImagesChange, className }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadFiles = async (files: FileList) => {
@@ -35,11 +44,19 @@ export function ImageUpload({ imageUrls, onImagesChange, className }: ImageUploa
 
     if (validFiles.length === 0) return;
 
+    // Limit to remaining slots
+    const remainingSlots = 8 - imageUrls.length;
+    const filesToUpload = validFiles.slice(0, remainingSlots);
+
+    if (filesToUpload.length < validFiles.length) {
+      toast.warning(`Only ${filesToUpload.length} of ${validFiles.length} images uploaded (max 8)`);
+    }
+
     setIsUploading(true);
     const newUrls: string[] = [];
 
     try {
-      for (const file of validFiles) {
+      for (const file of filesToUpload) {
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `items/${fileName}`;
@@ -72,7 +89,6 @@ export function ImageUpload({ imageUrls, onImagesChange, className }: ImageUploa
     if (files && files.length > 0) {
       await uploadFiles(files);
     }
-    // Reset input so same file can be selected again
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -99,18 +115,18 @@ export function ImageUpload({ imageUrls, onImagesChange, className }: ImageUploa
     }
   };
 
-  const handleRemoveImage = (index: number) => {
+  const handleRemoveImage = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation();
     const newUrls = imageUrls.filter((_, i) => i !== index);
     onImagesChange(newUrls);
-    if (selectedIndex >= newUrls.length && newUrls.length > 0) {
-      setSelectedIndex(newUrls.length - 1);
-    } else if (newUrls.length === 0) {
-      setSelectedIndex(0);
-    }
   };
 
-  const hasImages = imageUrls.length > 0;
-  const mainImage = hasImages ? imageUrls[selectedIndex] || imageUrls[0] : null;
+  const handleSlotClick = (index: number) => {
+    // If slot is empty or is the uploader slot, trigger file input
+    if (!imageUrls[index] || index === 0) {
+      fileInputRef.current?.click();
+    }
+  };
 
   return (
     <div 
@@ -119,104 +135,83 @@ export function ImageUpload({ imageUrls, onImagesChange, className }: ImageUploa
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {hasImages ? (
-        <div className="space-y-2">
-          {/* Main image preview */}
-          <div className="relative group rounded-lg overflow-hidden border border-border bg-muted/30">
-            <img 
-              src={mainImage!} 
-              alt="Item" 
-              className="w-full h-48 object-contain bg-muted/20"
-            />
-            <Button
-              type="button"
-              variant="destructive"
-              size="icon"
-              className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => handleRemoveImage(selectedIndex)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          {/* Thumbnails row */}
-          <div className="flex gap-2 flex-wrap">
-            {imageUrls.map((url, index) => (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium">Photos</p>
+          <p className="text-xs text-muted-foreground">{imageUrls.length}/8</p>
+        </div>
+        
+        <div className={cn(
+          "grid grid-cols-4 gap-2 p-2 rounded-lg transition-colors",
+          isDragging && "bg-primary/5 ring-2 ring-primary/20"
+        )}>
+          {photoSlots.map((slot, index) => {
+            const image = imageUrls[index];
+            const isEmpty = !image;
+            const isDisabled = isUploading && isEmpty;
+            
+            return (
               <button
-                key={url}
+                key={index}
                 type="button"
-                onClick={() => setSelectedIndex(index)}
+                disabled={isDisabled}
+                onClick={() => isEmpty && handleSlotClick(index)}
                 className={cn(
-                  "relative w-14 h-14 rounded-md overflow-hidden border-2 transition-all group",
-                  index === selectedIndex 
-                    ? "border-primary ring-2 ring-primary/20" 
-                    : "border-border hover:border-primary/50"
+                  "aspect-square border-2 border-dashed rounded-md flex flex-col items-center justify-center gap-1 transition-all relative overflow-hidden group",
+                  isEmpty 
+                    ? "border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/30" 
+                    : "border-transparent",
+                  isDisabled && "opacity-50 cursor-not-allowed"
                 )}
               >
-                <img src={url} alt="" className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemoveImage(index);
-                  }}
-                  className="absolute inset-0 bg-destructive/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                >
-                  <X className="h-4 w-4 text-destructive-foreground" />
-                </button>
+                {image ? (
+                  <>
+                    <img 
+                      src={image} 
+                      alt={slot.label} 
+                      className="w-full h-full object-cover rounded-md"
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => handleRemoveImage(index, e)}
+                      className="absolute inset-0 bg-destructive/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-md"
+                    >
+                      <X className="h-5 w-5 text-destructive-foreground" />
+                    </button>
+                    {index === 0 && (
+                      <span className="absolute bottom-0 left-0 right-0 bg-background/80 text-[10px] text-center py-0.5 font-medium">
+                        Cover
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {isUploading && index === imageUrls.length ? (
+                      <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+                    ) : slot.isUploader ? (
+                      <ImagePlus className={cn(
+                        "h-5 w-5",
+                        isDragging ? "text-primary" : "text-muted-foreground"
+                      )} />
+                    ) : null}
+                    <span className={cn(
+                      "text-[10px] text-center px-1 leading-tight",
+                      isDragging && slot.isUploader ? "text-primary" : "text-muted-foreground"
+                    )}>
+                      {slot.label}
+                    </span>
+                  </>
+                )}
               </button>
-            ))}
-            
-            {/* Add more button */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className={cn(
-                "w-14 h-14 rounded-md border-2 border-dashed flex items-center justify-center transition-colors",
-                isDragging 
-                  ? "border-primary bg-primary/10" 
-                  : "border-border hover:border-primary/50 hover:bg-muted/50"
-              )}
-            >
-              {isUploading ? (
-                <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
-              ) : (
-                <ImagePlus className={cn("h-5 w-5", isDragging ? "text-primary" : "text-muted-foreground")} />
-              )}
-            </button>
-          </div>
+            );
+          })}
         </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
-          className={cn(
-            "w-full h-40 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 transition-colors disabled:opacity-50",
-            isDragging 
-              ? "border-primary bg-primary/10" 
-              : "border-border hover:border-primary/50 hover:bg-muted/50"
-          )}
-        >
-          {isUploading ? (
-            <>
-              <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
-              <span className="text-sm text-muted-foreground">Uploading...</span>
-            </>
-          ) : (
-            <>
-              <ImagePlus className={cn("h-8 w-8", isDragging ? "text-primary" : "text-muted-foreground")} />
-              <span className={cn("text-sm", isDragging ? "text-primary" : "text-muted-foreground")}>
-                {isDragging ? "Drop images here" : "Add Photos"}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                Click or drag & drop (multiple allowed)
-              </span>
-            </>
-          )}
-        </button>
-      )}
+        
+        <p className="text-xs text-muted-foreground text-center">
+          Click or drag & drop images
+        </p>
+      </div>
+      
       <input
         ref={fileInputRef}
         type="file"

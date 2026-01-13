@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, ArrowUpDown, Eye, CalendarCheck } from 'lucide-react';
+import { Search, ArrowUpDown, Eye, CalendarCheck, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EditableCell } from '@/components/gotsole/EditableCell';
 
@@ -229,27 +229,45 @@ export function InventoryTable({
                     </TableCell>
                   )}
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      {!selectionMode && item.inConvention && (
-                        <CalendarCheck className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                      )}
-                      <div>
-                        <p className="font-medium text-sm">{item.name}</p>
-                        {selectionMode && item.inConvention ? (
-                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                            <span className="text-xs text-muted-foreground">Size</span>
-                            <EditableCell
-                              value={item.size}
-                              onSave={(val) => onUpdateItem?.(item.id, { size: val as string | null })}
-                              isEditing={true}
-                              type="text"
-                              placeholder="—"
-                              className="w-16 h-6 text-xs"
-                            />
-                          </div>
+                    <div className="flex items-center gap-3">
+                      {/* Thumbnail */}
+                      <div className="w-10 h-10 rounded-md overflow-hidden bg-muted flex-shrink-0 border border-border">
+                        {(item.imageUrls?.[0] || item.imageUrl) ? (
+                          <img 
+                            src={item.imageUrls?.[0] || item.imageUrl} 
+                            alt="" 
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
-                          item.size && <p className="text-xs text-muted-foreground">Size {item.size}</p>
+                          <div className="w-full h-full flex items-center justify-center">
+                            <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                          </div>
                         )}
+                      </div>
+                      
+                      {/* Item info */}
+                      <div className="flex items-center gap-2">
+                        {!selectionMode && item.inConvention && (
+                          <CalendarCheck className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                        )}
+                        <div>
+                          <p className="font-medium text-sm">{item.name}</p>
+                          {selectionMode && item.inConvention ? (
+                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              <span className="text-xs text-muted-foreground">Size</span>
+                              <EditableCell
+                                value={item.size}
+                                onSave={(val) => onUpdateItem?.(item.id, { size: val as string | null })}
+                                isEditing={true}
+                                type="text"
+                                placeholder="—"
+                                className="w-16 h-6 text-xs"
+                              />
+                            </div>
+                          ) : (
+                            item.size && <p className="text-xs text-muted-foreground">Size {item.size}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </TableCell>
