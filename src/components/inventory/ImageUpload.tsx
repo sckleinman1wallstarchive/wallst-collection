@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, DragEvent } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { ImagePlus, X, Loader2 } from 'lucide-react';
@@ -13,12 +13,10 @@ interface ImageUploadProps {
 
 export function ImageUpload({ imageUrl, onImageChange, className }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const uploadFile = async (file: File) => {
     // Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image file');
@@ -58,6 +56,36 @@ export function ImageUpload({ imageUrl, onImageChange, className }: ImageUploadP
     }
   };
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await uploadFile(file);
+    }
+  };
+
+  const handleDragOver = (e: DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      await uploadFile(files[0]);
+    }
+  };
+
   const handleRemoveImage = () => {
     onImageChange(null);
   };
@@ -85,8 +113,16 @@ export function ImageUpload({ imageUrl, onImageChange, className }: ImageUploadP
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
           disabled={isUploading}
-          className="w-full h-40 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-muted/50 transition-colors disabled:opacity-50"
+          className={cn(
+            "w-full h-40 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 transition-colors disabled:opacity-50",
+            isDragging 
+              ? "border-primary bg-primary/10" 
+              : "border-border hover:border-primary/50 hover:bg-muted/50"
+          )}
         >
           {isUploading ? (
             <>
@@ -95,8 +131,13 @@ export function ImageUpload({ imageUrl, onImageChange, className }: ImageUploadP
             </>
           ) : (
             <>
-              <ImagePlus className="h-8 w-8 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Add Photo</span>
+              <ImagePlus className={cn("h-8 w-8", isDragging ? "text-primary" : "text-muted-foreground")} />
+              <span className={cn("text-sm", isDragging ? "text-primary" : "text-muted-foreground")}>
+                {isDragging ? "Drop image here" : "Add Photo"}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                Click or drag & drop
+              </span>
             </>
           )}
         </button>

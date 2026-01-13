@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, DragEvent } from 'react';
 import { InventoryItem } from '@/hooks/useSupabaseInventory';
 import { Database } from '@/integrations/supabase/types';
 import {
@@ -23,6 +23,7 @@ import { Trash2, DollarSign, Save, ImagePlus, X, Loader2, ArrowRightLeft, Calend
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PlatformMultiSelect } from './PlatformMultiSelect';
+import { cn } from '@/lib/utils';
 
 type ItemStatus = Database['public']['Enums']['item_status'];
 
@@ -51,6 +52,7 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<InventoryItem>>({});
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [hasAutoStarted, setHasAutoStarted] = useState(false);
   const [isAddingAttention, setIsAddingAttention] = useState(false);
@@ -81,10 +83,7 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
 
   if (!item) return null;
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const uploadFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image file');
       return;
@@ -123,6 +122,34 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
       toast.error('Failed to upload image');
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) await uploadFile(file);
+  };
+
+  const handleDragOver = (e: DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      await uploadFile(files[0]);
     }
   };
 
@@ -333,8 +360,16 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
                   disabled={isUploading}
-                  className="w-full h-32 mt-1 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-muted/50 transition-colors disabled:opacity-50"
+                  className={cn(
+                    "w-full h-32 mt-1 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 transition-colors disabled:opacity-50",
+                    isDragging 
+                      ? "border-primary bg-primary/10" 
+                      : "border-border hover:border-primary/50 hover:bg-muted/50"
+                  )}
                 >
                   {isUploading ? (
                     <>
@@ -343,8 +378,11 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
                     </>
                   ) : (
                     <>
-                      <ImagePlus className="h-6 w-6 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Add Photo</span>
+                      <ImagePlus className={cn("h-6 w-6", isDragging ? "text-primary" : "text-muted-foreground")} />
+                      <span className={cn("text-sm", isDragging ? "text-primary" : "text-muted-foreground")}>
+                        {isDragging ? "Drop image here" : "Add Photo"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">Click or drag & drop</span>
                     </>
                   )}
                 </button>
@@ -387,9 +425,13 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
               onChange={(platforms) => setEditData({ ...editData, platforms })}
             />
             <div>
+              <Label>Notes</Label>
+              <Textarea value={editData.notes || ''} onChange={(e) => setEditData({ ...editData, notes: e.target.value })} rows={3} placeholder="General notes about this item..." />
+            </div>
+            <div>
               <Label className="flex items-center gap-1.5">
                 <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                Attention Note
+                Quick Flag (optional)
               </Label>
               <Input 
                 value={editData.attentionNote || ''} 
@@ -397,11 +439,6 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
                 placeholder="e.g., fake, needs refund"
                 className="mt-1"
               />
-              <p className="text-xs text-muted-foreground mt-1">Leave empty if no issues</p>
-            </div>
-            <div>
-              <Label>Notes</Label>
-              <Textarea value={editData.notes || ''} onChange={(e) => setEditData({ ...editData, notes: e.target.value })} rows={3} />
             </div>
             <div className="flex gap-3 pt-4">
               <Button onClick={handleSave} className="flex-1"><Save className="h-4 w-4 mr-2" />Save Changes</Button>
@@ -420,8 +457,16 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
                 disabled={isUploading}
-                className="w-full h-32 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-muted/50 transition-colors disabled:opacity-50"
+                className={cn(
+                  "w-full h-32 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 transition-colors disabled:opacity-50",
+                  isDragging 
+                    ? "border-primary bg-primary/10" 
+                    : "border-border hover:border-primary/50 hover:bg-muted/50"
+                )}
               >
                 {isUploading ? (
                   <>
@@ -430,8 +475,11 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
                   </>
                 ) : (
                   <>
-                    <ImagePlus className="h-6 w-6 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Add Photo</span>
+                    <ImagePlus className={cn("h-6 w-6", isDragging ? "text-primary" : "text-muted-foreground")} />
+                    <span className={cn("text-sm", isDragging ? "text-primary" : "text-muted-foreground")}>
+                      {isDragging ? "Drop image here" : "Add Photo"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">Click or drag & drop</span>
                   </>
                 )}
               </button>
