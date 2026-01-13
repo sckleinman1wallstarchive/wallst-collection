@@ -114,7 +114,7 @@ export const CashFlowStatement = ({ onBack }: CashFlowStatementProps) => {
             <AccordionItem value="purchases" className="border-none">
               <AccordionTrigger className="py-2 hover:no-underline">
                 <div className="flex justify-between items-center w-full pr-4">
-                  <span className="text-sm">Cash paid for inventory (WSC Account)</span>
+                  <span className="text-sm">Cash paid for inventory</span>
                   <span className={`font-mono text-sm font-medium ${getAmountColor(-operating.cashPaidForInventory)}`}>
                     {formatCurrency(-operating.cashPaidForInventory)}
                   </span>
@@ -122,15 +122,15 @@ export const CashFlowStatement = ({ onBack }: CashFlowStatementProps) => {
               </AccordionTrigger>
               <AccordionContent>
                 <div className="pl-4 space-y-1 max-h-48 overflow-y-auto">
-                  {details.wscPurchaseItems && details.wscPurchaseItems.length > 0 ? (
-                    details.wscPurchaseItems.map((item, i) => (
+                  {details.purchaseItems && details.purchaseItems.length > 0 ? (
+                    details.purchaseItems.map((item, i) => (
                       <div key={i} className="flex justify-between text-xs text-muted-foreground py-1 border-b border-border/50 last:border-0">
-                        <span className="truncate flex-1">{item.date} - {item.name}</span>
+                        <span className="truncate flex-1">{item.date} - {item.name} ({item.paidBy})</span>
                         <span className="font-mono ml-2">{formatCurrency(item.amount)}</span>
                       </div>
                     ))
                   ) : (
-                    <p className="text-xs text-muted-foreground italic">No WSC purchases recorded</p>
+                    <p className="text-xs text-muted-foreground italic">No purchases recorded</p>
                   )}
                 </div>
               </AccordionContent>
