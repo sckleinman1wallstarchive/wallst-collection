@@ -14,8 +14,10 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { Database } from '@/integrations/supabase/types';
-import { CalendarCheck, Package } from 'lucide-react';
+import { CalendarCheck, Package, AlertTriangle, Check, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Input } from '@/components/ui/input';
 
 type ItemStatus = Database['public']['Enums']['item_status'];
 
@@ -57,6 +59,7 @@ const Inventory = () => {
     toggleConvention,
     getFinancialSummary,
     getConventionItems,
+    getAttentionItems,
   } = useSupabaseInventory();
 
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
@@ -68,6 +71,9 @@ const Inventory = () => {
   const [tradeOpen, setTradeOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [conventionMode, setConventionMode] = useState(false);
+  const [attentionOpen, setAttentionOpen] = useState(true);
+  const [editingAttentionId, setEditingAttentionId] = useState<string | null>(null);
+  const [editingAttentionNote, setEditingAttentionNote] = useState('');
 
   // Handle URL params to open item detail directly
   useEffect(() => {
@@ -88,6 +94,7 @@ const Inventory = () => {
 
   const summary = getFinancialSummary();
   const conventionItems = getConventionItems();
+  const attentionItems = getAttentionItems();
 
   // Calculate summaries by status
   const statusSummaries = useMemo((): StatusSummary[] => {
@@ -119,8 +126,8 @@ const Inventory = () => {
       summaryMap.set(status, existing);
     });
     
-    // Order: active statuses first, then sold, then issues
-    const order = ['in-closet-parker', 'in-closet-spencer', 'in-closet', 'listed', 'otw', 'sold', 'traded', 'refunded', 'scammed', 'archive-hold'];
+    // Simplified order: only show the 5 main statuses
+    const order = ['listed', 'otw', 'in-closet-parker', 'in-closet-spencer', 'sold'];
     return order
       .filter(s => summaryMap.has(s))
       .map(s => summaryMap.get(s)!);
@@ -186,6 +193,17 @@ const Inventory = () => {
 
   const handleConventionToggle = async (id: string, inConvention: boolean) => {
     await toggleConvention(id, inConvention);
+  };
+
+  const handleSaveAttentionNote = async (id: string, note: string) => {
+    await updateItem(id, { attentionNote: note || null });
+    setEditingAttentionId(null);
+    setEditingAttentionNote('');
+  };
+
+  const handleClearAttention = async (id: string) => {
+    await updateItem(id, { attentionNote: null });
+    toast.success('Issue resolved');
   };
 
   if (isLoading) {
@@ -259,6 +277,97 @@ const Inventory = () => {
               </div>
             </div>
           </Card>
+        )}
+
+        {/* Needs Attention Banner */}
+        {attentionItems.length > 0 && !conventionMode && (
+          <Collapsible open={attentionOpen} onOpenChange={setAttentionOpen}>
+            <Card className="border-amber-500/30 bg-amber-500/5">
+              <CollapsibleTrigger className="w-full p-3 flex items-center justify-between hover:bg-amber-500/5 transition-colors rounded-t-lg">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  <span className="font-medium text-sm">{attentionItems.length} item{attentionItems.length !== 1 ? 's' : ''} flagged</span>
+                </div>
+                {attentionOpen ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-3 pb-3 space-y-2">
+                  {attentionItems.map((item) => (
+                    <div 
+                      key={item.id} 
+                      className="flex items-center gap-3 p-2 bg-background rounded-lg border border-border"
+                    >
+                      <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                      <button
+                        onClick={() => {
+                          setSelectedItem(item);
+                          setDetailOpen(true);
+                        }}
+                        className="font-medium text-sm hover:underline truncate flex-shrink-0 max-w-[140px]"
+                      >
+                        {item.name}
+                      </button>
+                      
+                      {editingAttentionId === item.id ? (
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <Input
+                            value={editingAttentionNote}
+                            onChange={(e) => setEditingAttentionNote(e.target.value)}
+                            placeholder="Quick note..."
+                            className="h-7 text-sm flex-1"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveAttentionNote(item.id, editingAttentionNote);
+                              if (e.key === 'Escape') setEditingAttentionId(null);
+                            }}
+                          />
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-7 w-7 p-0"
+                            onClick={() => handleSaveAttentionNote(item.id, editingAttentionNote)}
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="text-sm text-muted-foreground italic truncate flex-1 min-w-0">
+                            "{item.attentionNote}"
+                          </span>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-7 w-7 p-0"
+                              onClick={() => {
+                                setEditingAttentionId(item.id);
+                                setEditingAttentionNote(item.attentionNote || '');
+                              }}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-7 w-7 p-0 text-chart-2 hover:text-chart-2"
+                              onClick={() => handleClearAttention(item.id)}
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
         )}
 
         {/* Status Totals - Clickable Cards */}
