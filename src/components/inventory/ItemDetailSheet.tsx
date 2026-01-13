@@ -1,4 +1,4 @@
-import React, { useState, useRef, DragEvent } from 'react';
+import React, { useState } from 'react';
 import { InventoryItem } from '@/hooks/useSupabaseInventory';
 import { Database } from '@/integrations/supabase/types';
 import {
@@ -19,13 +19,58 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Trash2, DollarSign, Save, ImagePlus, X, Loader2, ArrowRightLeft, CalendarCheck, AlertTriangle, Check } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Trash2, DollarSign, Save, ArrowRightLeft, CalendarCheck, AlertTriangle, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { PlatformMultiSelect } from './PlatformMultiSelect';
+import { ImageUpload } from './ImageUpload';
 import { cn } from '@/lib/utils';
 
 type ItemStatus = Database['public']['Enums']['item_status'];
+
+// Simple image gallery view for displaying multiple images
+function ImageGalleryView({ 
+  images, 
+  selectedIndex, 
+  onSelect 
+}: { 
+  images: string[]; 
+  selectedIndex: number; 
+  onSelect: (i: number) => void; 
+}) {
+  if (images.length === 0) return null;
+  const mainImage = images[selectedIndex] || images[0];
+  
+  return (
+    <div className="space-y-2">
+      <div className="rounded-lg overflow-hidden border border-border bg-muted/30">
+        <img 
+          src={mainImage} 
+          alt="Item" 
+          className="w-full h-48 object-contain bg-muted/20"
+        />
+      </div>
+      {images.length > 1 && (
+        <div className="flex gap-2 flex-wrap">
+          {images.map((url, index) => (
+            <button
+              key={url}
+              type="button"
+              onClick={() => onSelect(index)}
+              className={cn(
+                "w-12 h-12 rounded-md overflow-hidden border-2 transition-all",
+                index === selectedIndex 
+                  ? "border-primary ring-2 ring-primary/20" 
+                  : "border-border hover:border-primary/50"
+              )}
+            >
+              <img src={url} alt="" className="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface ItemDetailSheetProps {
   item: InventoryItem | null;
@@ -51,16 +96,27 @@ const statuses: { value: ItemStatus; label: string }[] = [
 export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, onSell, onTrade, allItems = [], startInEditMode = false }: ItemDetailSheetProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<InventoryItem>>({});
-  const [isUploading, setIsUploading] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [hasAutoStarted, setHasAutoStarted] = useState(false);
   const [isAddingAttention, setIsAddingAttention] = useState(false);
   const [newAttentionNote, setNewAttentionNote] = useState('');
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  // Helper to get all images for an item
+  const getItemImages = (i: InventoryItem): string[] => {
+    const urls: string[] = [];
+    if (i.imageUrl) urls.push(i.imageUrl);
+    if (i.imageUrls && i.imageUrls.length > 0) {
+      i.imageUrls.forEach(url => {
+        if (!urls.includes(url)) urls.push(url);
+      });
+    }
+    return urls;
+  };
 
   // Auto-start edit mode when requested
   React.useEffect(() => {
     if (open && startInEditMode && item && !hasAutoStarted && item.status !== 'sold' && item.status !== 'traded') {
+      const images = getItemImages(item);
       setEditData({
         name: item.name,
         size: item.size,
@@ -70,7 +126,7 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
         status: item.status,
         platforms: item.platforms || [],
         notes: item.notes,
-        imageUrl: item.imageUrl,
+        imageUrls: images,
         inConvention: item.inConvention,
       });
       setIsEditing(true);
@@ -78,82 +134,25 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
     }
     if (!open) {
       setHasAutoStarted(false);
+      setSelectedImageIndex(0);
     }
   }, [open, startInEditMode, item, hasAutoStarted]);
 
   if (!item) return null;
 
-  const uploadFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be less than 5MB');
-      return;
-    }
-
-    setIsUploading(true);
-
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `items/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('inventory-images')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('inventory-images')
-        .getPublicUrl(filePath);
-
-      if (isEditing) {
-        setEditData({ ...editData, imageUrl: publicUrl });
-      } else {
-        onUpdate(item.id, { imageUrl: publicUrl });
-      }
-      toast.success('Image uploaded');
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      toast.error('Failed to upload image');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) await uploadFile(file);
-  };
-
-  const handleDragOver = (e: DragEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: DragEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  const handleDrop = async (e: DragEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      await uploadFile(files[0]);
+  // Handle image changes from ImageUpload component
+  const handleImagesChange = (urls: string[]) => {
+    if (isEditing) {
+      setEditData({ ...editData, imageUrls: urls });
+    } else {
+      // Update directly - first image becomes imageUrl, rest go to imageUrls
+      const primary = urls[0] || null;
+      onUpdate(item.id, { imageUrl: primary, imageUrls: urls });
     }
   };
 
   const handleEdit = () => {
+    const images = getItemImages(item);
     setEditData({
       name: item.name,
       size: item.size,
@@ -163,7 +162,7 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
       status: item.status,
       platforms: item.platforms || [],
       notes: item.notes,
-      imageUrl: item.imageUrl,
+      imageUrls: images,
       inConvention: item.inConvention,
       attentionNote: item.attentionNote,
     });
@@ -171,7 +170,13 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
   };
 
   const handleSave = () => {
-    onUpdate(item.id, editData);
+    // When saving, set imageUrl to first image and imageUrls to all
+    const images = editData.imageUrls || [];
+    onUpdate(item.id, {
+      ...editData,
+      imageUrl: images[0] || null,
+      imageUrls: images,
+    });
     setIsEditing(false);
   };
 
@@ -202,7 +207,9 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
   const margin = (item.askingPrice || 0) > 0 ? ((profit / (item.askingPrice || 1)) * 100).toFixed(0) : '0';
   const isLostItem = ['scammed', 'refunded'].includes(item.status);
   const isTradedItem = item.status === 'traded';
-  const currentImageUrl = isEditing ? editData.imageUrl : item.imageUrl;
+  
+  // Get all images for display
+  const currentImages = isEditing ? (editData.imageUrls || []) : getItemImages(item);
 
   // Get traded item info
   const tradedForItem = isTradedItem && item.tradedForItemId 
@@ -216,22 +223,10 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
           <SheetTitle className="text-left">Item Details</SheetTitle>
         </SheetHeader>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-
         {item.status === 'sold' ? (
           <div className="mt-6 space-y-4">
-            {item.imageUrl && (
-              <img 
-                src={item.imageUrl} 
-                alt={item.name} 
-                className="w-full h-48 object-cover rounded-lg border border-border"
-              />
+            {currentImages.length > 0 && (
+              <ImageGalleryView images={currentImages} selectedIndex={selectedImageIndex} onSelect={setSelectedImageIndex} />
             )}
             <div>
               <h3 className="text-lg font-semibold">{item.name}</h3>
@@ -302,12 +297,8 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
           </div>
         ) : isTradedItem ? (
           <div className="mt-6 space-y-4">
-            {item.imageUrl && (
-              <img 
-                src={item.imageUrl} 
-                alt={item.name} 
-                className="w-full h-48 object-cover rounded-lg border border-border"
-              />
+            {currentImages.length > 0 && (
+              <ImageGalleryView images={currentImages} selectedIndex={selectedImageIndex} onSelect={setSelectedImageIndex} />
             )}
             <div>
               <h3 className="text-lg font-semibold">{item.name}</h3>
@@ -338,55 +329,13 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
         ) : isEditing ? (
           <div className="mt-6 space-y-4">
             <div>
-              <Label>Photo</Label>
-              {currentImageUrl ? (
-                <div className="relative group mt-1">
-                  <img 
-                    src={currentImageUrl} 
-                    alt="Item" 
-                    className="w-full h-40 object-cover rounded-lg border border-border"
-                  />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => setEditData({ ...editData, imageUrl: null })}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  disabled={isUploading}
-                  className={cn(
-                    "w-full h-32 mt-1 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 transition-colors disabled:opacity-50",
-                    isDragging 
-                      ? "border-primary bg-primary/10" 
-                      : "border-border hover:border-primary/50 hover:bg-muted/50"
-                  )}
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
-                      <span className="text-sm text-muted-foreground">Uploading...</span>
-                    </>
-                  ) : (
-                    <>
-                      <ImagePlus className={cn("h-6 w-6", isDragging ? "text-primary" : "text-muted-foreground")} />
-                      <span className={cn("text-sm", isDragging ? "text-primary" : "text-muted-foreground")}>
-                        {isDragging ? "Drop image here" : "Add Photo"}
-                      </span>
-                      <span className="text-xs text-muted-foreground">Click or drag & drop</span>
-                    </>
-                  )}
-                </button>
-              )}
+              <Label>Photos</Label>
+              <div className="mt-1">
+                <ImageUpload
+                  imageUrls={currentImages}
+                  onImagesChange={handleImagesChange}
+                />
+              </div>
             </div>
 
             <div>
@@ -447,42 +396,18 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
           </div>
         ) : (
           <div className="mt-6 space-y-6">
-            {item.imageUrl ? (
-              <img 
-                src={item.imageUrl} 
-                alt={item.name} 
-                className="w-full h-48 object-cover rounded-lg border border-border"
+            {/* Image Gallery or Upload */}
+            {currentImages.length > 0 ? (
+              <ImageGalleryView 
+                images={currentImages} 
+                selectedIndex={selectedImageIndex} 
+                onSelect={setSelectedImageIndex} 
               />
             ) : (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                disabled={isUploading}
-                className={cn(
-                  "w-full h-32 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 transition-colors disabled:opacity-50",
-                  isDragging 
-                    ? "border-primary bg-primary/10" 
-                    : "border-border hover:border-primary/50 hover:bg-muted/50"
-                )}
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
-                    <span className="text-sm text-muted-foreground">Uploading...</span>
-                  </>
-                ) : (
-                  <>
-                    <ImagePlus className={cn("h-6 w-6", isDragging ? "text-primary" : "text-muted-foreground")} />
-                    <span className={cn("text-sm", isDragging ? "text-primary" : "text-muted-foreground")}>
-                      {isDragging ? "Drop image here" : "Add Photo"}
-                    </span>
-                    <span className="text-xs text-muted-foreground">Click or drag & drop</span>
-                  </>
-                )}
-              </button>
+              <ImageUpload
+                imageUrls={[]}
+                onImagesChange={handleImagesChange}
+              />
             )}
 
             <div>
