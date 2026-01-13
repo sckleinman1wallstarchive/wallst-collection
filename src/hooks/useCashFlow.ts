@@ -139,13 +139,17 @@ export const useCashFlow = () => {
   const equipmentSales = 0;
   const netInvesting = equipmentSales - equipmentPurchases;
 
-  // Financing Activities - Get from contribution transactions, not capital_accounts
-  // This ensures we count the actual recorded contributions
-  const spencerContributions = contributionTransactions
+  // Financing Activities - Only count ACTUAL cash contributions, not purchase-assignment contributions
+  // Purchase contributions have a "reference" field linking to inventory item
+  const actualContributions = contributionTransactions.filter(
+    (t) => !t.reference // No reference = manual cash contribution
+  );
+
+  const spencerContributions = actualContributions
     .filter((t) => t.category === 'Spencer Kleinman')
     .reduce((sum, t) => sum + Number(t.amount), 0);
   
-  const parkerContributions = contributionTransactions
+  const parkerContributions = actualContributions
     .filter((t) => t.category === 'Parker Kleinman')
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
@@ -158,8 +162,8 @@ export const useCashFlow = () => {
 
   const netFinancing = spencerContributions + parkerContributions - distributions;
 
-  // Parse contribution details by partner
-  const spencerContributionDetails: ContributionDetail[] = contributionTransactions
+  // Parse contribution details by partner (only actual cash contributions)
+  const spencerContributionDetails: ContributionDetail[] = actualContributions
     .filter((t) => t.category === 'Spencer Kleinman')
     .map((t) => ({
       date: t.date,
@@ -167,7 +171,7 @@ export const useCashFlow = () => {
       amount: Number(t.amount),
     }));
 
-  const parkerContributionDetails: ContributionDetail[] = contributionTransactions
+  const parkerContributionDetails: ContributionDetail[] = actualContributions
     .filter((t) => t.category === 'Parker Kleinman')
     .map((t) => ({
       date: t.date,
