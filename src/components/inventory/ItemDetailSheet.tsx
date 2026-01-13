@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Trash2, DollarSign, Save, ImagePlus, X, Loader2, ArrowRightLeft, CalendarCheck } from 'lucide-react';
+import { Trash2, DollarSign, Save, ImagePlus, X, Loader2, ArrowRightLeft, CalendarCheck, AlertTriangle, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PlatformMultiSelect } from './PlatformMultiSelect';
@@ -53,6 +53,8 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [hasAutoStarted, setHasAutoStarted] = useState(false);
+  const [isAddingAttention, setIsAddingAttention] = useState(false);
+  const [newAttentionNote, setNewAttentionNote] = useState('');
 
   // Auto-start edit mode when requested
   React.useEffect(() => {
@@ -136,6 +138,7 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
       notes: item.notes,
       imageUrl: item.imageUrl,
       inConvention: item.inConvention,
+      attentionNote: item.attentionNote,
     });
     setIsEditing(true);
   };
@@ -154,6 +157,18 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
 
   const handleConventionToggle = () => {
     onUpdate(item.id, { inConvention: !item.inConvention });
+  };
+
+  const handleSaveAttentionNote = () => {
+    onUpdate(item.id, { attentionNote: newAttentionNote || null });
+    setIsAddingAttention(false);
+    setNewAttentionNote('');
+    if (newAttentionNote) toast.success('Issue flagged');
+  };
+
+  const handleClearAttention = () => {
+    onUpdate(item.id, { attentionNote: null });
+    toast.success('Issue resolved');
   };
 
   const profit = (item.askingPrice || 0) - item.acquisitionCost;
@@ -372,6 +387,19 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
               onChange={(platforms) => setEditData({ ...editData, platforms })}
             />
             <div>
+              <Label className="flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                Attention Note
+              </Label>
+              <Input 
+                value={editData.attentionNote || ''} 
+                onChange={(e) => setEditData({ ...editData, attentionNote: e.target.value })} 
+                placeholder="e.g., fake, needs refund"
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Leave empty if no issues</p>
+            </div>
+            <div>
               <Label>Notes</Label>
               <Textarea value={editData.notes || ''} onChange={(e) => setEditData({ ...editData, notes: e.target.value })} rows={3} />
             </div>
@@ -465,6 +493,68 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
                 <p className="text-xs text-muted-foreground mb-1">Notes</p>
                 <p className="text-sm bg-muted p-3 rounded-lg">{item.notes}</p>
               </div>
+            )}
+
+            {/* Attention Note Section */}
+            {item.attentionNote ? (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-amber-600 dark:text-amber-400">Flagged</p>
+                    <p className="text-sm text-muted-foreground italic">"{item.attentionNote}"</p>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className="h-7 text-chart-2 hover:text-chart-2 flex-shrink-0"
+                    onClick={handleClearAttention}
+                  >
+                    <Check className="h-3.5 w-3.5 mr-1" />
+                    Resolve
+                  </Button>
+                </div>
+              </div>
+            ) : isAddingAttention ? (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  <span className="text-sm font-medium">Flag Issue</span>
+                </div>
+                <Input
+                  value={newAttentionNote}
+                  onChange={(e) => setNewAttentionNote(e.target.value)}
+                  placeholder="e.g., fake, needs refund"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveAttentionNote();
+                    if (e.key === 'Escape') {
+                      setIsAddingAttention(false);
+                      setNewAttentionNote('');
+                    }
+                  }}
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleSaveAttentionNote} disabled={!newAttentionNote.trim()}>
+                    Save
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => {
+                    setIsAddingAttention(false);
+                    setNewAttentionNote('');
+                  }}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button 
+                variant="outline" 
+                className="w-full border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                onClick={() => setIsAddingAttention(true)}
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Flag Issue
+              </Button>
             )}
 
             {/* Convention Toggle */}

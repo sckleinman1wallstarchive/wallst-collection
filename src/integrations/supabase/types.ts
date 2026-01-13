@@ -123,6 +123,7 @@ export type Database = {
         Row: {
           acquisition_cost: number
           asking_price: number | null
+          attention_note: string | null
           brand: string | null
           category: Database["public"]["Enums"]["item_category"]
           created_at: string
@@ -154,6 +155,7 @@ export type Database = {
         Insert: {
           acquisition_cost?: number
           asking_price?: number | null
+          attention_note?: string | null
           brand?: string | null
           category?: Database["public"]["Enums"]["item_category"]
           created_at?: string
@@ -185,6 +187,7 @@ export type Database = {
         Update: {
           acquisition_cost?: number
           asking_price?: number | null
+          attention_note?: string | null
           brand?: string | null
           category?: Database["public"]["Enums"]["item_category"]
           created_at?: string

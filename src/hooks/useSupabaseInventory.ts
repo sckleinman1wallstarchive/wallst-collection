@@ -36,6 +36,7 @@ export interface InventoryItem {
   tradeCashDifference: number | null;
   paidBy: Database['public']['Enums']['item_owner'] | null;
   prioritySale: boolean;
+  attentionNote: string | null;
   createdAt: string;
 }
 
@@ -68,6 +69,7 @@ const toAppItem = (row: DbInventoryItem): InventoryItem => ({
   tradeCashDifference: (row as any).trade_cash_difference || null,
   paidBy: row.paid_by,
   prioritySale: (row as any).priority_sale || false,
+  attentionNote: (row as any).attention_note || null,
   createdAt: row.created_at,
 });
 
@@ -98,6 +100,7 @@ const toDbInsert = (item: Partial<InventoryItem>): DbInsertItem => ({
   traded_for_item_id: item.tradedForItemId,
   trade_cash_difference: item.tradeCashDifference,
   priority_sale: item.prioritySale ?? false,
+  attention_note: item.attentionNote,
 } as DbInsertItem);
 
 // Transform app format to database update format
@@ -128,6 +131,7 @@ const toDbUpdate = (item: Partial<InventoryItem>): DbUpdateItem => {
   if (item.tradedForItemId !== undefined) update.traded_for_item_id = item.tradedForItemId;
   if (item.tradeCashDifference !== undefined) update.trade_cash_difference = item.tradeCashDifference;
   if (item.prioritySale !== undefined) update.priority_sale = item.prioritySale;
+  if (item.attentionNote !== undefined) update.attention_note = item.attentionNote;
   return update as DbUpdateItem;
 };
 
@@ -353,6 +357,9 @@ export function useSupabaseInventory() {
     i.everInConvention && i.status === 'sold'
   );
 
+  // Get all items that need attention (have an attention note)
+  const getAttentionItems = () => inventory.filter((i) => i.attentionNote);
+
   return {
     inventory,
     isLoading,
@@ -370,6 +377,7 @@ export function useSupabaseInventory() {
     getSoldItems,
     getConventionItems,
     getConventionSoldItems,
+    getAttentionItems,
     getIncompleteItems,
     getFinancialSummary,
   };
