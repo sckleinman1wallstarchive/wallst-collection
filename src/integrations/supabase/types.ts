@@ -312,6 +312,8 @@ export type Database = {
         | "platform-fees"
         | "other"
         | "pop-up"
+        | "advertising"
+        | "subscriptions"
       item_category:
         | "tops"
         | "bottoms"
@@ -475,6 +477,8 @@ export const Constants = {
         "platform-fees",
         "other",
         "pop-up",
+        "advertising",
+        "subscriptions",
       ],
       item_category: [
         "tops",
