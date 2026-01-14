@@ -30,6 +30,7 @@ const CATEGORIES: { value: ExpenseCategory; label: string }[] = [
   { value: 'supplies', label: 'Supplies' },
   { value: 'shipping', label: 'Shipping' },
   { value: 'platform-fees', label: 'Platform Fees' },
+  { value: 'pop-up', label: 'Pop Up' },
   { value: 'other', label: 'Other' },
 ];
 

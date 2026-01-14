@@ -270,7 +270,12 @@ export type Database = {
       is_allowed_user: { Args: never; Returns: boolean }
     }
     Enums: {
-      expense_category: "supplies" | "shipping" | "platform-fees" | "other"
+      expense_category:
+        | "supplies"
+        | "shipping"
+        | "platform-fees"
+        | "other"
+        | "pop-up"
       item_category:
         | "tops"
         | "bottoms"
@@ -428,7 +433,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      expense_category: ["supplies", "shipping", "platform-fees", "other"],
+      expense_category: [
+        "supplies",
+        "shipping",
+        "platform-fees",
+        "other",
+        "pop-up",
+      ],
       item_category: [
         "tops",
         "bottoms",

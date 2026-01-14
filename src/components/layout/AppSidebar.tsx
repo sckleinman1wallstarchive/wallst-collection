@@ -32,7 +32,7 @@ import { toast } from 'sonner';
 const navigation = [
   { title: 'Overview', url: '/', icon: LayoutDashboard },
   { title: 'Inventory', url: '/inventory', icon: Package },
-  { title: 'Got Sole', url: '/got-sole', icon: Ticket },
+  { title: 'Pop Ups', url: '/pop-ups', icon: Ticket },
   { title: 'Contacts', url: '/contacts', icon: Users },
   { title: 'Accounting', url: '/accounting', icon: Calculator },
   { title: 'Goals', url: '/goals', icon: Target },
