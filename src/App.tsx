@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AccessGate } from "@/components/auth/AccessGate";
 import Index from "./pages/Index";
 import Inventory from "./pages/Inventory";
-import GotSole from "./pages/GotSole";
+import PopUps from "./pages/PopUps";
 import Contacts from "./pages/Contacts";
 import Accounting from "./pages/Accounting";
 import Goals from "./pages/Goals";
@@ -26,7 +26,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/inventory" element={<Inventory />} />
-            <Route path="/got-sole" element={<GotSole />} />
+            <Route path="/pop-ups" element={<PopUps />} />
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/accounting" element={<Accounting />} />
             <Route path="/goals" element={<Goals />} />

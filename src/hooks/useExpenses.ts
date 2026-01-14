@@ -108,6 +108,11 @@ export function useExpenses() {
     }, {} as Record<ItemOwner, number>);
   };
 
+  const getPopUpExpenses = () => expenses.filter(e => e.category === 'pop-up');
+  
+  const getTotalPopUpExpenses = () => 
+    getPopUpExpenses().reduce((sum, e) => sum + e.amount, 0);
+
   return {
     expenses,
     isLoading,
@@ -117,6 +122,8 @@ export function useExpenses() {
     getTotalExpenses,
     getExpensesByCategory,
     getExpensesByOwner,
+    getPopUpExpenses,
+    getTotalPopUpExpenses,
     isAdding: addMutation.isPending,
   };
 }
