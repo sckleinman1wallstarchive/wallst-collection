@@ -119,6 +119,42 @@ export type Database = {
         }
         Relationships: []
       }
+      goals: {
+        Row: {
+          art_style: string | null
+          created_at: string | null
+          description: string
+          id: string
+          image_url: string | null
+          is_complete: boolean | null
+          owner: string
+          timeframe: string
+          updated_at: string | null
+        }
+        Insert: {
+          art_style?: string | null
+          created_at?: string | null
+          description: string
+          id?: string
+          image_url?: string | null
+          is_complete?: boolean | null
+          owner: string
+          timeframe: string
+          updated_at?: string | null
+        }
+        Update: {
+          art_style?: string | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          image_url?: string | null
+          is_complete?: boolean | null
+          owner?: string
+          timeframe?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       inventory_items: {
         Row: {
           acquisition_cost: number
