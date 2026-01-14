@@ -128,6 +128,14 @@ export function ImageUpload({ imageUrls, onImagesChange, className }: ImageUploa
     }
   };
 
+  // Enable dragging images out to desktop/other apps
+  const handleImageDragStart = (e: React.DragEvent<HTMLImageElement>, url: string) => {
+    e.stopPropagation(); // Prevent triggering the container's drag events
+    e.dataTransfer.setData('text/uri-list', url);
+    e.dataTransfer.setData('text/plain', url);
+    e.dataTransfer.effectAllowed = 'copy';
+  };
+
   return (
     <div 
       className={cn("relative", className)}
@@ -169,7 +177,9 @@ export function ImageUpload({ imageUrls, onImagesChange, className }: ImageUploa
                     <img 
                       src={image} 
                       alt={slot.label} 
-                      className="w-full h-full object-cover rounded-md"
+                      className="w-full h-full object-cover rounded-md cursor-grab active:cursor-grabbing"
+                      draggable
+                      onDragStart={(e) => handleImageDragStart(e, image)}
                     />
                     <button
                       type="button"
