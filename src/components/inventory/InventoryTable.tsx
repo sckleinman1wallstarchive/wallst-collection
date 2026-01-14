@@ -236,7 +236,15 @@ export function InventoryTable({
                           <img 
                             src={item.imageUrls?.[0] || item.imageUrl} 
                             alt="" 
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
+                            draggable
+                            onDragStart={(e) => {
+                              e.stopPropagation();
+                              const url = item.imageUrls?.[0] || item.imageUrl || '';
+                              e.dataTransfer.setData('text/uri-list', url);
+                              e.dataTransfer.setData('text/plain', url);
+                              e.dataTransfer.effectAllowed = 'copy';
+                            }}
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">

@@ -27,6 +27,13 @@ import { cn } from '@/lib/utils';
 
 type ItemStatus = Database['public']['Enums']['item_status'];
 
+// Helper to enable dragging images out to desktop/other apps
+const handleImageDragStart = (e: React.DragEvent<HTMLImageElement>, url: string) => {
+  e.dataTransfer.setData('text/uri-list', url);
+  e.dataTransfer.setData('text/plain', url);
+  e.dataTransfer.effectAllowed = 'copy';
+};
+
 // Simple image gallery view for displaying multiple images
 function ImageGalleryView({ 
   images, 
@@ -46,7 +53,9 @@ function ImageGalleryView({
         <img 
           src={mainImage} 
           alt="Item" 
-          className="w-full h-48 object-contain bg-muted/20"
+          className="w-full h-48 object-contain bg-muted/20 cursor-grab active:cursor-grabbing"
+          draggable
+          onDragStart={(e) => handleImageDragStart(e, mainImage)}
         />
       </div>
       {images.length > 1 && (
@@ -63,7 +72,16 @@ function ImageGalleryView({
                   : "border-border hover:border-primary/50"
               )}
             >
-              <img src={url} alt="" className="w-full h-full object-cover" />
+              <img 
+                src={url} 
+                alt="" 
+                className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
+                draggable
+                onDragStart={(e) => {
+                  e.stopPropagation();
+                  handleImageDragStart(e, url);
+                }}
+              />
             </button>
           ))}
         </div>
