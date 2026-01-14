@@ -92,12 +92,12 @@ export const AddGoalDialog = ({ onAddGoal, isLoading }: AddGoalDialogProps) => {
       <DialogTrigger asChild>
         <div
           className="p-6 rounded-lg cursor-pointer transition-all duration-200 
-            bg-[hsl(266,4%,20.8%)] hover:bg-[hsl(266,4%,25%)]
-            border-2 border-dashed border-white/20 hover:border-[#c9b99a]/50
+            bg-white hover:bg-gray-50
+            border-2 border-dashed border-gray-300 hover:border-[#c9b99a]
             flex flex-col items-center justify-center min-h-[140px]"
         >
-          <Plus className="h-8 w-8 text-white/50 mb-2" />
-          <span className="text-white/70 font-medium">Add Goal</span>
+          <Plus className="h-8 w-8 text-gray-400 mb-2" />
+          <span className="text-gray-600 font-medium">Add Goal</span>
         </div>
       </DialogTrigger>
       <DialogContent className="bg-black border-[#c9b99a]/30 text-white max-w-md">

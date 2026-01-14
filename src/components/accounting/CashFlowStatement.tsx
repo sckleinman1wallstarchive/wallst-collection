@@ -146,15 +146,112 @@ export const CashFlowStatement = ({ onBack }: CashFlowStatementProps) => {
                 </div>
               </AccordionTrigger>
               <AccordionContent>
-                <div className="pl-4 space-y-1 max-h-48 overflow-y-auto">
-                  {details.expenseItems.length > 0 ? (
-                    details.expenseItems.map((item, i) => (
-                      <div key={i} className="flex justify-between text-xs text-muted-foreground py-1 border-b border-border/50 last:border-0">
-                        <span className="truncate flex-1">{item.date} - {item.description} ({item.category})</span>
-                        <span className="font-mono ml-2">{formatCurrency(item.amount)}</span>
-                      </div>
-                    ))
-                  ) : (
+                <div className="pl-4 space-y-2 max-h-64 overflow-y-auto">
+                  {/* Supplies */}
+                  {details.expensesByCategory?.supplies && details.expensesByCategory.supplies.length > 0 && (
+                    <Accordion type="single" collapsible className="w-full">
+                      <AccordionItem value="supplies" className="border-none">
+                        <AccordionTrigger className="py-1.5 hover:no-underline">
+                          <div className="flex justify-between items-center w-full pr-4">
+                            <span className="text-xs text-muted-foreground">Supplies</span>
+                            <span className="font-mono text-xs">
+                              {formatCurrency(-details.expensesByCategory.supplies.reduce((sum, e) => sum + Math.abs(e.amount), 0))}
+                            </span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="pl-4 space-y-1">
+                            {details.expensesByCategory.supplies.map((item, i) => (
+                              <div key={i} className="flex justify-between text-xs text-muted-foreground py-0.5">
+                                <span className="truncate flex-1">{item.date} - {item.description}</span>
+                                <span className="font-mono ml-2">{formatCurrency(item.amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  )}
+
+                  {/* Pop-Up */}
+                  {details.expensesByCategory?.['pop-up'] && details.expensesByCategory['pop-up'].length > 0 && (
+                    <Accordion type="single" collapsible className="w-full">
+                      <AccordionItem value="pop-up" className="border-none">
+                        <AccordionTrigger className="py-1.5 hover:no-underline">
+                          <div className="flex justify-between items-center w-full pr-4">
+                            <span className="text-xs text-muted-foreground">Pop-Up</span>
+                            <span className="font-mono text-xs">
+                              {formatCurrency(-details.expensesByCategory['pop-up'].reduce((sum, e) => sum + Math.abs(e.amount), 0))}
+                            </span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="pl-4 space-y-1">
+                            {details.expensesByCategory['pop-up'].map((item, i) => (
+                              <div key={i} className="flex justify-between text-xs text-muted-foreground py-0.5">
+                                <span className="truncate flex-1">{item.date} - {item.description}</span>
+                                <span className="font-mono ml-2">{formatCurrency(item.amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  )}
+
+                  {/* Advertising */}
+                  {details.expensesByCategory?.advertising && details.expensesByCategory.advertising.length > 0 && (
+                    <Accordion type="single" collapsible className="w-full">
+                      <AccordionItem value="advertising" className="border-none">
+                        <AccordionTrigger className="py-1.5 hover:no-underline">
+                          <div className="flex justify-between items-center w-full pr-4">
+                            <span className="text-xs text-muted-foreground">Advertising</span>
+                            <span className="font-mono text-xs">
+                              {formatCurrency(-details.expensesByCategory.advertising.reduce((sum, e) => sum + Math.abs(e.amount), 0))}
+                            </span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="pl-4 space-y-1">
+                            {details.expensesByCategory.advertising.map((item, i) => (
+                              <div key={i} className="flex justify-between text-xs text-muted-foreground py-0.5">
+                                <span className="truncate flex-1">{item.date} - {item.description}</span>
+                                <span className="font-mono ml-2">{formatCurrency(item.amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  )}
+
+                  {/* Subscriptions */}
+                  {details.expensesByCategory?.subscriptions && details.expensesByCategory.subscriptions.length > 0 && (
+                    <Accordion type="single" collapsible className="w-full">
+                      <AccordionItem value="subscriptions" className="border-none">
+                        <AccordionTrigger className="py-1.5 hover:no-underline">
+                          <div className="flex justify-between items-center w-full pr-4">
+                            <span className="text-xs text-muted-foreground">Subscriptions</span>
+                            <span className="font-mono text-xs">
+                              {formatCurrency(-details.expensesByCategory.subscriptions.reduce((sum, e) => sum + Math.abs(e.amount), 0))}
+                            </span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="pl-4 space-y-1">
+                            {details.expensesByCategory.subscriptions.map((item, i) => (
+                              <div key={i} className="flex justify-between text-xs text-muted-foreground py-0.5">
+                                <span className="truncate flex-1">{item.date} - {item.description}</span>
+                                <span className="font-mono ml-2">{formatCurrency(item.amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  )}
+
+                  {details.expenseItems.length === 0 && (
                     <p className="text-xs text-muted-foreground italic">No expenses recorded</p>
                   )}
                 </div>
@@ -271,39 +368,12 @@ export const CashFlowStatement = ({ onBack }: CashFlowStatementProps) => {
             </AccordionItem>
           </Accordion>
           
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="distributions" className="border-none">
-              <AccordionTrigger className="py-2 hover:no-underline">
-                <div className="flex justify-between items-center w-full pr-4">
-                  <span className="text-sm">Distributions to Partners</span>
-                  <span className={`font-mono text-sm font-medium ${getAmountColor(-financing.distributions)}`}>
-                    {formatCurrency(-financing.distributions)}
-                  </span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="pl-4 space-y-2 text-xs text-muted-foreground">
-                  <p className="italic">
-                    Revenue paid directly to partners and spent (not retained in WSC account)
-                  </p>
-                  <div className="space-y-1 pt-2 border-t border-border/50">
-                    <div className="flex justify-between">
-                      <span>Expected cash (based on activity)</span>
-                      <span className="font-mono">{formatCurrency(summary.expectedCash)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Actual cash on hand</span>
-                      <span className="font-mono">{formatCurrency(summary.endingCash)}</span>
-                    </div>
-                    <div className="flex justify-between font-medium pt-1 border-t border-border/50">
-                      <span>Difference (distributed)</span>
-                      <span className="font-mono">{formatCurrency(financing.distributions)}</span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+          <div className="flex justify-between items-center py-2 px-3">
+            <span className="text-sm">Dividends</span>
+            <span className={`font-mono text-sm font-medium ${getAmountColor(-financing.distributions)}`}>
+              {formatCurrency(-financing.distributions)}
+            </span>
+          </div>
           
           <Separator className="my-2" />
           <div className="flex justify-between items-center py-2 bg-muted/50 px-3 rounded-md">

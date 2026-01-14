@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useSupabaseInventory, InventoryItem } from '@/hooks/useSupabaseInventory';
@@ -37,6 +37,10 @@ export default function PopUps() {
   const popUpExpenses = getTotalPopUpExpenses();
 
   // Hub analytics
+  // Total Invested = ALL convention COGS (sold + unsold) + pop-up expenses
+  const allConventionCOGS = allConventionHistoryItems.reduce((sum, item) => sum + item.acquisitionCost, 0);
+  const totalInvested = allConventionCOGS + popUpExpenses;
+
   const inventoryCost = allConventionHistoryItems
     .filter(i => !['sold', 'traded', 'scammed', 'refunded'].includes(i.status))
     .reduce((sum, item) => sum + item.acquisitionCost, 0);
@@ -44,13 +48,38 @@ export default function PopUps() {
   const soldRevenue = soldConventionItems.reduce((sum, item) => sum + (item.salePrice || 0), 0);
   const soldCOGS = soldConventionItems.reduce((sum, item) => sum + item.acquisitionCost, 0);
   const totalProfit = soldRevenue - soldCOGS;
-  const totalInvested = inventoryCost + popUpExpenses;
   const averageMargin = soldRevenue > 0 ? Math.round((totalProfit / soldRevenue) * 100) : 0;
 
   // Got Sole specific stats
   const gotSoleDate = 'January 11, 2025';
+  const gotSoleEndDate = new Date('2025-01-11'); // Convention end date
   const gotSoleItemsSold = soldConventionItems.length;
   const gotSoleProfit = totalProfit;
+
+  // Auto-release convention items 2 days after the event
+  useEffect(() => {
+    const releaseDays = 2;
+    const releaseDate = new Date(gotSoleEndDate);
+    releaseDate.setDate(releaseDate.getDate() + releaseDays);
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to start of day
+    releaseDate.setHours(0, 0, 0, 0);
+    
+    if (today > releaseDate && conventionItems.length > 0) {
+      // Bulk update to release items from convention
+      conventionItems.forEach(item => {
+        updateItem(item.id, { inConvention: false });
+      });
+    }
+  }, [conventionItems, updateItem]);
+
+  // Auto-switch to 'sold' view when there are no active items
+  useEffect(() => {
+    if (conventionItems.length === 0 && viewMode === 'active') {
+      setViewMode('sold');
+    }
+  }, [conventionItems.length, viewMode]);
 
   const handleUpdateItem = async (id: string, updates: Partial<InventoryItem>) => {
     try {
@@ -279,16 +308,22 @@ export default function PopUps() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'active' | 'sold')}>
-              <TabsList>
-                <TabsTrigger value="active">
-                  Active ({conventionItems.length})
-                </TabsTrigger>
-                <TabsTrigger value="sold">
-                  Sold ({soldConventionItems.length})
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            {conventionItems.length > 0 ? (
+              <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'active' | 'sold')}>
+                <TabsList>
+                  <TabsTrigger value="active">
+                    Active ({conventionItems.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="sold">
+                    Sold ({soldConventionItems.length})
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                Sold ({soldConventionItems.length})
+              </div>
+            )}
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input

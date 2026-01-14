@@ -28,10 +28,9 @@ interface ExpenseTrackerDialogProps {
 
 const CATEGORIES: { value: ExpenseCategory; label: string }[] = [
   { value: 'supplies', label: 'Supplies' },
-  { value: 'shipping', label: 'Shipping' },
-  { value: 'platform-fees', label: 'Platform Fees' },
   { value: 'pop-up', label: 'Pop Up' },
-  { value: 'other', label: 'Other' },
+  { value: 'advertising', label: 'Advertising' },
+  { value: 'subscriptions', label: 'Subscriptions' },
 ];
 
 const OWNERS: { value: ItemOwner; label: string }[] = [
@@ -44,7 +43,7 @@ export function ExpenseTrackerDialog({ open, onOpenChange }: ExpenseTrackerDialo
   const { addExpense, isAdding } = useExpenses();
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<ExpenseCategory>('other');
+  const [category, setCategory] = useState<ExpenseCategory>('supplies');
   const [owner, setOwner] = useState<ItemOwner>('Shared');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
@@ -64,7 +63,7 @@ export function ExpenseTrackerDialog({ open, onOpenChange }: ExpenseTrackerDialo
     // Reset form
     setAmount('');
     setDescription('');
-    setCategory('other');
+    setCategory('supplies');
     setOwner('Shared');
     setDate(new Date().toISOString().split('T')[0]);
     onOpenChange(false);
