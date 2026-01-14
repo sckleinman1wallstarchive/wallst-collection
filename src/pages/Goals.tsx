@@ -17,7 +17,7 @@ const Goals = () => {
 
   return (
     <DashboardLayout>
-      <div className="min-h-[calc(100vh-4rem)] bg-black -m-6 p-6">
+      <div className="min-h-[calc(100vh-4rem)] bg-[hsl(266,4%,20.8%)] -m-6 p-6">
         <div className="max-w-5xl mx-auto space-y-8">
           {/* Header */}
           <div className="flex items-start justify-between">

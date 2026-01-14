@@ -44,6 +44,7 @@ interface CashFlowData {
     salesItems: Array<{ date: string; name: string; amount: number }>;
     purchaseItems: Array<{ date: string; name: string; amount: number; paidBy: string }>;
     expenseItems: ExpenseDetail[];
+    expensesByCategory: Record<string, ExpenseDetail[]>;
     spencerContributions: ContributionDetail[];
     parkerContributions: ContributionDetail[];
   };
@@ -122,6 +123,21 @@ export const useCashFlow = () => {
     category: exp.category,
   }));
 
+  // Group expenses by category
+  const expensesByCategory: Record<string, ExpenseDetail[]> = expenses.reduce((acc, exp) => {
+    const category = exp.category;
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push({
+      date: exp.date,
+      description: exp.description,
+      amount: -exp.amount,
+      category: exp.category,
+    });
+    return acc;
+  }, {} as Record<string, ExpenseDetail[]>);
+
   // Investing Activities (placeholder - can be expanded later)
   const equipmentPurchases = 0;
   const equipmentSales = 0;
@@ -195,6 +211,7 @@ export const useCashFlow = () => {
       salesItems,
       purchaseItems,
       expenseItems,
+      expensesByCategory,
       spencerContributions: spencerContributionDetails,
       parkerContributions: parkerContributionDetails,
     },
