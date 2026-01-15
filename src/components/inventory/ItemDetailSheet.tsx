@@ -118,6 +118,7 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
   const [isAddingAttention, setIsAddingAttention] = useState(false);
   const [newAttentionNote, setNewAttentionNote] = useState('');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isAddingPhotos, setIsAddingPhotos] = useState(false);
 
   // Helper to get all images for an item
   const getItemImages = (i: InventoryItem): string[] => {
@@ -243,8 +244,24 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
 
         {item.status === 'sold' ? (
           <div className="mt-6 space-y-4">
-            {currentImages.length > 0 && (
-              <ImageGalleryView images={currentImages} selectedIndex={selectedImageIndex} onSelect={setSelectedImageIndex} />
+            {isAddingPhotos ? (
+              <div className="space-y-2">
+                <ImageUpload imageUrls={currentImages} onImagesChange={handleImagesChange} />
+                <Button variant="outline" size="sm" className="w-full" onClick={() => setIsAddingPhotos(false)}>
+                  Done Adding Photos
+                </Button>
+              </div>
+            ) : currentImages.length > 0 ? (
+              <div className="space-y-2">
+                <ImageGalleryView images={currentImages} selectedIndex={selectedImageIndex} onSelect={setSelectedImageIndex} />
+                <Button variant="ghost" size="sm" className="w-full" onClick={() => setIsAddingPhotos(true)}>
+                  + Add Photos
+                </Button>
+              </div>
+            ) : (
+              <Button variant="outline" size="sm" className="w-full" onClick={() => setIsAddingPhotos(true)}>
+                + Add Photos
+              </Button>
             )}
             <div>
               <h3 className="text-lg font-semibold">{item.name}</h3>
@@ -315,8 +332,24 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
           </div>
         ) : isTradedItem ? (
           <div className="mt-6 space-y-4">
-            {currentImages.length > 0 && (
-              <ImageGalleryView images={currentImages} selectedIndex={selectedImageIndex} onSelect={setSelectedImageIndex} />
+            {isAddingPhotos ? (
+              <div className="space-y-2">
+                <ImageUpload imageUrls={currentImages} onImagesChange={handleImagesChange} />
+                <Button variant="outline" size="sm" className="w-full" onClick={() => setIsAddingPhotos(false)}>
+                  Done Adding Photos
+                </Button>
+              </div>
+            ) : currentImages.length > 0 ? (
+              <div className="space-y-2">
+                <ImageGalleryView images={currentImages} selectedIndex={selectedImageIndex} onSelect={setSelectedImageIndex} />
+                <Button variant="ghost" size="sm" className="w-full" onClick={() => setIsAddingPhotos(true)}>
+                  + Add Photos
+                </Button>
+              </div>
+            ) : (
+              <Button variant="outline" size="sm" className="w-full" onClick={() => setIsAddingPhotos(true)}>
+                + Add Photos
+              </Button>
             )}
             <div>
               <h3 className="text-lg font-semibold">{item.name}</h3>
