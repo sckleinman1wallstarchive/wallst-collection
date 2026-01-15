@@ -51,6 +51,7 @@ export const useGoals = () => {
 
   const createGoal = useMutation({
     mutationFn: async (input: CreateGoalInput) => {
+      // First create the goal
       const { data, error } = await supabase
         .from('goals')
         .insert(input)
@@ -58,6 +59,33 @@ export const useGoals = () => {
         .single();
       
       if (error) throw error;
+
+      // If art_style is provided but no image_url, generate an image
+      if (input.art_style && !input.image_url) {
+        try {
+          const response = await supabase.functions.invoke('generate-art-image', {
+            body: { artStyle: input.art_style, goalDescription: input.description }
+          });
+
+          if (response.data?.imageUrl) {
+            // Update the goal with the generated image
+            const { data: updatedGoal, error: updateError } = await supabase
+              .from('goals')
+              .update({ image_url: response.data.imageUrl })
+              .eq('id', data.id)
+              .select()
+              .single();
+
+            if (!updateError && updatedGoal) {
+              return updatedGoal;
+            }
+          }
+        } catch (genError) {
+          console.error('Image generation failed:', genError);
+          // Continue without image - goal was still created
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
