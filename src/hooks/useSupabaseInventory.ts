@@ -331,8 +331,13 @@ export function useSupabaseInventory() {
     const sold = getSoldItems();
     const active = getActiveItems();
     const scammed = inventory.filter((i) => i.status === 'scammed');
+    const refunded = inventory.filter((i) => i.status === 'refunded');
 
-    const totalSpent = inventory.reduce((sum, i) => sum + i.acquisitionCost, 0);
+    // Exclude refunded items from totalSpent (we got that money back)
+    const nonRefundedItems = inventory.filter((i) => i.status !== 'refunded');
+    const totalSpent = nonRefundedItems.reduce((sum, i) => sum + i.acquisitionCost, 0);
+    const refundedAmount = refunded.reduce((sum, i) => sum + i.acquisitionCost, 0);
+    
     const totalRevenue = sold.reduce((sum, i) => sum + (i.salePrice || 0), 0);
     const totalCostOfSold = sold.reduce((sum, i) => sum + i.acquisitionCost, 0);
     const totalProfit = totalRevenue - totalCostOfSold;
@@ -343,6 +348,7 @@ export function useSupabaseInventory() {
 
     return {
       totalSpent,
+      refundedAmount,
       totalRevenue,
       totalCostOfSold,
       totalProfit,
