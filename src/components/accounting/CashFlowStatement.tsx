@@ -110,6 +110,34 @@ export const CashFlowStatement = ({ onBack }: CashFlowStatementProps) => {
                 </div>
               </AccordionContent>
             </AccordionItem>
+
+            {/* Refunds Received - only show if there are refunds */}
+            {operating.refundsReceived > 0 && (
+              <AccordionItem value="refunds" className="border-none">
+                <AccordionTrigger className="py-2 hover:no-underline">
+                  <div className="flex justify-between items-center w-full pr-4">
+                    <span className="text-sm">Refunds received from suppliers</span>
+                    <span className={`font-mono text-sm font-medium ${getAmountColor(operating.refundsReceived)}`}>
+                      {formatCurrency(operating.refundsReceived)}
+                    </span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="pl-4 space-y-1 max-h-48 overflow-y-auto">
+                    {details.refundItems.length > 0 ? (
+                      details.refundItems.map((item, i) => (
+                        <div key={i} className="flex justify-between text-xs text-muted-foreground py-1 border-b border-border/50 last:border-0">
+                          <span className="truncate flex-1">{item.date} - {item.name}</span>
+                          <span className="font-mono ml-2">{formatCurrency(item.amount)}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">No refunds recorded</p>
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            )}
             
             <AccordionItem value="purchases" className="border-none">
               <AccordionTrigger className="py-2 hover:no-underline">

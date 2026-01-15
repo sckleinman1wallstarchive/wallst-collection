@@ -19,6 +19,7 @@ interface ExpenseDetail {
 interface CashFlowData {
   operating: {
     cashFromSales: number;
+    refundsReceived: number;
     cashPaidForInventory: number;
     cashPaidForExpenses: number;
     netOperating: number;
@@ -47,6 +48,7 @@ interface CashFlowData {
     expensesByCategory: Record<string, ExpenseDetail[]>;
     spencerContributions: ContributionDetail[];
     parkerContributions: ContributionDetail[];
+    refundItems: Array<{ date: string; name: string; amount: number }>;
   };
 }
 
@@ -83,12 +85,17 @@ export const useCashFlow = () => {
   });
 
   const soldItems = getSoldItems();
+  
+  // Get refunded items - these are cash neutral (we got the money back from supplier)
+  const refundedItems = inventory.filter(item => item.status === 'refunded');
+  const refundsReceived = refundedItems.reduce((sum, item) => sum + item.acquisitionCost, 0);
 
   // Calculate Operating Activities
   const cashFromSales = soldItems.reduce((sum, item) => sum + (item.salePrice || 0), 0);
   
-  // ALL inventory purchases are cash outflows - partner purchases are offset by their contributions
-  const cashPaidForInventory = inventory.reduce((sum, item) => sum + item.acquisitionCost, 0);
+  // Exclude refunded items from inventory costs (since we got that money back)
+  const nonRefundedItems = inventory.filter(item => item.status !== 'refunded');
+  const cashPaidForInventory = nonRefundedItems.reduce((sum, item) => sum + item.acquisitionCost, 0);
   
   const cashPaidForExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   const netOperating = cashFromSales - cashPaidForInventory - cashPaidForExpenses;
@@ -103,14 +110,24 @@ export const useCashFlow = () => {
     }))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  // All purchase details for breakdown (for reference)
-  const purchaseItems = inventory
+  // All purchase details for breakdown (excluding refunded items)
+  const purchaseItems = nonRefundedItems
     .filter(item => item.acquisitionCost > 0)
     .map(item => ({
       date: item.dateAdded || '',
       name: item.name,
       amount: -item.acquisitionCost,
       paidBy: item.paidBy || 'Shared',
+    }))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  // Refund details for breakdown
+  const refundItems = refundedItems
+    .filter(item => item.acquisitionCost > 0)
+    .map(item => ({
+      date: item.dateAdded || '',
+      name: item.name,
+      amount: item.acquisitionCost,
     }))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -186,6 +203,7 @@ export const useCashFlow = () => {
   const cashFlowData: CashFlowData = {
     operating: {
       cashFromSales,
+      refundsReceived,
       cashPaidForInventory,
       cashPaidForExpenses,
       netOperating,
@@ -214,6 +232,7 @@ export const useCashFlow = () => {
       expensesByCategory,
       spencerContributions: spencerContributionDetails,
       parkerContributions: parkerContributionDetails,
+      refundItems,
     },
   };
 
