@@ -332,14 +332,34 @@ export function useSupabaseInventory() {
     const active = getActiveItems();
     const scammed = inventory.filter((i) => i.status === 'scammed');
     const refunded = inventory.filter((i) => i.status === 'refunded');
+    const traded = inventory.filter((i) => i.status === 'traded');
 
     // Exclude refunded items from totalSpent (we got that money back)
     const nonRefundedItems = inventory.filter((i) => i.status !== 'refunded');
     const totalSpent = nonRefundedItems.reduce((sum, i) => sum + i.acquisitionCost, 0);
     const refundedAmount = refunded.reduce((sum, i) => sum + i.acquisitionCost, 0);
     
-    const totalRevenue = sold.reduce((sum, i) => sum + (i.salePrice || 0), 0);
-    const totalCostOfSold = sold.reduce((sum, i) => sum + i.acquisitionCost, 0);
+    // Cash received from trades (negative tradeCashDifference = you received cash)
+    const tradeCashReceived = traded.reduce((sum, i) => {
+      const diff = i.tradeCashDifference || 0;
+      return sum + (diff < 0 ? Math.abs(diff) : 0);
+    }, 0);
+    
+    // Cash paid in trades (positive tradeCashDifference = you paid cash)
+    const tradeCashPaid = traded.reduce((sum, i) => {
+      const diff = i.tradeCashDifference || 0;
+      return sum + (diff > 0 ? diff : 0);
+    }, 0);
+
+    // Revenue includes sales + cash received from trades
+    const saleRevenue = sold.reduce((sum, i) => sum + (i.salePrice || 0), 0);
+    const totalRevenue = saleRevenue + tradeCashReceived;
+    
+    // COGS includes sold items' cost + traded items' cost (you gave up that item)
+    const soldCost = sold.reduce((sum, i) => sum + i.acquisitionCost, 0);
+    const tradedCost = traded.reduce((sum, i) => sum + i.acquisitionCost, 0);
+    const totalCostOfSold = soldCost + tradedCost;
+    
     const totalProfit = totalRevenue - totalCostOfSold;
     const activeInventoryCost = active.reduce((sum, i) => sum + i.acquisitionCost, 0);
     const potentialRevenue = active.reduce((sum, i) => sum + (i.askingPrice || 0), 0);
@@ -359,6 +379,9 @@ export function useSupabaseInventory() {
       activeItems: active.length,
       lostToScams,
       avgMargin: totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : '0',
+      tradeCashReceived,
+      tradeCashPaid,
+      tradedItemsCount: traded.length,
     };
   };
 
