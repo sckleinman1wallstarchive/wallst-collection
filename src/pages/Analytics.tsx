@@ -3,7 +3,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, Treemap } from 'recharts';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -121,6 +121,42 @@ const Analytics = () => {
     .filter(i => (i.daysHeld || 0) > 21)
     .sort((a, b) => b.acquisitionCost - a.acquisitionCost)
     .slice(0, 5);
+
+  // Revenue by brand (from sold items)
+  const revenueByBrand = inventory
+    .filter(i => i.status === 'sold')
+    .reduce((acc, item) => {
+      const brand = item.brand || 'Unknown';
+      const revenue = (item.salePrice || 0) + 
+        (item.tradeCashDifference && item.tradeCashDifference < 0 
+          ? Math.abs(item.tradeCashDifference) : 0);
+      const existing = acc.find(b => b.name === brand);
+      if (existing) {
+        existing.revenue += revenue;
+      } else {
+        acc.push({ name: brand, revenue });
+      }
+      return acc;
+    }, [] as { name: string; revenue: number }[])
+    .filter(b => b.revenue > 0)
+    .sort((a, b) => b.revenue - a.revenue);
+
+  // Custom treemap content
+  const CustomTreemapContent = (props: any) => {
+    const { x, y, width, height, name, revenue } = props;
+    if (width < 40 || height < 30) return null;
+    return (
+      <g>
+        <rect x={x} y={y} width={width} height={height} fill="hsl(var(--chart-3))" stroke="hsl(var(--background))" strokeWidth={2} rx={4} />
+        <text x={x + width / 2} y={y + height / 2 - 8} textAnchor="middle" fill="hsl(var(--chart-3-foreground, var(--foreground)))" fontSize={width < 80 ? 10 : 12} fontWeight={500}>
+          {name?.length > 12 ? name.slice(0, 12) + '…' : name}
+        </text>
+        <text x={x + width / 2} y={y + height / 2 + 10} textAnchor="middle" fill="hsl(var(--chart-3-foreground, var(--muted-foreground)))" fontSize={width < 80 ? 9 : 11}>
+          {formatCurrency(revenue || 0)}
+        </text>
+      </g>
+    );
+  };
 
   const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
@@ -356,6 +392,28 @@ const Analytics = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Revenue by Brand Treemap */}
+        {revenueByBrand.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-medium">Revenue by Brand</CardTitle>
+              <p className="text-xs text-muted-foreground">Realized revenue from sold items</p>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <Treemap
+                    data={revenueByBrand}
+                    dataKey="revenue"
+                    aspectRatio={4/3}
+                    content={<CustomTreemapContent />}
+                  />
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Capital Blockers */}
         <Card>
