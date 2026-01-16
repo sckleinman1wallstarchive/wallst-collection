@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Trash2, DollarSign, Save, ArrowRightLeft, CalendarCheck, AlertTriangle, Check } from 'lucide-react';
+import { Trash2, DollarSign, Save, ArrowRightLeft, CalendarCheck, AlertTriangle, Check, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { PlatformMultiSelect } from './PlatformMultiSelect';
 import { ImageUpload } from './ImageUpload';
@@ -34,7 +34,7 @@ const handleImageDragStart = (e: React.DragEvent<HTMLImageElement>, url: string)
   e.dataTransfer.effectAllowed = 'copy';
 };
 
-// Simple image gallery view for displaying multiple images
+// Simple image gallery view with shift-select for copying multiple images
 function ImageGalleryView({ 
   images, 
   selectedIndex, 
@@ -44,8 +44,51 @@ function ImageGalleryView({
   selectedIndex: number; 
   onSelect: (i: number) => void; 
 }) {
+  const [selectedImages, setSelectedImages] = useState<Set<number>>(new Set());
+  const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
+
   if (images.length === 0) return null;
   const mainImage = images[selectedIndex] || images[0];
+
+  const handleImageClick = (index: number, e: React.MouseEvent) => {
+    if (e.shiftKey && lastClickedIndex !== null) {
+      // Range select from last clicked to current
+      const start = Math.min(lastClickedIndex, index);
+      const end = Math.max(lastClickedIndex, index);
+      const newSelection = new Set(selectedImages);
+      for (let i = start; i <= end; i++) {
+        newSelection.add(i);
+      }
+      setSelectedImages(newSelection);
+    } else if (e.ctrlKey || e.metaKey) {
+      // Toggle single selection with ctrl/cmd
+      const newSelection = new Set(selectedImages);
+      if (newSelection.has(index)) {
+        newSelection.delete(index);
+      } else {
+        newSelection.add(index);
+      }
+      setSelectedImages(newSelection);
+      setLastClickedIndex(index);
+    } else {
+      // Normal click - select for viewing and clear multi-selection
+      onSelect(index);
+      setSelectedImages(new Set());
+      setLastClickedIndex(index);
+    }
+  };
+
+  const handleCopySelected = async () => {
+    const urlsToCopy = Array.from(selectedImages).sort((a, b) => a - b).map(i => images[i]).join('\n');
+    await navigator.clipboard.writeText(urlsToCopy);
+    toast.success(`${selectedImages.size} image URL(s) copied!`);
+    setSelectedImages(new Set());
+  };
+
+  const handleSelectAll = () => {
+    const allIndices = new Set(images.map((_, i) => i));
+    setSelectedImages(allIndices);
+  };
   
   return (
     <div className="space-y-2">
@@ -59,31 +102,55 @@ function ImageGalleryView({
         />
       </div>
       {images.length > 1 && (
-        <div className="flex gap-2 flex-wrap">
-          {images.map((url, index) => (
-            <button
-              key={url}
-              type="button"
-              onClick={() => onSelect(index)}
-              className={cn(
-                "w-12 h-12 rounded-md overflow-hidden border-2 transition-all",
-                index === selectedIndex 
-                  ? "border-primary ring-2 ring-primary/20" 
-                  : "border-border hover:border-primary/50"
-              )}
-            >
-              <img 
-                src={url} 
-                alt="" 
-                className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
-                draggable
-                onDragStart={(e) => {
-                  e.stopPropagation();
-                  handleImageDragStart(e, url);
-                }}
-              />
-            </button>
-          ))}
+        <div className="space-y-2">
+          <div className="flex gap-2 flex-wrap">
+            {images.map((url, index) => (
+              <button
+                key={url}
+                type="button"
+                onClick={(e) => handleImageClick(index, e)}
+                className={cn(
+                  "w-12 h-12 rounded-md overflow-hidden border-2 transition-all relative",
+                  selectedImages.has(index)
+                    ? "border-blue-500 ring-2 ring-blue-500/40"
+                    : index === selectedIndex 
+                      ? "border-primary ring-2 ring-primary/20" 
+                      : "border-border hover:border-primary/50"
+                )}
+              >
+                <img 
+                  src={url} 
+                  alt="" 
+                  className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
+                  draggable
+                  onDragStart={(e) => {
+                    e.stopPropagation();
+                    handleImageDragStart(e, url);
+                  }}
+                />
+                {selectedImages.has(index) && (
+                  <div className="absolute inset-0 bg-blue-500/30 flex items-center justify-center">
+                    <Check className="h-4 w-4 text-white" />
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+          {selectedImages.size > 0 ? (
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" size="sm" onClick={handleCopySelected}>
+                <Copy className="h-3 w-3 mr-1" />
+                Copy {selectedImages.size} URL{selectedImages.size > 1 ? 's' : ''}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedImages(new Set())}>
+                Clear
+              </Button>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Shift+click to select range • Ctrl/Cmd+click to toggle • <button type="button" className="underline hover:text-foreground" onClick={handleSelectAll}>Select all</button>
+            </p>
+          )}
         </div>
       )}
     </div>

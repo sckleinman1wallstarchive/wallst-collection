@@ -10,15 +10,22 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { ArrowRightLeft, Plus, Minus } from 'lucide-react';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { ArrowRightLeft, Plus, Minus, ChevronsUpDown, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface TradeItemDialogProps {
   item: InventoryItem | null;
@@ -43,6 +50,7 @@ export function TradeItemDialog({
   const [selectedItemId, setSelectedItemId] = useState<string>('');
   const [cashDirection, setCashDirection] = useState<'paid' | 'received'>('paid');
   const [cashAmount, setCashAmount] = useState<string>('0');
+  const [searchOpen, setSearchOpen] = useState(false);
 
   if (!item) return null;
 
@@ -65,6 +73,8 @@ export function TradeItemDialog({
   const selectableItems = availableItems.filter(
     (i) => i.id !== item.id && !['sold', 'scammed', 'refunded', 'traded'].includes(i.status)
   );
+
+  const selectedItem = selectableItems.find(i => i.id === selectedItemId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -112,20 +122,51 @@ export function TradeItemDialog({
               </Button>
             </div>
             
-            {/* Dropdown only shows when "existing" is selected */}
+            {/* Searchable dropdown only shows when "existing" is selected */}
             {receivedOption === 'existing' && (
-              <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-                <SelectTrigger className="mt-2">
-                  <SelectValue placeholder="Select item received in trade..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectableItems.map((i) => (
-                    <SelectItem key={i.id} value={i.id}>
-                      {i.name} {i.size ? `(${i.size})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={searchOpen}
+                    className="w-full justify-between mt-2"
+                  >
+                    {selectedItem 
+                      ? `${selectedItem.name}${selectedItem.size ? ` (${selectedItem.size})` : ''}`
+                      : "Search items..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search by name or size..." />
+                    <CommandList>
+                      <CommandEmpty>No items found</CommandEmpty>
+                      <CommandGroup>
+                        {selectableItems.map((i) => (
+                          <CommandItem
+                            key={i.id}
+                            value={`${i.name} ${i.size || ''}`}
+                            onSelect={() => {
+                              setSelectedItemId(i.id);
+                              setSearchOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedItemId === i.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {i.name} {i.size ? `(${i.size})` : ''}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             )}
           </div>
 
@@ -177,8 +218,8 @@ export function TradeItemDialog({
           <div className="p-3 bg-muted rounded-lg space-y-1">
             <p className="text-sm font-medium">Trade Summary</p>
             <p className="text-xs text-muted-foreground">
-              {item.name} → {receivedOption === 'existing' && selectedItemId 
-                ? selectableItems.find(i => i.id === selectedItemId)?.name 
+              {item.name} → {receivedOption === 'existing' && selectedItem 
+                ? selectedItem.name 
                 : '(will add new item after)'}
             </p>
             {parseFloat(cashAmount) > 0 && (
