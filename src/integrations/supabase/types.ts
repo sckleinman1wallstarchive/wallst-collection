@@ -161,6 +161,7 @@ export type Database = {
           asking_price: number | null
           attention_note: string | null
           brand: string | null
+          brand_category: string | null
           category: Database["public"]["Enums"]["item_category"]
           created_at: string
           date_added: string | null
@@ -194,6 +195,7 @@ export type Database = {
           asking_price?: number | null
           attention_note?: string | null
           brand?: string | null
+          brand_category?: string | null
           category?: Database["public"]["Enums"]["item_category"]
           created_at?: string
           date_added?: string | null
@@ -227,6 +229,7 @@ export type Database = {
           asking_price?: number | null
           attention_note?: string | null
           brand?: string | null
+          brand_category?: string | null
           category?: Database["public"]["Enums"]["item_category"]
           created_at?: string
           date_added?: string | null

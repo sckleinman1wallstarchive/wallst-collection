@@ -22,6 +22,7 @@ import {
 import { Plus } from 'lucide-react';
 import { PlatformMultiSelect } from './PlatformMultiSelect';
 import { ImageUpload } from './ImageUpload';
+import { supabase } from '@/integrations/supabase/client';
 
 type ItemStatus = Database['public']['Enums']['item_status'];
 
@@ -38,6 +39,23 @@ const statuses: { value: ItemStatus; label: string }[] = [
   { value: 'traded', label: 'Traded' },
 ];
 
+// Extract brand from item name using AI
+async function extractBrandFromName(name: string): Promise<{ brand: string; brandCategory: string } | null> {
+  try {
+    const { data, error } = await supabase.functions.invoke('extract-brands', {
+      body: { mode: 'single', itemName: name }
+    });
+    
+    if (error || !data?.results?.[0]) return null;
+    return {
+      brand: data.results[0].brand,
+      brandCategory: data.results[0].brandCategory,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function AddItemDialog({ onAdd }: AddItemDialogProps) {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -53,7 +71,7 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
     imageUrls: [] as string[],
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const cost = parseFloat(formData.acquisitionCost);
@@ -61,6 +79,9 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
     const lowest = parseFloat(formData.lowestAcceptablePrice);
 
     if (!formData.name || isNaN(cost)) return;
+
+    // Extract brand using AI (non-blocking, best effort)
+    const brandInfo = await extractBrandFromName(formData.name);
 
     onAdd({
       name: formData.name,
@@ -75,6 +96,8 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
       dateAdded: new Date().toISOString().split('T')[0],
       imageUrl: formData.imageUrls[0] || null,
       imageUrls: formData.imageUrls,
+      brand: brandInfo?.brand || null,
+      brandCategory: brandInfo?.brandCategory || null,
     });
 
     setFormData({

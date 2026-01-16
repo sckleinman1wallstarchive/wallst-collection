@@ -12,6 +12,7 @@ export interface InventoryItem {
   id: string;
   name: string;
   brand: string | null;
+  brandCategory: string | null;
   category: Database['public']['Enums']['item_category'];
   size: string | null;
   acquisitionCost: number;
@@ -46,6 +47,7 @@ const toAppItem = (row: DbInventoryItem): InventoryItem => ({
   id: row.id,
   name: row.name,
   brand: row.brand,
+  brandCategory: (row as any).brand_category || null,
   category: row.category,
   size: row.size,
   acquisitionCost: row.acquisition_cost,
@@ -111,6 +113,7 @@ const toDbUpdate = (item: Partial<InventoryItem>): DbUpdateItem => {
   const update: Record<string, any> = {};
   if (item.name !== undefined) update.name = item.name;
   if (item.brand !== undefined) update.brand = item.brand;
+  if (item.brandCategory !== undefined) update.brand_category = item.brandCategory;
   if (item.category !== undefined) update.category = item.category;
   if (item.size !== undefined) update.size = item.size;
   if (item.acquisitionCost !== undefined) update.acquisition_cost = item.acquisitionCost;

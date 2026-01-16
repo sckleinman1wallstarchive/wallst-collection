@@ -1,12 +1,56 @@
+import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Sparkles, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
+
+const CATEGORY_LABELS: Record<string, string> = {
+  jewelry: "Jewelry",
+  "japanese-designers": "Japanese Designers",
+  "european-luxury": "European Luxury",
+  "avant-garde": "Avant-Garde",
+  streetwear: "Streetwear",
+  contemporary: "Contemporary",
+  footwear: "Footwear",
+  vintage: "Vintage",
+  other: "Other",
+};
 
 const Analytics = () => {
   const { inventory, getActiveItems, getFinancialSummary } = useSupabaseInventory();
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [viewMode, setViewMode] = useState<'brand' | 'category'>('category');
+  const queryClient = useQueryClient();
+  
   const activeItems = getActiveItems();
   const summary = getFinancialSummary();
+
+  // Count items without brand
+  const itemsWithoutBrand = inventory.filter(i => !i.brand).length;
+
+  const handleExtractBrands = async () => {
+    setIsExtracting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('extract-brands', {
+        body: { mode: 'backfill' }
+      });
+      
+      if (error) throw error;
+      
+      toast.success(`Extracted brands for ${data.processed} items`);
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+    } catch (err) {
+      console.error('Brand extraction error:', err);
+      toast.error('Failed to extract brands');
+    } finally {
+      setIsExtracting(false);
+    }
+  };
 
   // Brand performance
   const brandData = activeItems.reduce((acc, item) => {
@@ -27,6 +71,28 @@ const Analytics = () => {
 
   const sortedByProfit = [...brandData].sort((a, b) => b.value - a.value).slice(0, 10);
 
+  // Category performance
+  const categoryData = activeItems.reduce((acc, item) => {
+    const category = item.brandCategory || 'other';
+    const existing = acc.find(c => c.name === category);
+    if (existing) {
+      existing.count += 1;
+      existing.value += (item.askingPrice || 0) - item.acquisitionCost;
+      existing.cost += item.acquisitionCost;
+    } else {
+      acc.push({
+        name: category,
+        label: CATEGORY_LABELS[category] || category,
+        count: 1,
+        value: (item.askingPrice || 0) - item.acquisitionCost,
+        cost: item.acquisitionCost,
+      });
+    }
+    return acc;
+  }, [] as { name: string; label: string; count: number; value: number; cost: number }[]);
+
+  const sortedCategoryByProfit = [...categoryData].sort((a, b) => b.value - a.value);
+
   // Status distribution
   const statusData = [
     { name: 'For Sale', value: inventory.filter(i => i.status === 'listed').length },
@@ -35,6 +101,12 @@ const Analytics = () => {
     { name: 'OTW', value: inventory.filter(i => i.status === 'otw').length },
     { name: 'Sold', value: inventory.filter(i => i.status === 'sold').length },
   ].filter(s => s.value > 0);
+
+  // Category distribution for pie chart
+  const categoryDistribution = categoryData.map(c => ({
+    name: c.label,
+    value: c.count,
+  })).filter(c => c.value > 0);
 
   // Days held distribution
   const daysCategories = [
@@ -67,11 +139,28 @@ const Analytics = () => {
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Quick insights for decision-making
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Quick insights for decision-making
+            </p>
+          </div>
+          {itemsWithoutBrand > 0 && (
+            <Button 
+              onClick={handleExtractBrands} 
+              disabled={isExtracting}
+              variant="outline"
+              size="sm"
+            >
+              {isExtracting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4 mr-2" />
+              )}
+              {isExtracting ? 'Extracting...' : `Auto-tag ${itemsWithoutBrand} items`}
+            </Button>
+          )}
         </div>
 
         {/* All-Time Totals */}
@@ -121,20 +210,89 @@ const Analytics = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Brand Performance */}
+          {/* Brand/Category Performance */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-medium">Profit by Brand (Top 10)</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-base font-medium">
+                Potential Profit by {viewMode === 'brand' ? 'Brand' : 'Category'}
+              </CardTitle>
+              <div className="flex gap-1">
+                <Button
+                  variant={viewMode === 'category' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('category')}
+                  className="h-7 text-xs"
+                >
+                  Category
+                </Button>
+                <Button
+                  variant={viewMode === 'brand' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('brand')}
+                  className="h-7 text-xs"
+                >
+                  Brand
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={sortedByProfit} layout="vertical">
+                  <BarChart 
+                    data={viewMode === 'brand' ? sortedByProfit : sortedCategoryByProfit} 
+                    layout="vertical"
+                  >
                     <XAxis type="number" tickFormatter={(v) => `$${v}`} />
-                    <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} />
+                    <YAxis 
+                      type="category" 
+                      dataKey={viewMode === 'brand' ? 'name' : 'label'} 
+                      width={120} 
+                      tick={{ fontSize: 12 }} 
+                    />
                     <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Category Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-medium">Category Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64 flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={categoryDistribution}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {categoryDistribution.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex flex-wrap justify-center gap-4 mt-4">
+                {categoryDistribution.map((entry, index) => (
+                  <div key={entry.name} className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      {entry.name} ({entry.value})
+                    </span>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -145,15 +303,15 @@ const Analytics = () => {
               <CardTitle className="text-base font-medium">Status Distribution</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-64 flex items-center justify-center">
+              <div className="h-48 flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={statusData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
+                      innerRadius={50}
+                      outerRadius={70}
                       paddingAngle={2}
                       dataKey="value"
                     >
@@ -197,37 +355,39 @@ const Analytics = () => {
               </div>
             </CardContent>
           </Card>
-
-          {/* Capital Blockers */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-medium">Capital Blockers</CardTitle>
-              <p className="text-xs text-muted-foreground">Items held 21+ days, sorted by cost</p>
-            </CardHeader>
-            <CardContent>
-              {capitalBlockers.length > 0 ? (
-                <div className="space-y-3">
-                  {capitalBlockers.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                      <div>
-                        <p className="text-sm font-medium">{item.name}</p>
-                        <p className="text-xs text-muted-foreground">{item.daysHeld || 0} days · {item.brand}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-mono">{formatCurrency(item.acquisitionCost)}</p>
-                        <p className="text-xs text-muted-foreground">invested</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No items blocking capital
-                </p>
-              )}
-            </CardContent>
-          </Card>
         </div>
+
+        {/* Capital Blockers */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-medium">Capital Blockers</CardTitle>
+            <p className="text-xs text-muted-foreground">Items held 21+ days, sorted by cost</p>
+          </CardHeader>
+          <CardContent>
+            {capitalBlockers.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {capitalBlockers.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.daysHeld || 0} days · {item.brand || 'Unknown'} · {CATEGORY_LABELS[item.brandCategory || 'other'] || item.brandCategory}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-mono">{formatCurrency(item.acquisitionCost)}</p>
+                      <p className="text-xs text-muted-foreground">invested</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No items blocking capital
+              </p>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
