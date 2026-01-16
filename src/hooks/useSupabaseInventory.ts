@@ -355,10 +355,15 @@ export function useSupabaseInventory() {
     const saleRevenue = sold.reduce((sum, i) => sum + (i.salePrice || 0), 0);
     const totalRevenue = saleRevenue + tradeCashReceived;
     
-    // COGS includes sold items' cost + traded items' cost (you gave up that item)
+    // COGS includes sold items' cost + traded items' cost ONLY when cash was received
+    // (trades with no cash are inventory swaps - profit realized when received item sells)
     const soldCost = sold.reduce((sum, i) => sum + i.acquisitionCost, 0);
-    const tradedCost = traded.reduce((sum, i) => sum + i.acquisitionCost, 0);
-    const totalCostOfSold = soldCost + tradedCost;
+    const tradedCostForCashReceived = traded.reduce((sum, i) => {
+      const diff = i.tradeCashDifference || 0;
+      // Only count cost if you received cash in this trade
+      return sum + (diff < 0 ? i.acquisitionCost : 0);
+    }, 0);
+    const totalCostOfSold = soldCost + tradedCostForCashReceived;
     
     const totalProfit = totalRevenue - totalCostOfSold;
     const activeInventoryCost = active.reduce((sum, i) => sum + i.acquisitionCost, 0);
