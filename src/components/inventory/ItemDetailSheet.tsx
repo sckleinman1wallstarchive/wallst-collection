@@ -90,6 +90,56 @@ function ImageGalleryView({
     setSelectedImages(allIndices);
   };
   
+  // Handle multi-image drag - drags all selected URLs when dragging a selected image
+  const handleMultiDragStart = (e: React.DragEvent<HTMLImageElement>, url: string, index: number) => {
+    e.stopPropagation();
+    
+    // If dragging a selected image and multiple are selected, drag all selected
+    if (selectedImages.has(index) && selectedImages.size > 1) {
+      const urls = Array.from(selectedImages)
+        .sort((a, b) => a - b)
+        .map(i => images[i])
+        .join('\n');
+      e.dataTransfer.setData('text/uri-list', urls);
+      e.dataTransfer.setData('text/plain', urls);
+      e.dataTransfer.effectAllowed = 'copy';
+      
+      // Create custom drag preview showing count
+      const dragPreview = document.createElement('div');
+      dragPreview.textContent = `📷 ${selectedImages.size} images`;
+      dragPreview.style.cssText = 'background:#3b82f6;color:white;padding:8px 12px;border-radius:6px;font-size:14px;font-weight:500;white-space:nowrap;';
+      document.body.appendChild(dragPreview);
+      e.dataTransfer.setDragImage(dragPreview, 0, 0);
+      setTimeout(() => document.body.removeChild(dragPreview), 0);
+    } else {
+      // Single image drag
+      handleImageDragStart(e, url);
+    }
+  };
+
+  // Drag from main image - if images are selected, drag all selected
+  const handleMainImageDragStart = (e: React.DragEvent<HTMLImageElement>) => {
+    const mainIndex = selectedIndex;
+    if (selectedImages.size > 1) {
+      const urls = Array.from(selectedImages)
+        .sort((a, b) => a - b)
+        .map(i => images[i])
+        .join('\n');
+      e.dataTransfer.setData('text/uri-list', urls);
+      e.dataTransfer.setData('text/plain', urls);
+      e.dataTransfer.effectAllowed = 'copy';
+      
+      const dragPreview = document.createElement('div');
+      dragPreview.textContent = `📷 ${selectedImages.size} images`;
+      dragPreview.style.cssText = 'background:#3b82f6;color:white;padding:8px 12px;border-radius:6px;font-size:14px;font-weight:500;white-space:nowrap;';
+      document.body.appendChild(dragPreview);
+      e.dataTransfer.setDragImage(dragPreview, 0, 0);
+      setTimeout(() => document.body.removeChild(dragPreview), 0);
+    } else {
+      handleImageDragStart(e, mainImage);
+    }
+  };
+
   return (
     <div className="space-y-2">
       <div className="rounded-lg overflow-hidden border border-border bg-muted/30">
@@ -98,7 +148,7 @@ function ImageGalleryView({
           alt="Item" 
           className="w-full h-48 object-contain bg-muted/20 cursor-grab active:cursor-grabbing"
           draggable
-          onDragStart={(e) => handleImageDragStart(e, mainImage)}
+          onDragStart={handleMainImageDragStart}
         />
       </div>
       {images.length > 1 && (
@@ -123,10 +173,7 @@ function ImageGalleryView({
                   alt="" 
                   className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
                   draggable
-                  onDragStart={(e) => {
-                    e.stopPropagation();
-                    handleImageDragStart(e, url);
-                  }}
+                  onDragStart={(e) => handleMultiDragStart(e, url, index)}
                 />
                 {selectedImages.has(index) && (
                   <div className="absolute inset-0 bg-blue-500/30 flex items-center justify-center">
