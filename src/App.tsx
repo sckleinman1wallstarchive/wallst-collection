@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AccessGate } from "@/components/auth/AccessGate";
+import { useCartSync } from "@/hooks/useCartSync";
 import Index from "./pages/Index";
 import Inventory from "./pages/Inventory";
 import PopUps from "./pages/PopUps";
@@ -13,8 +14,30 @@ import Goals from "./pages/Goals";
 import Analytics from "./pages/Analytics";
 import Tasks from "./pages/Tasks";
 import Content from "./pages/Content";
+import Storefront from "./pages/Storefront";
 import NotFound from "./pages/NotFound";
+
 const queryClient = new QueryClient();
+
+function AppContent() {
+  useCartSync();
+  
+  return (
+    <Routes>
+      <Route path="/" element={<Index />} />
+      <Route path="/inventory" element={<Inventory />} />
+      <Route path="/pop-ups" element={<PopUps />} />
+      <Route path="/contacts" element={<Contacts />} />
+      <Route path="/accounting" element={<Accounting />} />
+      <Route path="/goals" element={<Goals />} />
+      <Route path="/analytics" element={<Analytics />} />
+      <Route path="/tasks" element={<Tasks />} />
+      <Route path="/content" element={<Content />} />
+      <Route path="/storefront" element={<Storefront />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -23,18 +46,7 @@ const App = () => (
       <Sonner />
       <AccessGate>
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/inventory" element={<Inventory />} />
-            <Route path="/pop-ups" element={<PopUps />} />
-            <Route path="/contacts" element={<Contacts />} />
-            <Route path="/accounting" element={<Accounting />} />
-            <Route path="/goals" element={<Goals />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/content" element={<Content />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AppContent />
         </BrowserRouter>
       </AccessGate>
     </TooltipProvider>
