@@ -182,6 +182,7 @@ export type Database = {
           platforms: string[] | null
           priority_sale: boolean | null
           sale_price: number | null
+          shopify_product_id: string | null
           size: string | null
           source: string | null
           source_platform: string | null
@@ -216,6 +217,7 @@ export type Database = {
           platforms?: string[] | null
           priority_sale?: boolean | null
           sale_price?: number | null
+          shopify_product_id?: string | null
           size?: string | null
           source?: string | null
           source_platform?: string | null
@@ -250,6 +252,7 @@ export type Database = {
           platforms?: string[] | null
           priority_sale?: boolean | null
           sale_price?: number | null
+          shopify_product_id?: string | null
           size?: string | null
           source?: string | null
           source_platform?: string | null
