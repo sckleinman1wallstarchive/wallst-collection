@@ -51,11 +51,19 @@ const Accounting = () => {
   const soldItems = getSoldItems();
   const summary = getFinancialSummary();
 
-  // Sort sold items based on selected option
+  // Sort sold items based on selected option (items with dates first, then no dates)
   const sortedSoldItems = useMemo(() => {
     const items = [...soldItems];
     
     items.sort((a, b) => {
+      // First, prioritize items with dates over items without dates
+      const aHasDate = !!a.dateSold;
+      const bHasDate = !!b.dateSold;
+      
+      if (aHasDate && !bHasDate) return -1;
+      if (!aHasDate && bHasDate) return 1;
+      
+      // Then apply the selected sort criteria
       let comparison = 0;
       
       switch (sortBy) {
