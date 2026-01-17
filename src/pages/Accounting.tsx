@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -14,12 +15,19 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, Tooltip } from 'recharts';
-import { DollarSign, TrendingUp, Package, FileText, PlusCircle, Receipt, ChevronDown, ChevronUp, BarChart3, Users } from 'lucide-react';
+import { DollarSign, TrendingUp, Package, FileText, PlusCircle, Receipt, ChevronDown, ChevronUp, BarChart3, Users, ArrowUpDown } from 'lucide-react';
 import { CashFlowStatement } from '@/components/accounting/CashFlowStatement';
 import { RecordContributionDialog } from '@/components/accounting/RecordContributionDialog';
 import { ExpenseTrackerDialog } from '@/components/accounting/ExpenseTrackerDialog';
@@ -27,6 +35,7 @@ import { ExpenseList } from '@/components/accounting/ExpenseList';
 import { AssignPurchasesDialog } from '@/components/accounting/AssignPurchasesDialog';
 
 type View = 'dashboard' | 'cash-flow';
+type SortOption = 'date' | 'price' | 'brand';
 
 const Accounting = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
@@ -34,9 +43,75 @@ const Accounting = () => {
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [assignPurchasesOpen, setAssignPurchasesOpen] = useState(false);
   const [chartsExpanded, setChartsExpanded] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  
   const { inventory, isLoading, getSoldItems, getFinancialSummary } = useSupabaseInventory();
   const soldItems = getSoldItems();
   const summary = getFinancialSummary();
+
+  // Sort sold items based on selected option
+  const sortedSoldItems = useMemo(() => {
+    const items = [...soldItems];
+    
+    items.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'date':
+          comparison = new Date(a.dateSold || '').getTime() - new Date(b.dateSold || '').getTime();
+          break;
+        case 'price':
+          comparison = (a.salePrice || 0) - (b.salePrice || 0);
+          break;
+        case 'brand':
+          comparison = (a.brand || '').localeCompare(b.brand || '');
+          break;
+      }
+      
+      return sortDirection === 'desc' ? -comparison : comparison;
+    });
+    
+    return items;
+  }, [soldItems, sortBy, sortDirection]);
+
+  // Calculate totals for selected items
+  const selectedTotals = useMemo(() => {
+    const selected = sortedSoldItems.filter(item => selectedItems.has(item.id));
+    const totalCOGS = selected.reduce((sum, item) => sum + item.acquisitionCost, 0);
+    const totalSales = selected.reduce((sum, item) => sum + (item.salePrice || 0), 0);
+    const totalProfit = totalSales - totalCOGS;
+    
+    return {
+      count: selected.length,
+      cogs: totalCOGS,
+      sales: totalSales,
+      profit: totalProfit,
+    };
+  }, [sortedSoldItems, selectedItems]);
+
+  const toggleItemSelection = (itemId: string) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
+    } else {
+      newSelected.add(itemId);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const toggleAllItems = () => {
+    if (selectedItems.size === sortedSoldItems.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(sortedSoldItems.map(item => item.id)));
+    }
+  };
+
+  const toggleSortDirection = () => {
+    setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -361,31 +436,90 @@ const Accounting = () => {
 
         {/* Sales Ledger */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <CardTitle className="text-base font-medium">Sales Ledger</CardTitle>
+            <div className="flex items-center gap-2">
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                <SelectTrigger className="w-[140px] h-8">
+                  <SelectValue placeholder="Sort by..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date">Date</SelectItem>
+                  <SelectItem value="price">Sale Price</SelectItem>
+                  <SelectItem value="brand">Brand</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-8 w-8"
+                onClick={toggleSortDirection}
+              >
+                <ArrowUpDown className="h-4 w-4" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            {soldItems.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Item</TableHead>
-                    <TableHead>Brand</TableHead>
-                    <TableHead className="text-right">Cost</TableHead>
-                    <TableHead className="text-right">Sale Price</TableHead>
-                    <TableHead className="text-right">Profit</TableHead>
-                    <TableHead className="text-right">Margin</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {soldItems
-                    .sort((a, b) => new Date(b.dateSold || '').getTime() - new Date(a.dateSold || '').getTime())
-                    .map((item) => {
+            {sortedSoldItems.length > 0 ? (
+              <>
+                {/* Selected Items Summary */}
+                {selectedItems.size > 0 && (
+                  <div className="mb-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="text-sm font-medium">
+                        {selectedTotals.count} item{selectedTotals.count !== 1 ? 's' : ''} selected
+                      </span>
+                      <div className="flex items-center gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">COGS: </span>
+                          <span className="font-mono font-medium">{formatCurrency(selectedTotals.cogs)}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Sales: </span>
+                          <span className="font-mono font-medium">{formatCurrency(selectedTotals.sales)}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Profit: </span>
+                          <span className="font-mono font-medium text-chart-2">+{formatCurrency(selectedTotals.profit)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[40px]">
+                        <Checkbox 
+                          checked={selectedItems.size === sortedSoldItems.length && sortedSoldItems.length > 0}
+                          onCheckedChange={toggleAllItems}
+                        />
+                      </TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Item</TableHead>
+                      <TableHead>Brand</TableHead>
+                      <TableHead className="text-right">Cost</TableHead>
+                      <TableHead className="text-right">Sale Price</TableHead>
+                      <TableHead className="text-right">Profit</TableHead>
+                      <TableHead className="text-right">Margin</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedSoldItems.map((item) => {
                       const profit = (item.salePrice || 0) - item.acquisitionCost;
                       const margin = item.salePrice ? ((profit / item.salePrice) * 100).toFixed(0) : '0';
+                      const isSelected = selectedItems.has(item.id);
                       return (
-                        <TableRow key={item.id}>
+                        <TableRow 
+                          key={item.id} 
+                          className={isSelected ? 'bg-primary/5' : ''}
+                        >
+                          <TableCell>
+                            <Checkbox 
+                              checked={isSelected}
+                              onCheckedChange={() => toggleItemSelection(item.id)}
+                            />
+                          </TableCell>
                           <TableCell className="text-sm">{item.dateSold}</TableCell>
                           <TableCell>
                             <p className="font-medium text-sm">{item.name}</p>
@@ -408,8 +542,9 @@ const Accounting = () => {
                         </TableRow>
                       );
                     })}
-                </TableBody>
-              </Table>
+                  </TableBody>
+                </Table>
+              </>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-8">No sales recorded yet</p>
             )}
