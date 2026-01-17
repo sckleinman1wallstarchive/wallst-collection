@@ -10,6 +10,9 @@ interface ImageUploadProps {
   className?: string;
 }
 
+const MAX_IMAGES = 15;
+const GRID_SLOTS = 8;
+
 const photoSlots = [
   { label: 'Add a photo', isUploader: true },
   { label: 'Cover photo' },
@@ -45,11 +48,11 @@ export function ImageUpload({ imageUrls, onImagesChange, className }: ImageUploa
     if (validFiles.length === 0) return;
 
     // Limit to remaining slots
-    const remainingSlots = 8 - imageUrls.length;
+    const remainingSlots = MAX_IMAGES - imageUrls.length;
     const filesToUpload = validFiles.slice(0, remainingSlots);
 
     if (filesToUpload.length < validFiles.length) {
-      toast.warning(`Only ${filesToUpload.length} of ${validFiles.length} images uploaded (max 8)`);
+      toast.warning(`Only ${filesToUpload.length} of ${validFiles.length} images uploaded (max ${MAX_IMAGES})`);
     }
 
     setIsUploading(true);
@@ -146,7 +149,7 @@ export function ImageUpload({ imageUrls, onImagesChange, className }: ImageUploa
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium">Photos</p>
-          <p className="text-xs text-muted-foreground">{imageUrls.length}/8</p>
+          <p className="text-xs text-muted-foreground">{imageUrls.length}/{MAX_IMAGES}</p>
         </div>
         
         <div className={cn(
@@ -216,6 +219,34 @@ export function ImageUpload({ imageUrls, onImagesChange, className }: ImageUploa
             );
           })}
         </div>
+        
+        {imageUrls.length > GRID_SLOTS && (
+          <div className="mt-2 pt-2 border-t border-border">
+            <p className="text-xs text-muted-foreground mb-1">
+              Additional photos ({imageUrls.length - GRID_SLOTS})
+            </p>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {imageUrls.slice(GRID_SLOTS).map((url, idx) => (
+                <div key={idx + GRID_SLOTS} className="relative flex-shrink-0 group">
+                  <img 
+                    src={url} 
+                    alt={`Photo ${idx + GRID_SLOTS + 1}`}
+                    className="w-12 h-12 object-cover rounded-md cursor-grab active:cursor-grabbing"
+                    draggable
+                    onDragStart={(e) => handleImageDragStart(e, url)}
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => handleRemoveImage(idx + GRID_SLOTS, e)}
+                    className="absolute inset-0 bg-destructive/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-md"
+                  >
+                    <X className="h-3 w-3 text-destructive-foreground" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         
         <p className="text-xs text-muted-foreground text-center">
           Click or drag & drop images
