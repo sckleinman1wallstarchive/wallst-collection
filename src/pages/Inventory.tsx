@@ -14,7 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { Database } from '@/integrations/supabase/types';
-import { CalendarCheck, Package, AlertTriangle, Check, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
+import { CalendarCheck, Package, AlertTriangle, Check, Pencil, ChevronDown, ChevronUp, Cloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
@@ -60,6 +60,9 @@ const Inventory = () => {
     getFinancialSummary,
     getConventionItems,
     getAttentionItems,
+    syncToShopify,
+    bulkSyncToShopify,
+    getListedItems,
   } = useSupabaseInventory();
 
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
@@ -74,6 +77,7 @@ const Inventory = () => {
   const [attentionOpen, setAttentionOpen] = useState(true);
   const [editingAttentionId, setEditingAttentionId] = useState<string | null>(null);
   const [editingAttentionNote, setEditingAttentionNote] = useState('');
+  const [isBulkSyncing, setIsBulkSyncing] = useState(false);
 
   // Handle URL params to open item detail directly
   useEffect(() => {
@@ -95,6 +99,7 @@ const Inventory = () => {
   const summary = getFinancialSummary();
   const conventionItems = getConventionItems();
   const attentionItems = getAttentionItems();
+  const listedItems = getListedItems();
 
   // Calculate summaries by status
   const statusSummaries = useMemo((): StatusSummary[] => {
@@ -206,6 +211,19 @@ const Inventory = () => {
     toast.success('Issue resolved');
   };
 
+  const handleBulkSync = async () => {
+    if (listedItems.length === 0) {
+      toast.error('No listed items to sync');
+      return;
+    }
+    setIsBulkSyncing(true);
+    try {
+      await bulkSyncToShopify(listedItems.map(i => i.id));
+    } finally {
+      setIsBulkSyncing(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -254,6 +272,15 @@ const Inventory = () => {
                 Convention Mode
               </Label>
             </div>
+            {/* Shopify Sync Button */}
+            <Button
+              variant="outline"
+              onClick={handleBulkSync}
+              disabled={isBulkSyncing || listedItems.length === 0}
+            >
+              <Cloud className="h-4 w-4 mr-2" />
+              {isBulkSyncing ? 'Syncing...' : `Sync ${listedItems.length} to Shopify`}
+            </Button>
             <AddItemDialog onAdd={handleAddItem} />
           </div>
         </div>
@@ -512,6 +539,7 @@ const Inventory = () => {
           onDelete={handleDeleteItem}
           onSell={handleOpenSell}
           onTrade={handleOpenTrade}
+          onSyncToShopify={syncToShopify}
           allItems={inventory}
           startInEditMode={startInEditMode}
         />

@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Trash2, DollarSign, Save, ArrowRightLeft, CalendarCheck, AlertTriangle, Check, Copy } from 'lucide-react';
+import { Trash2, DollarSign, Save, ArrowRightLeft, CalendarCheck, AlertTriangle, Check, Copy, Cloud, CloudOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { PlatformMultiSelect } from './PlatformMultiSelect';
 import { ImageUpload } from './ImageUpload';
@@ -212,6 +212,7 @@ interface ItemDetailSheetProps {
   onDelete: (id: string) => void;
   onSell: (item: InventoryItem) => void;
   onTrade?: (item: InventoryItem) => void;
+  onSyncToShopify?: (itemId: string) => Promise<void>;
   allItems?: InventoryItem[];
   startInEditMode?: boolean;
 }
@@ -225,7 +226,7 @@ const statuses: { value: ItemStatus; label: string }[] = [
   { value: 'refunded', label: 'Refunded' },
   { value: 'scammed', label: 'Scammed' },
 ];
-export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, onSell, onTrade, allItems = [], startInEditMode = false }: ItemDetailSheetProps) {
+export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, onSell, onTrade, onSyncToShopify, allItems = [], startInEditMode = false }: ItemDetailSheetProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<InventoryItem>>({});
   const [hasAutoStarted, setHasAutoStarted] = useState(false);
@@ -233,6 +234,7 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
   const [newAttentionNote, setNewAttentionNote] = useState('');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isAddingPhotos, setIsAddingPhotos] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Helper to get all images for an item
   const getItemImages = (i: InventoryItem): string[] => {
@@ -704,6 +706,35 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
               <CalendarCheck className="h-4 w-4 mr-2" />
               {item.inConvention ? 'Remove from Convention' : 'Add to Convention'}
             </Button>
+
+            {/* Shopify Sync Button - only for listed items */}
+            {item.status === 'listed' && onSyncToShopify && (
+              <Button
+                variant="outline"
+                className="w-full"
+                disabled={isSyncing}
+                onClick={async () => {
+                  setIsSyncing(true);
+                  try {
+                    await onSyncToShopify(item.id);
+                  } finally {
+                    setIsSyncing(false);
+                  }
+                }}
+              >
+                {(item as any).shopifyProductId ? (
+                  <>
+                    <Cloud className="h-4 w-4 mr-2 text-chart-2" />
+                    {isSyncing ? 'Syncing...' : 'Update on Shopify'}
+                  </>
+                ) : (
+                  <>
+                    <CloudOff className="h-4 w-4 mr-2" />
+                    {isSyncing ? 'Syncing...' : 'Sync to Shopify'}
+                  </>
+                )}
+              </Button>
+            )}
 
             <div className="flex gap-3 pt-4 border-t border-border">
               {!isLostItem && (

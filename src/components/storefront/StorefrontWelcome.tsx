@@ -19,12 +19,12 @@ export function StorefrontWelcome({ onEnterShop }: StorefrontWelcomeProps) {
       
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center justify-center h-full">
-        <h1 className="text-4xl md:text-5xl font-light tracking-[0.3em] text-[#f5f5f0] mb-4">
-          WALL ST.
+        <h1 className="text-4xl md:text-5xl font-sans font-light tracking-[0.3em] text-[#f5f5f0] mb-2">
+          WALL ST
         </h1>
-        <p className="text-lg tracking-[0.2em] text-[#f5f5f0]/80 mb-12">
+        <h2 className="text-4xl md:text-5xl font-sans font-light tracking-[0.3em] text-[#f5f5f0] mb-12">
           COLLECTION
-        </p>
+        </h2>
         
         <Button
           onClick={onEnterShop}
