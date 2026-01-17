@@ -53,7 +53,7 @@ export function StorefrontSidebar({ currentView, onNavigate }: StorefrontSidebar
         {!collapsed && (
           <div className="flex flex-col">
             <span className="font-semibold text-sidebar-foreground tracking-tight">WSC</span>
-            <span className="text-xs text-sidebar-foreground/60">Wall St. Collection</span>
+            <span className="text-xs text-sidebar-foreground/60">Wall St Collection</span>
           </div>
         )}
         {collapsed && (

@@ -402,6 +402,41 @@ export function useSupabaseInventory() {
   // Get all items that need attention (have an attention note)
   const getAttentionItems = () => inventory.filter((i) => i.attentionNote);
 
+  // Sync item to Shopify
+  const syncToShopify = async (itemId: string) => {
+    const { data, error } = await supabase.functions.invoke('sync-to-shopify', {
+      body: { action: 'sync', itemId },
+    });
+    
+    if (error) {
+      toast.error('Sync failed: ' + error.message);
+      throw error;
+    }
+    
+    queryClient.invalidateQueries({ queryKey: ['inventory'] });
+    toast.success('Synced to Shopify');
+    return data;
+  };
+
+  // Bulk sync to Shopify
+  const bulkSyncToShopify = async (itemIds: string[]) => {
+    const { data, error } = await supabase.functions.invoke('sync-to-shopify', {
+      body: { action: 'bulk-sync', itemIds },
+    });
+    
+    if (error) {
+      toast.error('Bulk sync failed: ' + error.message);
+      throw error;
+    }
+    
+    queryClient.invalidateQueries({ queryKey: ['inventory'] });
+    toast.success(`Synced ${itemIds.length} items to Shopify`);
+    return data;
+  };
+
+  // Get listed items for sync
+  const getListedItems = () => inventory.filter((i) => i.status === 'listed');
+
   return {
     inventory,
     isLoading,
@@ -422,5 +457,8 @@ export function useSupabaseInventory() {
     getAttentionItems,
     getIncompleteItems,
     getFinancialSummary,
+    syncToShopify,
+    bulkSyncToShopify,
+    getListedItems,
   };
 }
