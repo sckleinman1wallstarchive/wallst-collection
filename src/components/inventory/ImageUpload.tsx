@@ -1,8 +1,27 @@
 import { useState, useRef, DragEvent } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { ImagePlus, X, Loader2 } from 'lucide-react';
+import { ImagePlus, X, Loader2, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface ImageUploadProps {
   imageUrls: string[];
@@ -24,10 +43,163 @@ const photoSlots = [
   { label: 'Flaw' },
 ];
 
+interface SortableImageSlotProps {
+  id: string;
+  url: string;
+  index: number;
+  label: string;
+  onRemove: (index: number, e: React.MouseEvent) => void;
+  onImageDragStart: (e: React.DragEvent<HTMLImageElement>, url: string) => void;
+}
+
+function SortableImageSlot({ 
+  id, 
+  url, 
+  index, 
+  label, 
+  onRemove,
+  onImageDragStart 
+}: SortableImageSlotProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 10 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "aspect-square border-2 rounded-md relative overflow-hidden group",
+        isDragging ? "border-primary ring-2 ring-primary/30" : "border-transparent"
+      )}
+    >
+      <img 
+        src={url} 
+        alt={label} 
+        className="w-full h-full object-cover rounded-md"
+        draggable
+        onDragStart={(e) => onImageDragStart(e, url)}
+      />
+      {/* Drag handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute top-1 left-1 p-1 bg-background/80 rounded cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <GripVertical className="h-3 w-3 text-foreground" />
+      </div>
+      {/* Remove button */}
+      <button
+        type="button"
+        onClick={(e) => onRemove(index, e)}
+        className="absolute top-1 right-1 p-1 bg-destructive/80 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <X className="h-3 w-3 text-destructive-foreground" />
+      </button>
+      {/* Cover label for first slot */}
+      {index === 0 && (
+        <span className="absolute bottom-0 left-0 right-0 bg-background/80 text-[10px] text-center py-0.5 font-medium">
+          Cover
+        </span>
+      )}
+    </div>
+  );
+}
+
+interface SortableOverflowImageProps {
+  id: string;
+  url: string;
+  index: number;
+  onRemove: (index: number, e: React.MouseEvent) => void;
+  onImageDragStart: (e: React.DragEvent<HTMLImageElement>, url: string) => void;
+}
+
+function SortableOverflowImage({ 
+  id, 
+  url, 
+  index, 
+  onRemove,
+  onImageDragStart 
+}: SortableOverflowImageProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 10 : 1,
+  };
+
+  return (
+    <div 
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "relative flex-shrink-0 group",
+        isDragging && "ring-2 ring-primary/30 rounded-md"
+      )}
+    >
+      <img 
+        src={url} 
+        alt={`Photo ${index + 1}`}
+        className="w-12 h-12 object-cover rounded-md"
+        draggable
+        onDragStart={(e) => onImageDragStart(e, url)}
+      />
+      {/* Drag handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute top-0.5 left-0.5 p-0.5 bg-background/80 rounded cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <GripVertical className="h-2 w-2 text-foreground" />
+      </div>
+      <button
+        type="button"
+        onClick={(e) => onRemove(index, e)}
+        className="absolute top-0.5 right-0.5 p-0.5 bg-destructive/80 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <X className="h-2 w-2 text-destructive-foreground" />
+      </button>
+    </div>
+  );
+}
+
 export function ImageUpload({ imageUrls, onImagesChange, className }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const uploadFiles = async (files: FileList) => {
     const validFiles: File[] = [];
@@ -133,11 +305,33 @@ export function ImageUpload({ imageUrls, onImagesChange, className }: ImageUploa
 
   // Enable dragging images out to desktop/other apps
   const handleImageDragStart = (e: React.DragEvent<HTMLImageElement>, url: string) => {
-    e.stopPropagation(); // Prevent triggering the container's drag events
+    e.stopPropagation();
     e.dataTransfer.setData('text/uri-list', url);
     e.dataTransfer.setData('text/plain', url);
     e.dataTransfer.effectAllowed = 'copy';
   };
+
+  const handleDndDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+    
+    if (over && active.id !== over.id) {
+      const oldIndex = imageUrls.findIndex((_, i) => `image-${i}` === active.id);
+      const newIndex = imageUrls.findIndex((_, i) => `image-${i}` === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newOrder = arrayMove(imageUrls, oldIndex, newIndex);
+        onImagesChange(newOrder);
+      }
+    }
+  };
+
+  const activeUrl = activeId ? imageUrls[parseInt(activeId.replace('image-', ''))] : null;
+  const allImageIds = imageUrls.map((_, i) => `image-${i}`);
 
   return (
     <div 
@@ -152,53 +346,50 @@ export function ImageUpload({ imageUrls, onImagesChange, className }: ImageUploa
           <p className="text-xs text-muted-foreground">{imageUrls.length}/{MAX_IMAGES}</p>
         </div>
         
-        <div className={cn(
-          "grid grid-cols-4 gap-2 p-2 rounded-lg transition-colors",
-          isDragging && "bg-primary/5 ring-2 ring-primary/20"
-        )}>
-          {photoSlots.map((slot, index) => {
-            const image = imageUrls[index];
-            const isEmpty = !image;
-            const isDisabled = isUploading && isEmpty;
-            
-            return (
-              <button
-                key={index}
-                type="button"
-                disabled={isDisabled}
-                onClick={() => isEmpty && handleSlotClick(index)}
-                className={cn(
-                  "aspect-square border-2 border-dashed rounded-md flex flex-col items-center justify-center gap-1 transition-all relative overflow-hidden group",
-                  isEmpty 
-                    ? "border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/30" 
-                    : "border-transparent",
-                  isDisabled && "opacity-50 cursor-not-allowed"
-                )}
-              >
-                {image ? (
-                  <>
-                    <img 
-                      src={image} 
-                      alt={slot.label} 
-                      className="w-full h-full object-cover rounded-md cursor-grab active:cursor-grabbing"
-                      draggable
-                      onDragStart={(e) => handleImageDragStart(e, image)}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDndDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={allImageIds} strategy={rectSortingStrategy}>
+            <div className={cn(
+              "grid grid-cols-4 gap-2 p-2 rounded-lg transition-colors",
+              isDragging && "bg-primary/5 ring-2 ring-primary/20"
+            )}>
+              {photoSlots.map((slot, index) => {
+                const image = imageUrls[index];
+                const isEmpty = !image;
+                const isDisabled = isUploading && isEmpty;
+                
+                if (image) {
+                  return (
+                    <SortableImageSlot
+                      key={`image-${index}`}
+                      id={`image-${index}`}
+                      url={image}
+                      index={index}
+                      label={slot.label}
+                      onRemove={handleRemoveImage}
+                      onImageDragStart={handleImageDragStart}
                     />
-                    <button
-                      type="button"
-                      onClick={(e) => handleRemoveImage(index, e)}
-                      className="absolute inset-0 bg-destructive/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-md"
-                    >
-                      <X className="h-5 w-5 text-destructive-foreground" />
-                    </button>
-                    {index === 0 && (
-                      <span className="absolute bottom-0 left-0 right-0 bg-background/80 text-[10px] text-center py-0.5 font-medium">
-                        Cover
-                      </span>
+                  );
+                }
+                
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    disabled={isDisabled}
+                    onClick={() => isEmpty && handleSlotClick(index)}
+                    className={cn(
+                      "aspect-square border-2 border-dashed rounded-md flex flex-col items-center justify-center gap-1 transition-all relative overflow-hidden group",
+                      isEmpty 
+                        ? "border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/30" 
+                        : "border-transparent",
+                      isDisabled && "opacity-50 cursor-not-allowed"
                     )}
-                  </>
-                ) : (
-                  <>
+                  >
                     {isUploading && index === imageUrls.length ? (
                       <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
                     ) : slot.isUploader ? (
@@ -213,43 +404,47 @@ export function ImageUpload({ imageUrls, onImagesChange, className }: ImageUploa
                     )}>
                       {slot.label}
                     </span>
-                  </>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        
-        {imageUrls.length > GRID_SLOTS && (
-          <div className="mt-2 pt-2 border-t border-border">
-            <p className="text-xs text-muted-foreground mb-1">
-              Additional photos ({imageUrls.length - GRID_SLOTS})
-            </p>
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {imageUrls.slice(GRID_SLOTS).map((url, idx) => (
-                <div key={idx + GRID_SLOTS} className="relative flex-shrink-0 group">
-                  <img 
-                    src={url} 
-                    alt={`Photo ${idx + GRID_SLOTS + 1}`}
-                    className="w-12 h-12 object-cover rounded-md cursor-grab active:cursor-grabbing"
-                    draggable
-                    onDragStart={(e) => handleImageDragStart(e, url)}
-                  />
-                  <button
-                    type="button"
-                    onClick={(e) => handleRemoveImage(idx + GRID_SLOTS, e)}
-                    className="absolute inset-0 bg-destructive/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-md"
-                  >
-                    <X className="h-3 w-3 text-destructive-foreground" />
                   </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
-          </div>
-        )}
+            
+            {imageUrls.length > GRID_SLOTS && (
+              <div className="mt-2 pt-2 border-t border-border">
+                <p className="text-xs text-muted-foreground mb-1">
+                  Additional photos ({imageUrls.length - GRID_SLOTS})
+                </p>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {imageUrls.slice(GRID_SLOTS).map((url, idx) => (
+                    <SortableOverflowImage
+                      key={`image-${idx + GRID_SLOTS}`}
+                      id={`image-${idx + GRID_SLOTS}`}
+                      url={url}
+                      index={idx + GRID_SLOTS}
+                      onRemove={handleRemoveImage}
+                      onImageDragStart={handleImageDragStart}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </SortableContext>
+          
+          <DragOverlay>
+            {activeUrl && (
+              <div className="w-16 h-16 rounded-md overflow-hidden shadow-lg ring-2 ring-primary">
+                <img 
+                  src={activeUrl} 
+                  alt="Dragging" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
         
         <p className="text-xs text-muted-foreground text-center">
-          Click or drag & drop images
+          Click or drag & drop images • Drag grip to reorder
         </p>
       </div>
       
