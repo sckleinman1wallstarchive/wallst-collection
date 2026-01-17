@@ -253,7 +253,8 @@ export function useSupabaseInventory() {
   const markAsSold = (
     id: string,
     salePrice: number,
-    platformSold?: Database['public']['Enums']['platform']
+    platformSold?: Database['public']['Enums']['platform'],
+    dateSold?: string
   ) =>
     updateMutation.mutateAsync({
       id,
@@ -261,7 +262,7 @@ export function useSupabaseInventory() {
         status: 'sold',
         salePrice,
         platformSold,
-        dateSold: new Date().toISOString().split('T')[0],
+        dateSold: dateSold || new Date().toISOString().split('T')[0],
         // IMPORTANT: do NOT clear inConvention here.
         // Items sold at the convention should still count toward Got Sole sold stats.
       },

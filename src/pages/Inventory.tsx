@@ -174,8 +174,8 @@ const Inventory = () => {
     setSelectedItem(null);
   };
 
-  const handleMarkAsSold = async (id: string, salePrice: number, platformSold?: string) => {
-    await markAsSold(id, salePrice, platformSold as any);
+  const handleMarkAsSold = async (id: string, salePrice: number, platformSold?: string, dateSold?: string) => {
+    await markAsSold(id, salePrice, platformSold as any, dateSold);
     setSellOpen(false);
     setSellItem(null);
   };
