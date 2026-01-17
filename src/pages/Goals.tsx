@@ -21,7 +21,7 @@ const Goals = () => {
   // Revenue goals
   const revenueGoal = 8333;
   const stretchGoal = 10000;
-  const currentRevenue = summary.totalProfit;
+  const currentRevenue = summary.totalRevenue;
   const revenuePercentage = Math.min(100, (currentRevenue / revenueGoal) * 100);
   const stretchPercentage = Math.min(100, (currentRevenue / stretchGoal) * 100);
 

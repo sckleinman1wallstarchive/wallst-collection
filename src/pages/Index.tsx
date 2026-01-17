@@ -112,13 +112,13 @@ const Index = () => {
             <CardContent className="space-y-6">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Profit Target</span>
+                  <span className="text-sm text-muted-foreground">Revenue Target</span>
                   <span className="text-sm font-medium">
-                    {formatCurrency(summary.totalProfit)} / {formatCurrency(monthlyTarget)}
+                    {formatCurrency(summary.totalRevenue)} / {formatCurrency(monthlyTarget)}
                   </span>
                 </div>
                 <ProgressBar
-                  value={summary.totalProfit}
+                  value={summary.totalRevenue}
                   max={monthlyTarget}
                   showPercentage={false}
                 />
@@ -127,11 +127,11 @@ const Index = () => {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground">Stretch Target</span>
                   <span className="text-sm font-medium">
-                    {formatCurrency(summary.totalProfit)} / {formatCurrency(stretchTarget)}
+                    {formatCurrency(summary.totalRevenue)} / {formatCurrency(stretchTarget)}
                   </span>
                 </div>
                 <ProgressBar
-                  value={summary.totalProfit}
+                  value={summary.totalRevenue}
                   max={stretchTarget}
                   showPercentage={false}
                 />
