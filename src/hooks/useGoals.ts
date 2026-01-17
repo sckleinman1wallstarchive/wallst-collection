@@ -12,6 +12,12 @@ export interface Goal {
   art_style: string | null;
   created_at: string;
   updated_at: string;
+  goal_type: 'standard' | 'metric' | null;
+  metric_type: string | null;
+  metric_target: number | null;
+  metric_current: number | null;
+  start_date: string | null;
+  end_date: string | null;
 }
 
 export interface CreateGoalInput {
@@ -20,6 +26,11 @@ export interface CreateGoalInput {
   owner: 'Parker' | 'Spencer' | 'WSC';
   image_url?: string | null;
   art_style?: string | null;
+  goal_type?: 'standard' | 'metric';
+  metric_type?: string | null;
+  metric_target?: number | null;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 export interface UpdateGoalInput {
@@ -30,6 +41,11 @@ export interface UpdateGoalInput {
   is_complete?: boolean;
   image_url?: string | null;
   art_style?: string | null;
+  goal_type?: 'standard' | 'metric';
+  metric_type?: string | null;
+  metric_target?: number | null;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 export const useGoals = () => {

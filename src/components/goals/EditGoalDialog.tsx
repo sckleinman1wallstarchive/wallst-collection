@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,17 +17,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Plus, Upload, Search } from 'lucide-react';
-import { CreateGoalInput } from '@/hooks/useGoals';
+import { Upload, Search } from 'lucide-react';
+import { Goal, UpdateGoalInput } from '@/hooks/useGoals';
 import { supabase } from '@/integrations/supabase/client';
 
-interface AddGoalDialogProps {
-  onAddGoal: (goal: CreateGoalInput) => void;
+interface EditGoalDialogProps {
+  goal: Goal | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUpdateGoal: (goal: UpdateGoalInput) => void;
   isLoading?: boolean;
 }
 
-export const AddGoalDialog = ({ onAddGoal, isLoading }: AddGoalDialogProps) => {
-  const [open, setOpen] = useState(false);
+export const EditGoalDialog = ({ goal, open, onOpenChange, onUpdateGoal, isLoading }: EditGoalDialogProps) => {
   const [description, setDescription] = useState('');
   const [timeframe, setTimeframe] = useState('');
   const [owner, setOwner] = useState<'Parker' | 'Spencer' | 'WSC'>('WSC');
@@ -44,11 +45,28 @@ export const AddGoalDialog = ({ onAddGoal, isLoading }: AddGoalDialogProps) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  useEffect(() => {
+    if (goal) {
+      setDescription(goal.description);
+      setTimeframe(goal.timeframe);
+      setOwner(goal.owner);
+      setImageUrl(goal.image_url || '');
+      setArtStyle(goal.art_style || '');
+      setImageOption(goal.image_url ? 'upload' : goal.art_style ? 'search' : 'none');
+      setGoalType(goal.goal_type || 'standard');
+      setMetricType(goal.metric_type || '');
+      setMetricTarget(goal.metric_target?.toString() || '');
+      setStartDate(goal.start_date || '');
+      setEndDate(goal.end_date || '');
+    }
+  }, [goal]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!description.trim() || !timeframe.trim()) return;
+    if (!goal || !description.trim() || !timeframe.trim()) return;
 
-    onAddGoal({
+    const updates: UpdateGoalInput = {
+      id: goal.id,
       description: description.trim(),
       timeframe: timeframe.trim(),
       owner,
@@ -59,21 +77,10 @@ export const AddGoalDialog = ({ onAddGoal, isLoading }: AddGoalDialogProps) => {
       metric_target: goalType === 'metric' && metricTarget ? parseFloat(metricTarget) : null,
       start_date: goalType === 'metric' && startDate ? startDate : null,
       end_date: goalType === 'metric' && endDate ? endDate : null,
-    });
+    };
 
-    // Reset form
-    setDescription('');
-    setTimeframe('');
-    setOwner('WSC');
-    setImageOption('none');
-    setArtStyle('');
-    setImageUrl('');
-    setGoalType('standard');
-    setMetricType('');
-    setMetricTarget('');
-    setStartDate('');
-    setEndDate('');
-    setOpen(false);
+    onUpdateGoal(updates);
+    onOpenChange(false);
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,21 +120,10 @@ export const AddGoalDialog = ({ onAddGoal, isLoading }: AddGoalDialogProps) => {
   ];
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <div
-          className="p-6 rounded-lg cursor-pointer transition-all duration-200 
-            bg-white hover:bg-gray-50
-            border-2 border-dashed border-gray-300 hover:border-[#c9b99a]
-            flex flex-col items-center justify-center min-h-[140px]"
-        >
-          <Plus className="h-8 w-8 text-gray-400 mb-2" />
-          <span className="text-gray-600 font-medium">Add Goal</span>
-        </div>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-black border-[#c9b99a]/30 text-white max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-white text-xl">Add New Goal</DialogTitle>
+          <DialogTitle className="text-white text-xl">Edit Goal</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5 mt-4">
           {/* Goal Type Toggle */}
@@ -139,20 +135,20 @@ export const AddGoalDialog = ({ onAddGoal, isLoading }: AddGoalDialogProps) => {
               className="flex gap-4"
             >
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="standard" id="add-standard" className="border-white/50 text-[#c9b99a]" />
-                <Label htmlFor="add-standard" className="text-white/70 text-sm cursor-pointer">Standard</Label>
+                <RadioGroupItem value="standard" id="edit-standard" className="border-white/50 text-[#c9b99a]" />
+                <Label htmlFor="edit-standard" className="text-white/70 text-sm cursor-pointer">Standard</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="metric" id="add-metric" className="border-white/50 text-[#c9b99a]" />
-                <Label htmlFor="add-metric" className="text-white/70 text-sm cursor-pointer">Metric</Label>
+                <RadioGroupItem value="metric" id="edit-metric" className="border-white/50 text-[#c9b99a]" />
+                <Label htmlFor="edit-metric" className="text-white/70 text-sm cursor-pointer">Metric</Label>
               </div>
             </RadioGroup>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-white/80">Goal Description</Label>
+            <Label htmlFor="edit-description" className="text-white/80">Goal Description</Label>
             <Textarea
-              id="description"
+              id="edit-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g., Source $50k worth of clothes this year"
@@ -162,9 +158,9 @@ export const AddGoalDialog = ({ onAddGoal, isLoading }: AddGoalDialogProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="timeframe" className="text-white/80">Timeframe</Label>
+            <Label htmlFor="edit-timeframe" className="text-white/80">Timeframe</Label>
             <Input
-              id="timeframe"
+              id="edit-timeframe"
               value={timeframe}
               onChange={(e) => setTimeframe(e.target.value)}
               placeholder="e.g., 2025, Q1 2025, January 2025"
@@ -192,9 +188,9 @@ export const AddGoalDialog = ({ onAddGoal, isLoading }: AddGoalDialogProps) => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="metric-target" className="text-white/80">Target</Label>
+                <Label htmlFor="edit-metric-target" className="text-white/80">Target</Label>
                 <Input
-                  id="metric-target"
+                  id="edit-metric-target"
                   type="number"
                   value={metricTarget}
                   onChange={(e) => setMetricTarget(e.target.value)}
@@ -205,9 +201,9 @@ export const AddGoalDialog = ({ onAddGoal, isLoading }: AddGoalDialogProps) => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="start-date" className="text-white/80">Start Date</Label>
+                  <Label htmlFor="edit-start-date" className="text-white/80">Start Date</Label>
                   <Input
-                    id="start-date"
+                    id="edit-start-date"
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
@@ -215,9 +211,9 @@ export const AddGoalDialog = ({ onAddGoal, isLoading }: AddGoalDialogProps) => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="end-date" className="text-white/80">End Date</Label>
+                  <Label htmlFor="edit-end-date" className="text-white/80">End Date</Label>
                   <Input
-                    id="end-date"
+                    id="edit-end-date"
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
@@ -250,16 +246,16 @@ export const AddGoalDialog = ({ onAddGoal, isLoading }: AddGoalDialogProps) => {
               className="flex gap-4"
             >
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="none" id="none" className="border-white/50 text-[#c9b99a]" />
-                <Label htmlFor="none" className="text-white/70 text-sm cursor-pointer">None</Label>
+                <RadioGroupItem value="none" id="edit-none" className="border-white/50 text-[#c9b99a]" />
+                <Label htmlFor="edit-none" className="text-white/70 text-sm cursor-pointer">None</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="search" id="search" className="border-white/50 text-[#c9b99a]" />
-                <Label htmlFor="search" className="text-white/70 text-sm cursor-pointer">Art Style</Label>
+                <RadioGroupItem value="search" id="edit-search" className="border-white/50 text-[#c9b99a]" />
+                <Label htmlFor="edit-search" className="text-white/70 text-sm cursor-pointer">Art Style</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="upload" id="upload" className="border-white/50 text-[#c9b99a]" />
-                <Label htmlFor="upload" className="text-white/70 text-sm cursor-pointer">Upload</Label>
+                <RadioGroupItem value="upload" id="edit-upload" className="border-white/50 text-[#c9b99a]" />
+                <Label htmlFor="edit-upload" className="text-white/70 text-sm cursor-pointer">Upload</Label>
               </div>
             </RadioGroup>
 
@@ -284,13 +280,13 @@ export const AddGoalDialog = ({ onAddGoal, isLoading }: AddGoalDialogProps) => {
                     size="sm"
                     disabled={uploading}
                     className="bg-transparent border-white/20 text-white hover:bg-white/10"
-                    onClick={() => document.getElementById('goal-image-upload')?.click()}
+                    onClick={() => document.getElementById('edit-goal-image-upload')?.click()}
                   >
                     <Upload className="h-4 w-4 mr-2" />
                     {uploading ? 'Uploading...' : 'Choose Image'}
                   </Button>
                   <input
-                    id="goal-image-upload"
+                    id="edit-goal-image-upload"
                     type="file"
                     accept="image/*"
                     onChange={handleImageUpload}
@@ -310,7 +306,7 @@ export const AddGoalDialog = ({ onAddGoal, isLoading }: AddGoalDialogProps) => {
             <Button
               type="button"
               variant="ghost"
-              onClick={() => setOpen(false)}
+              onClick={() => onOpenChange(false)}
               className="text-white/70 hover:text-white hover:bg-white/10"
             >
               Cancel
@@ -320,7 +316,7 @@ export const AddGoalDialog = ({ onAddGoal, isLoading }: AddGoalDialogProps) => {
               disabled={!description.trim() || !timeframe.trim() || isLoading}
               className="bg-[#c9b99a] text-black hover:bg-[#d4c4b0]"
             >
-              Add Goal
+              Save Changes
             </Button>
           </div>
         </form>

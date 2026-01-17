@@ -58,7 +58,8 @@ const Index = () => {
     }).format(amount);
   };
 
-  const monthlyTarget = 5000;
+  const monthlyTarget = 8333;
+  const stretchTarget = 10000;
 
   return (
     <DashboardLayout>
@@ -126,12 +127,12 @@ const Index = () => {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground">Stretch Target</span>
                   <span className="text-sm font-medium">
-                    {formatCurrency(summary.totalProfit)} / {formatCurrency(10000)}
+                    {formatCurrency(summary.totalProfit)} / {formatCurrency(stretchTarget)}
                   </span>
                 </div>
                 <ProgressBar
                   value={summary.totalProfit}
-                  max={10000}
+                  max={stretchTarget}
                   showPercentage={false}
                 />
               </div>
