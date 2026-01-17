@@ -25,6 +25,7 @@ import { ImageUpload } from './ImageUpload';
 import { supabase } from '@/integrations/supabase/client';
 
 type ItemStatus = Database['public']['Enums']['item_status'];
+type ItemOwner = Database['public']['Enums']['item_owner'];
 
 interface AddItemDialogProps {
   onAdd: (item: Partial<InventoryItem>) => void;
@@ -37,6 +38,12 @@ const statuses: { value: ItemStatus; label: string }[] = [
   { value: 'otw', label: 'OTW' },
   { value: 'refunded', label: 'Refunded' },
   { value: 'traded', label: 'Traded' },
+];
+
+const paidByOptions: { value: ItemOwner; label: string }[] = [
+  { value: 'Shared', label: 'Shared (Business)' },
+  { value: 'Spencer Kleinman', label: 'Spencer' },
+  { value: 'Parker Kleinman', label: 'Parker' },
 ];
 
 // Extract brand from item name using AI
@@ -65,6 +72,7 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
     askingPrice: '',
     lowestAcceptablePrice: '',
     status: 'in-closet-parker' as ItemStatus,
+    paidBy: 'Shared' as ItemOwner,
     platforms: [] as string[],
     sourcePlatform: '',
     notes: '',
@@ -90,6 +98,7 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
       askingPrice: asking || cost * 2,
       lowestAcceptablePrice: lowest || cost * 1.5,
       status: formData.status,
+      paidBy: formData.paidBy,
       platforms: formData.platforms,
       sourcePlatform: formData.sourcePlatform || null,
       notes: formData.notes || null,
@@ -107,6 +116,7 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
       askingPrice: '',
       lowestAcceptablePrice: '',
       status: 'in-closet-parker',
+      paidBy: 'Shared',
       platforms: [],
       sourcePlatform: '',
       notes: '',
@@ -213,24 +223,44 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
             </div>
           </div>
 
-          {/* Status */}
-          <div>
-            <Label>Status</Label>
-            <Select
-              value={formData.status}
-              onValueChange={(value: ItemStatus) => setFormData({ ...formData, status: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {statuses.map((status) => (
-                  <SelectItem key={status.value} value={status.value}>
-                    {status.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Status & Paid By Row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value: ItemStatus) => setFormData({ ...formData, status: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {statuses.map((status) => (
+                    <SelectItem key={status.value} value={status.value}>
+                      {status.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Paid By</Label>
+              <Select
+                value={formData.paidBy}
+                onValueChange={(value: ItemOwner) => setFormData({ ...formData, paidBy: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {paidByOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Source Platform */}

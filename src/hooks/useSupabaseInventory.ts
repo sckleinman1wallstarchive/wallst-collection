@@ -106,7 +106,23 @@ const toDbInsert = (item: Partial<InventoryItem>): DbInsertItem => ({
   trade_cash_difference: item.tradeCashDifference,
   priority_sale: item.prioritySale ?? false,
   attention_note: item.attentionNote,
+  paid_by: item.paidBy || 'Shared',
 } as DbInsertItem);
+
+// Helper to adjust cash_on_hand
+const adjustCashOnHand = async (amount: number) => {
+  const { data: account } = await supabase
+    .from('capital_accounts')
+    .select('*')
+    .maybeSingle();
+  
+  if (account) {
+    await supabase
+      .from('capital_accounts')
+      .update({ cash_on_hand: Number(account.cash_on_hand) + amount })
+      .eq('id', account.id);
+  }
+};
 
 // Transform app format to database update format
 const toDbUpdate = (item: Partial<InventoryItem>): DbUpdateItem => {
@@ -169,10 +185,18 @@ export function useSupabaseInventory() {
         .single();
       
       if (error) throw error;
+      
+      // Deduct from cash if paid by Shared (business account)
+      const paidBy = item.paidBy || 'Shared';
+      if (paidBy === 'Shared') {
+        await adjustCashOnHand(-(item.acquisitionCost || 0));
+      }
+      
       return toAppItem(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['capital_accounts'] });
       toast.success('Item added');
     },
     onError: (error) => {
@@ -182,7 +206,7 @@ export function useSupabaseInventory() {
 
   // Update item
   const updateMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<InventoryItem> }) => {
+    mutationFn: async ({ id, updates, previousItem }: { id: string; updates: Partial<InventoryItem>; previousItem?: InventoryItem }) => {
       const { data, error } = await supabase
         .from('inventory_items')
         .update(toDbUpdate(updates))
@@ -191,6 +215,13 @@ export function useSupabaseInventory() {
         .single();
       
       if (error) throw error;
+      
+      // Handle refund: if status changed to 'refunded' and was a Shared purchase, add cost back
+      if (updates.status === 'refunded' && previousItem && previousItem.paidBy === 'Shared') {
+        await adjustCashOnHand(previousItem.acquisitionCost);
+        queryClient.invalidateQueries({ queryKey: ['capital_accounts'] });
+      }
+      
       return toAppItem(data);
     },
     onSuccess: () => {
@@ -245,18 +276,22 @@ export function useSupabaseInventory() {
   // Helper functions
   const addItem = (item: Partial<InventoryItem>) => addMutation.mutateAsync(item);
   
-  const updateItem = (id: string, updates: Partial<InventoryItem>) => 
-    updateMutation.mutateAsync({ id, updates });
+  const updateItem = (id: string, updates: Partial<InventoryItem>, previousItem?: InventoryItem) => 
+    updateMutation.mutateAsync({ id, updates, previousItem });
   
   const deleteItem = (id: string) => deleteMutation.mutateAsync(id);
   
-  const markAsSold = (
+  const markAsSold = async (
     id: string,
     salePrice: number,
     platformSold?: Database['public']['Enums']['platform'],
     dateSold?: string
-  ) =>
-    updateMutation.mutateAsync({
+  ) => {
+    // Add sale price to cash
+    await adjustCashOnHand(salePrice);
+    queryClient.invalidateQueries({ queryKey: ['capital_accounts'] });
+    
+    return updateMutation.mutateAsync({
       id,
       updates: {
         status: 'sold',
@@ -267,6 +302,7 @@ export function useSupabaseInventory() {
         // Items sold at the convention should still count toward Got Sole sold stats.
       },
     });
+  };
 
   const markAsUnsold = (id: string) =>
     updateMutation.mutateAsync({
