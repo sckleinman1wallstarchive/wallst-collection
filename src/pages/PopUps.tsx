@@ -94,9 +94,9 @@ export default function PopUps() {
     setSellDialogOpen(true);
   };
 
-  const handleSellConfirm = async (id: string, salePrice: number, platformSold?: string) => {
+  const handleSellConfirm = async (id: string, salePrice: number, platformSold?: string, dateSold?: string) => {
     try {
-      await markAsSold(id, salePrice, platformSold as any);
+      await markAsSold(id, salePrice, platformSold as any, dateSold);
       toast.success('Sale recorded!');
     } catch (error) {
       toast.error('Failed to record sale');

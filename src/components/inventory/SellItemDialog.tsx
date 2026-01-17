@@ -9,22 +9,29 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface SellItemDialogProps {
   item: InventoryItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSell: (id: string, salePrice: number, platformSold?: string) => void;
+  onSell: (id: string, salePrice: number, platformSold?: string, dateSold?: string) => void;
 }
 
 export function SellItemDialog({ item, open, onOpenChange, onSell }: SellItemDialogProps) {
   const [salePrice, setSalePrice] = useState('');
   const [soldTo, setSoldTo] = useState('');
+  const [saleDate, setSaleDate] = useState<Date>(new Date());
 
-  // Pre-fill with asking price when item changes
+  // Pre-fill with asking price and today's date when item changes
   useEffect(() => {
     if (item && open) {
       setSalePrice((item.askingPrice || 0).toString());
+      setSaleDate(new Date());
     }
   }, [item, open]);
 
@@ -35,9 +42,11 @@ export function SellItemDialog({ item, open, onOpenChange, onSell }: SellItemDia
     const price = parseFloat(salePrice);
     if (isNaN(price)) return;
 
-    onSell(item.id, price, item.platform);
+    const dateString = format(saleDate, 'yyyy-MM-dd');
+    onSell(item.id, price, item.platform, dateString);
     setSalePrice('');
     setSoldTo('');
+    setSaleDate(new Date());
     onOpenChange(false);
   };
 
@@ -88,6 +97,33 @@ export function SellItemDialog({ item, open, onOpenChange, onSell }: SellItemDia
                 required
               />
             </div>
+          </div>
+
+          <div>
+            <Label>Sale Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !saleDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {saleDate ? format(saleDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={saleDate}
+                  onSelect={(date) => date && setSaleDate(date)}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           {salePrice && (

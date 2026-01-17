@@ -6,6 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Table,
   TableBody,
@@ -27,12 +30,14 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, Tooltip } from 'recharts';
-import { DollarSign, TrendingUp, Package, FileText, PlusCircle, Receipt, ChevronDown, ChevronUp, BarChart3, Users, ArrowUpDown } from 'lucide-react';
+import { DollarSign, TrendingUp, Package, FileText, PlusCircle, Receipt, ChevronDown, ChevronUp, BarChart3, Users, ArrowUpDown, Pencil, Check, X, CalendarIcon } from 'lucide-react';
 import { CashFlowStatement } from '@/components/accounting/CashFlowStatement';
 import { RecordContributionDialog } from '@/components/accounting/RecordContributionDialog';
 import { ExpenseTrackerDialog } from '@/components/accounting/ExpenseTrackerDialog';
 import { ExpenseList } from '@/components/accounting/ExpenseList';
 import { AssignPurchasesDialog } from '@/components/accounting/AssignPurchasesDialog';
+import { format, parse } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 type View = 'dashboard' | 'cash-flow';
 type SortOption = 'date' | 'price' | 'brand';
@@ -46,8 +51,10 @@ const Accounting = () => {
   const [sortBy, setSortBy] = useState<SortOption>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [editMode, setEditMode] = useState(false);
+  const [editingDateId, setEditingDateId] = useState<string | null>(null);
   
-  const { inventory, isLoading, getSoldItems, getFinancialSummary } = useSupabaseInventory();
+  const { inventory, isLoading, getSoldItems, getFinancialSummary, updateItem } = useSupabaseInventory();
   const soldItems = getSoldItems();
   const summary = getFinancialSummary();
 
@@ -119,6 +126,12 @@ const Accounting = () => {
 
   const toggleSortDirection = () => {
     setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+  };
+
+  const handleDateChange = async (itemId: string, newDate: Date | undefined) => {
+    if (!newDate) return;
+    await updateItem(itemId, { dateSold: format(newDate, 'yyyy-MM-dd') });
+    setEditingDateId(null);
   };
 
   const formatCurrency = (amount: number) => {
@@ -447,6 +460,15 @@ const Accounting = () => {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <CardTitle className="text-base font-medium">Sales Ledger</CardTitle>
             <div className="flex items-center gap-2">
+              <Button
+                variant={editMode ? "default" : "outline"}
+                size="sm"
+                className="h-8 gap-1"
+                onClick={() => setEditMode(!editMode)}
+              >
+                {editMode ? <Check className="h-3 w-3" /> : <Pencil className="h-3 w-3" />}
+                {editMode ? "Done" : "Edit Dates"}
+              </Button>
               <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
                 <SelectTrigger className="w-[140px] h-8">
                   <SelectValue placeholder="Sort by..." />
@@ -528,7 +550,36 @@ const Accounting = () => {
                               onCheckedChange={() => toggleItemSelection(item.id)}
                             />
                           </TableCell>
-                          <TableCell className="text-sm">{item.dateSold}</TableCell>
+                          <TableCell className="text-sm">
+                            {editMode ? (
+                              <Popover open={editingDateId === item.id} onOpenChange={(open) => setEditingDateId(open ? item.id : null)}>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className={cn(
+                                      "h-7 px-2 text-xs font-normal",
+                                      !item.dateSold && "text-muted-foreground"
+                                    )}
+                                  >
+                                    <CalendarIcon className="mr-1 h-3 w-3" />
+                                    {item.dateSold || "Set date"}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={item.dateSold ? parse(item.dateSold, 'yyyy-MM-dd', new Date()) : undefined}
+                                    onSelect={(date) => handleDateChange(item.id, date)}
+                                    initialFocus
+                                    className={cn("p-3 pointer-events-auto")}
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            ) : (
+                              item.dateSold || <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <p className="font-medium text-sm">{item.name}</p>
                           </TableCell>
