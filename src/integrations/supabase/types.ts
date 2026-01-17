@@ -124,10 +124,16 @@ export type Database = {
           art_style: string | null
           created_at: string | null
           description: string
+          end_date: string | null
+          goal_type: string | null
           id: string
           image_url: string | null
           is_complete: boolean | null
+          metric_current: number | null
+          metric_target: number | null
+          metric_type: string | null
           owner: string
+          start_date: string | null
           timeframe: string
           updated_at: string | null
         }
@@ -135,10 +141,16 @@ export type Database = {
           art_style?: string | null
           created_at?: string | null
           description: string
+          end_date?: string | null
+          goal_type?: string | null
           id?: string
           image_url?: string | null
           is_complete?: boolean | null
+          metric_current?: number | null
+          metric_target?: number | null
+          metric_type?: string | null
           owner: string
+          start_date?: string | null
           timeframe: string
           updated_at?: string | null
         }
@@ -146,10 +158,16 @@ export type Database = {
           art_style?: string | null
           created_at?: string | null
           description?: string
+          end_date?: string | null
+          goal_type?: string | null
           id?: string
           image_url?: string | null
           is_complete?: boolean | null
+          metric_current?: number | null
+          metric_target?: number | null
+          metric_type?: string | null
           owner?: string
+          start_date?: string | null
           timeframe?: string
           updated_at?: string | null
         }
