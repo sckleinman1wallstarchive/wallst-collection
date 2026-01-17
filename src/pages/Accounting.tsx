@@ -172,7 +172,7 @@ const Accounting = () => {
   // Monthly targets
   const monthlyTarget = 5000;
   const stretchTarget = 10000;
-  const progressPercent = (summary.totalProfit / monthlyTarget) * 100;
+  const progressPercent = (summary.totalRevenue / monthlyTarget) * 100;
 
   if (isLoading) {
     return (
@@ -296,24 +296,24 @@ const Accounting = () => {
             <div className="flex-1">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Stretch: {formatCurrency(stretchTarget)}</span>
-                <span className="text-sm font-semibold">{((summary.totalProfit / stretchTarget) * 100).toFixed(0)}%</span>
+                <span className="text-sm font-semibold">{((summary.totalRevenue / stretchTarget) * 100).toFixed(0)}%</span>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
                 <div
                   className="h-full bg-chart-1 transition-all duration-500"
-                  style={{ width: `${Math.min((summary.totalProfit / stretchTarget) * 100, 100)}%` }}
+                  style={{ width: `${Math.min((summary.totalRevenue / stretchTarget) * 100, 100)}%` }}
                 />
               </div>
             </div>
             <div className="w-px h-8 bg-border hidden md:block" />
             <div className="flex gap-6 text-sm">
               <div>
-                <p className="text-muted-foreground">Profit</p>
-                <p className="font-semibold text-chart-2">+{formatCurrency(summary.totalProfit)}</p>
+                <p className="text-muted-foreground">Revenue</p>
+                <p className="font-semibold text-chart-2">+{formatCurrency(summary.totalRevenue)}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Remaining</p>
-                <p className="font-semibold">{formatCurrency(Math.max(0, monthlyTarget - summary.totalProfit))}</p>
+                <p className="font-semibold">{formatCurrency(Math.max(0, monthlyTarget - summary.totalRevenue))}</p>
               </div>
             </div>
           </div>
@@ -542,9 +542,13 @@ const Accounting = () => {
                       return (
                         <TableRow 
                           key={item.id} 
-                          className={isSelected ? 'bg-primary/5' : ''}
+                          className={cn(
+                            isSelected ? 'bg-primary/5' : '',
+                            'cursor-pointer hover:bg-muted/50'
+                          )}
+                          onClick={() => toggleItemSelection(item.id)}
                         >
-                          <TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
                             <Checkbox 
                               checked={isSelected}
                               onCheckedChange={() => toggleItemSelection(item.id)}
