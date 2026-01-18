@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { format } from 'date-fns';
 import { InventoryItem } from '@/hooks/useSupabaseInventory';
 import { Database } from '@/integrations/supabase/types';
 import {
@@ -19,7 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Plus, CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { PlatformMultiSelect } from './PlatformMultiSelect';
 import { ImageUpload } from './ImageUpload';
 import { supabase } from '@/integrations/supabase/client';
@@ -73,6 +81,7 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
     lowestAcceptablePrice: '',
     status: 'in-closet-parker' as ItemStatus,
     paidBy: 'Shared' as ItemOwner,
+    dateAdded: new Date().toISOString().split('T')[0],
     platforms: [] as string[],
     sourcePlatform: '',
     notes: '',
@@ -102,7 +111,7 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
       platforms: formData.platforms,
       sourcePlatform: formData.sourcePlatform || null,
       notes: formData.notes || null,
-      dateAdded: new Date().toISOString().split('T')[0],
+      dateAdded: formData.dateAdded,
       imageUrl: formData.imageUrls[0] || null,
       imageUrls: formData.imageUrls,
       brand: brandInfo?.brand || null,
@@ -117,6 +126,7 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
       lowestAcceptablePrice: '',
       status: 'in-closet-parker',
       paidBy: 'Shared',
+      dateAdded: new Date().toISOString().split('T')[0],
       platforms: [],
       sourcePlatform: '',
       notes: '',
@@ -261,6 +271,34 @@ export function AddItemDialog({ onAdd }: AddItemDialogProps) {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Acquisition Date */}
+          <div>
+            <Label>Acquisition Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !formData.dateAdded && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formData.dateAdded ? format(new Date(formData.dateAdded), 'PPP') : 'Select date'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={formData.dateAdded ? new Date(formData.dateAdded) : undefined}
+                  onSelect={(date) => setFormData({ ...formData, dateAdded: date?.toISOString().split('T')[0] || '' })}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Source Platform */}
