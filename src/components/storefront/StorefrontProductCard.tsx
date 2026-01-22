@@ -15,10 +15,11 @@ export function StorefrontProductCard({ item, onClick }: StorefrontProductCardPr
   
   const firstImage = item.imageUrls?.[0] || item.imageUrl;
   const price = item.askingPrice;
+  const isSold = item.status === 'sold';
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!price) return;
+    if (!price || isSold) return;
     
     addItem(item);
     toast.success('Added to cart', {
@@ -44,6 +45,11 @@ export function StorefrontProductCard({ item, onClick }: StorefrontProductCardPr
             No image
           </div>
         )}
+        {isSold && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <span className="text-white font-bold text-lg">SOLD</span>
+          </div>
+        )}
       </div>
       <CardContent className="p-4 space-y-2">
         <p className="text-xs text-muted-foreground uppercase tracking-wide">
@@ -51,15 +57,16 @@ export function StorefrontProductCard({ item, onClick }: StorefrontProductCardPr
         </p>
         <h3 className="font-medium line-clamp-2">{item.name}</h3>
         <div className="flex items-center justify-between">
-          <span className="text-lg font-bold">
+          <span className={`text-lg font-bold ${isSold ? 'text-muted-foreground line-through' : ''}`}>
             {price ? `$${price.toFixed(2)}` : 'Price TBD'}
           </span>
           <Button 
             size="sm" 
             onClick={handleAddToCart}
-            disabled={!price}
+            disabled={!price || isSold}
+            variant={isSold ? 'secondary' : 'default'}
           >
-            <ShoppingCart className="h-4 w-4" />
+            {isSold ? 'Sold' : <ShoppingCart className="h-4 w-4" />}
           </Button>
         </div>
       </CardContent>

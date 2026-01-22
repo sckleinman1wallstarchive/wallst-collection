@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,20 +10,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useStorefrontGrails, GRAIL_POSITIONS } from '@/hooks/useStorefrontGrails';
 import { GrailCard } from './GrailCard';
 import { StorefrontProductDetail } from './StorefrontProductDetail';
-import { StorefrontSearchBar } from './StorefrontSearchBar';
 import { PublicInventoryItem } from '@/hooks/usePublicInventory';
 import { toast } from 'sonner';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface CollectionGrailsViewProps {
   isEditMode: boolean;
@@ -54,20 +47,15 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
     },
   });
 
-  // Filter grails based on search
-  const filteredPositions = useMemo(() => {
-    if (!searchQuery.trim()) return GRAIL_POSITIONS;
-    
+  // Filter inventory items based on search (for selection dialog)
+  const filteredItems = useMemo(() => {
+    if (!searchQuery.trim()) return allItems || [];
     const query = searchQuery.toLowerCase();
-    return GRAIL_POSITIONS.filter(({ position }) => {
-      const grail = grailsByPosition.get(position);
-      if (!grail?.item) return false;
-      return (
-        grail.item.name.toLowerCase().includes(query) ||
-        grail.item.brand?.toLowerCase().includes(query)
-      );
-    });
-  }, [searchQuery, grailsByPosition]);
+    return (allItems || []).filter(item => 
+      item.name.toLowerCase().includes(query) ||
+      item.brand?.toLowerCase().includes(query)
+    );
+  }, [searchQuery, allItems]);
 
   const handleAddGrail = () => {
     if (!selectedPosition || !selectedItemId) return;
@@ -116,26 +104,24 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
         </p>
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-8 max-w-md">
-        <StorefrontSearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Search grails..."
-        />
-      </div>
-
-      {/* True Masonry Gallery using CSS Columns */}
-      <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-0">
-        {filteredPositions.map(({ position, size }) => {
+      {/* True Masonry Gallery using CSS Columns with gaps */}
+      <div 
+        className="gap-4"
+        style={{
+          columnCount: 4,
+          columnGap: '1rem',
+        }}
+      >
+        {GRAIL_POSITIONS.map(({ position, size }) => {
           const grail = grailsByPosition.get(position);
-          // Skip empty slots in non-edit mode (handled in GrailCard)
+          // Skip empty slots in non-edit mode
           if (!grail?.item && !isEditMode) return null;
           
           return (
             <div
               key={position}
-              className="break-inside-avoid mb-4"
+              className="mb-4"
+              style={{ breakInside: 'avoid' }}
             >
               <GrailCard
                 item={grail?.item || null}
@@ -164,27 +150,51 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
       </div>
 
       {/* Select Item Dialog */}
-      <Dialog open={showSelectDialog} onOpenChange={setShowSelectDialog}>
+      <Dialog open={showSelectDialog} onOpenChange={(open) => {
+        setShowSelectDialog(open);
+        if (!open) setSearchQuery('');
+      }}>
         <DialogContent className="bg-card">
           <DialogHeader>
             <DialogTitle>Select Grail for Position {selectedPosition}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Select Inventory Item</Label>
-              <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose an item" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover max-h-64">
-                  {allItems?.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.brand ? `${item.brand} - ` : ''}{item.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
             </div>
+            
+            {/* Scrollable Item List */}
+            <ScrollArea className="h-64 border rounded-md">
+              <div className="p-2 space-y-1">
+                {filteredItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`p-2 rounded-md cursor-pointer transition-colors ${
+                      selectedItemId === item.id 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'hover:bg-secondary'
+                    }`}
+                    onClick={() => setSelectedItemId(item.id)}
+                  >
+                    <span className="text-sm">
+                      {item.brand ? `${item.brand} - ` : ''}{item.name}
+                    </span>
+                  </div>
+                ))}
+                {filteredItems.length === 0 && (
+                  <div className="text-center text-muted-foreground py-4 text-sm">
+                    No items found
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
 
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowSelectDialog(false)}>

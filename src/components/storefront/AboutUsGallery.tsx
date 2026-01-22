@@ -110,8 +110,8 @@ export function AboutUsGallery({ isEditMode }: AboutUsGalleryProps) {
           </p>
         </div>
 
-        {/* Art Gallery Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-24">
+        {/* Art Gallery - Stacked for horizontal art */}
+        <div className="flex flex-col gap-16 max-w-4xl mx-auto">
           {/* Parker's Art Piece */}
           <ArtPieceFrame
             owner="Parker"
@@ -201,12 +201,12 @@ interface ArtPieceFrameProps {
 function ArtPieceFrame({ owner, imageUrl, title, isEditMode, onEdit }: ArtPieceFrameProps) {
   return (
     <div className="flex flex-col items-center">
-      {/* Frame Container */}
-      <div className="relative w-full max-w-md">
+      {/* Frame Container - wider for horizontal art */}
+      <div className="relative w-full">
         {/* Outer Frame */}
         <div className="border-8 border-white/20 p-2 bg-white/5">
-          {/* Inner Frame */}
-          <div className="border-2 border-white/10 aspect-[3/4] relative overflow-hidden bg-black">
+          {/* Inner Frame - landscape aspect ratio */}
+          <div className="border-2 border-white/10 aspect-[16/9] relative overflow-hidden bg-black">
             {imageUrl ? (
               <img
                 src={imageUrl}
@@ -218,7 +218,7 @@ function ArtPieceFrame({ owner, imageUrl, title, isEditMode, onEdit }: ArtPieceF
                 {isEditMode ? (
                   <div className="text-center">
                     <Upload className="h-8 w-8 mx-auto mb-2" />
-                    <span className="text-sm">Click edit to add art</span>
+                    <span className="text-sm">Click edit to add horizontal art</span>
                   </div>
                 ) : (
                   <span className="text-sm">Art piece coming soon</span>
