@@ -1,31 +1,29 @@
 import { useState } from 'react';
 import { Loader2, User, ShoppingBag, Info } from 'lucide-react';
-import { useShopifyProducts } from '@/hooks/useShopifyProducts';
-import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
-import { ProductCard } from '@/components/storefront/ProductCard';
-import { ProductDetailDialog } from '@/components/storefront/ProductDetailDialog';
+import { usePublicInventory, useClosetInventory, PublicInventoryItem } from '@/hooks/usePublicInventory';
+import { StorefrontProductCard } from '@/components/storefront/StorefrontProductCard';
+import { StorefrontProductDetail } from '@/components/storefront/StorefrontProductDetail';
 import { PersonalCollectionCard } from '@/components/storefront/PersonalCollectionCard';
+import { ClosetItemDetail } from '@/components/storefront/ClosetItemDetail';
 import { StorefrontWelcome } from '@/components/storefront/StorefrontWelcome';
 import { StorefrontSidebar } from '@/components/storefront/StorefrontSidebar';
 import { ClosetSelection } from '@/components/storefront/ClosetSelection';
+import { ShopCart } from '@/components/shop/ShopCart';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
-import { ShopifyProduct } from '@/lib/shopify';
 
 type StorefrontView = 'welcome' | 'shop-all' | 'closet-selection' | 'parker-closet' | 'spencer-closet' | 'about-us';
 
 export default function Storefront() {
   const [currentView, setCurrentView] = useState<StorefrontView>('welcome');
-  const [selectedProduct, setSelectedProduct] = useState<ShopifyProduct | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<PublicInventoryItem | null>(null);
+  const [selectedClosetItem, setSelectedClosetItem] = useState<PublicInventoryItem | null>(null);
   
-  const { data: shopifyProducts, isLoading: shopifyLoading } = useShopifyProducts();
-  const { inventory, isLoading: inventoryLoading } = useSupabaseInventory();
-
-  // Get personal collection items
-  const getPersonalCollection = (owner: 'parker' | 'spencer') => {
-    if (!inventory) return [];
-    const status = owner === 'parker' ? 'in-closet-parker' : 'in-closet-spencer';
-    return inventory.filter(item => item.status === status);
-  };
+  // Fetch shop items (for-sale status)
+  const { data: shopItems, isLoading: shopLoading } = usePublicInventory();
+  
+  // Fetch closet items
+  const { data: parkerItems, isLoading: parkerLoading } = useClosetInventory('parker');
+  const { data: spencerItems, isLoading: spencerLoading } = useClosetInventory('spencer');
 
   const handleEnterShop = () => {
     setCurrentView('shop-all');
@@ -44,10 +42,6 @@ export default function Storefront() {
     return <StorefrontWelcome onEnterShop={handleEnterShop} />;
   }
 
-  // Get the appropriate collection for closet views
-  const parkerCollection = getPersonalCollection('parker');
-  const spencerCollection = getPersonalCollection('spencer');
-
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -56,15 +50,18 @@ export default function Storefront() {
           onNavigate={handleNavigate}
         />
         <SidebarInset>
-          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-            <SidebarTrigger className="-ml-1" />
-            <span className="text-lg font-medium tracking-wide">
-              {currentView === 'shop-all' && 'Shop All'}
-              {currentView === 'closet-selection' && 'Personal Collection'}
-              {currentView === 'parker-closet' && "Parker's Closet"}
-              {currentView === 'spencer-closet' && "Spencer's Closet"}
-              {currentView === 'about-us' && 'About Us'}
-            </span>
+          <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger className="-ml-1" />
+              <span className="text-lg font-medium tracking-wide">
+                {currentView === 'shop-all' && 'Shop All'}
+                {currentView === 'closet-selection' && 'Personal Collection'}
+                {currentView === 'parker-closet' && "Parker's Closet"}
+                {currentView === 'spencer-closet' && "Spencer's Closet"}
+                {currentView === 'about-us' && 'About Us'}
+              </span>
+            </div>
+            {currentView === 'shop-all' && <ShopCart />}
           </header>
 
           <main className="flex-1 p-6">
@@ -74,21 +71,21 @@ export default function Storefront() {
                 <div>
                   <h2 className="text-2xl font-light tracking-wide">Shop All</h2>
                   <p className="text-muted-foreground text-sm">
-                    {shopifyProducts?.length || 0} items available
+                    {shopItems?.length || 0} items available
                   </p>
                 </div>
 
-                {shopifyLoading ? (
+                {shopLoading ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
-                ) : shopifyProducts && shopifyProducts.length > 0 ? (
+                ) : shopItems && shopItems.length > 0 ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {shopifyProducts.map((product) => (
-                      <ProductCard 
-                        key={product.node.id} 
-                        product={product}
-                        onClick={() => setSelectedProduct(product)}
+                    {shopItems.map((item) => (
+                      <StorefrontProductCard 
+                        key={item.id} 
+                        item={item}
+                        onClick={() => setSelectedProduct(item)}
                       />
                     ))}
                   </div>
@@ -97,7 +94,7 @@ export default function Storefront() {
                     <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-medium mb-2">No products found</h3>
                     <p className="text-muted-foreground">
-                      Products synced from your inventory will appear here.
+                      Items marked as "For Sale" will appear here.
                     </p>
                   </div>
                 )}
@@ -115,18 +112,22 @@ export default function Storefront() {
                 <div>
                   <h2 className="text-2xl font-light tracking-wide">Parker's Closet</h2>
                   <p className="text-muted-foreground text-sm">
-                    {parkerCollection.length} items in collection
+                    {parkerItems?.length || 0} items in collection
                   </p>
                 </div>
 
-                {inventoryLoading ? (
+                {parkerLoading ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
-                ) : parkerCollection.length > 0 ? (
+                ) : parkerItems && parkerItems.length > 0 ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {parkerCollection.map((item) => (
-                      <PersonalCollectionCard key={item.id} item={item} />
+                    {parkerItems.map((item) => (
+                      <PersonalCollectionCard 
+                        key={item.id} 
+                        item={item}
+                        onClick={() => setSelectedClosetItem(item)}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -147,18 +148,22 @@ export default function Storefront() {
                 <div>
                   <h2 className="text-2xl font-light tracking-wide">Spencer's Closet</h2>
                   <p className="text-muted-foreground text-sm">
-                    {spencerCollection.length} items in collection
+                    {spencerItems?.length || 0} items in collection
                   </p>
                 </div>
 
-                {inventoryLoading ? (
+                {spencerLoading ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
-                ) : spencerCollection.length > 0 ? (
+                ) : spencerItems && spencerItems.length > 0 ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {spencerCollection.map((item) => (
-                      <PersonalCollectionCard key={item.id} item={item} />
+                    {spencerItems.map((item) => (
+                      <PersonalCollectionCard 
+                        key={item.id} 
+                        item={item}
+                        onClick={() => setSelectedClosetItem(item)}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -207,10 +212,18 @@ export default function Storefront() {
         </SidebarInset>
       </div>
 
-      <ProductDetailDialog 
-        product={selectedProduct}
+      {/* Product Detail Dialog (for Shop All items) */}
+      <StorefrontProductDetail 
+        item={selectedProduct}
         open={!!selectedProduct}
         onOpenChange={(open) => !open && setSelectedProduct(null)}
+      />
+
+      {/* Closet Item Detail Dialog (for Personal Collection items) */}
+      <ClosetItemDetail 
+        item={selectedClosetItem}
+        open={!!selectedClosetItem}
+        onOpenChange={(open) => !open && setSelectedClosetItem(null)}
       />
     </SidebarProvider>
   );

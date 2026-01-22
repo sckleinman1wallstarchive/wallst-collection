@@ -1,24 +1,30 @@
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { MessageCircle } from 'lucide-react';
 import { PublicInventoryItem } from '@/hooks/usePublicInventory';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ShoppingCart } from 'lucide-react';
+import { useShopCartStore } from '@/stores/shopCartStore';
+import { toast } from 'sonner';
 
-interface PersonalCollectionCardProps {
+interface StorefrontProductCardProps {
   item: PublicInventoryItem;
   onClick?: () => void;
 }
 
-// Instagram handle for DM links
-const INSTAGRAM_HANDLE = 'wallst.collection';
-
-export function PersonalCollectionCard({ item, onClick }: PersonalCollectionCardProps) {
+export function StorefrontProductCard({ item, onClick }: StorefrontProductCardProps) {
+  const addItem = useShopCartStore(state => state.addItem);
+  
   const firstImage = item.imageUrls?.[0] || item.imageUrl;
-  const isDM = item.closetDisplay === 'dm';
+  const price = item.askingPrice;
 
-  const handleDMClick = (e: React.MouseEvent) => {
+  const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    window.open(`https://instagram.com/${INSTAGRAM_HANDLE}`, '_blank');
+    if (!price) return;
+    
+    addItem(item);
+    toast.success('Added to cart', {
+      description: item.name,
+      position: 'top-center'
+    });
   };
 
   return (
@@ -38,12 +44,6 @@ export function PersonalCollectionCard({ item, onClick }: PersonalCollectionCard
             No image
           </div>
         )}
-        <Badge 
-          variant={isDM ? 'default' : 'secondary'}
-          className="absolute top-2 right-2"
-        >
-          {isDM ? 'DM to Inquire' : 'Not For Sale'}
-        </Badge>
       </div>
       <CardContent className="p-4 space-y-2">
         <p className="text-xs text-muted-foreground uppercase tracking-wide">
@@ -51,18 +51,16 @@ export function PersonalCollectionCard({ item, onClick }: PersonalCollectionCard
         </p>
         <h3 className="font-medium line-clamp-2">{item.name}</h3>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            {item.size && <span>Size: {item.size}</span>}
-          </div>
-          {isDM && (
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={handleDMClick}
-            >
-              <MessageCircle className="h-4 w-4" />
-            </Button>
-          )}
+          <span className="text-lg font-bold">
+            {price ? `$${price.toFixed(2)}` : 'Price TBD'}
+          </span>
+          <Button 
+            size="sm" 
+            onClick={handleAddToCart}
+            disabled={!price}
+          >
+            <ShoppingCart className="h-4 w-4" />
+          </Button>
         </div>
       </CardContent>
     </Card>

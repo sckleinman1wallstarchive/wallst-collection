@@ -181,6 +181,9 @@ export type Database = {
           brand: string | null
           brand_category: string | null
           category: Database["public"]["Enums"]["item_category"]
+          closet_display:
+            | Database["public"]["Enums"]["closet_display_type"]
+            | null
           created_at: string
           date_added: string | null
           date_sold: string | null
@@ -216,6 +219,9 @@ export type Database = {
           brand?: string | null
           brand_category?: string | null
           category?: Database["public"]["Enums"]["item_category"]
+          closet_display?:
+            | Database["public"]["Enums"]["closet_display_type"]
+            | null
           created_at?: string
           date_added?: string | null
           date_sold?: string | null
@@ -251,6 +257,9 @@ export type Database = {
           brand?: string | null
           brand_category?: string | null
           category?: Database["public"]["Enums"]["item_category"]
+          closet_display?:
+            | Database["public"]["Enums"]["closet_display_type"]
+            | null
           created_at?: string
           date_added?: string | null
           date_sold?: string | null
@@ -330,6 +339,7 @@ export type Database = {
       is_allowed_user: { Args: never; Returns: boolean }
     }
     Enums: {
+      closet_display_type: "nfs" | "dm"
       expense_category:
         | "supplies"
         | "shipping"
@@ -496,6 +506,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      closet_display_type: ["nfs", "dm"],
       expense_category: [
         "supplies",
         "shipping",

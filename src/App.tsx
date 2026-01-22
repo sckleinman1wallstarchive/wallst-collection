@@ -14,7 +14,6 @@ import Analytics from "./pages/Analytics";
 import Tasks from "./pages/Tasks";
 import Content from "./pages/Content";
 import Storefront from "./pages/Storefront";
-import Shop from "./pages/Shop";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
 import NotFound from "./pages/NotFound";
 
@@ -46,8 +45,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Public shop routes - no auth required */}
-          <Route path="/shop" element={<Shop />} />
+          {/* Public routes - no auth required */}
+          <Route path="/shop" element={<Storefront />} />
           <Route path="/shop/success" element={<CheckoutSuccess />} />
           
           {/* All other routes require authentication */}

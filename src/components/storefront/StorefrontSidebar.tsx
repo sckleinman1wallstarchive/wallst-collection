@@ -14,7 +14,6 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { CartDrawer } from './CartDrawer';
 
 type StorefrontView = 'shop-all' | 'closet-selection' | 'parker-closet' | 'spencer-closet' | 'about-us';
 
@@ -82,10 +81,7 @@ export function StorefrontSidebar({ currentView, onNavigate }: StorefrontSidebar
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border p-2 space-y-2">
-        <div className="flex justify-center">
-          <CartDrawer />
-        </div>
+      <SidebarFooter className="border-t border-sidebar-border p-2">
         <Button
           variant="ghost"
           onClick={handleBackToDashboard}
