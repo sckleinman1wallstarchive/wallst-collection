@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -25,14 +26,17 @@ interface CollectionGrailsViewProps {
 type SizePreset = 'auto' | 'portrait' | 'square' | 'wide' | 'tall';
 
 export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) {
-  const { grails, grailsByPosition, isLoading, addGrail, removeGrail, uploadArtImage, updateGrailSize } = useStorefrontGrails();
+  const { grailsByPosition, isLoading, addGrail, removeGrail, uploadArtImage, updateGrailSize, updateGrailText } = useStorefrontGrails();
   const [showSelectDialog, setShowSelectDialog] = useState(false);
   const [showArtDialog, setShowArtDialog] = useState(false);
+  const [showTextDialog, setShowTextDialog] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
   const [selectedItemId, setSelectedItemId] = useState('');
   const [selectedItem, setSelectedItem] = useState<PublicInventoryItem | null>(null);
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Get all inventory items for selection
@@ -90,6 +94,23 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
     updateGrailSize({ position, sizePreset: newSize });
   };
 
+  const handleOpenTextEdit = (position: number) => {
+    const grail = grailsByPosition.get(position);
+    setSelectedPosition(position);
+    setEditTitle(grail?.title || '');
+    setEditDescription(grail?.description || '');
+    setShowTextDialog(true);
+  };
+
+  const handleSaveText = () => {
+    if (!selectedPosition) return;
+    updateGrailText({ position: selectedPosition, title: editTitle || undefined, description: editDescription || undefined });
+    setShowTextDialog(false);
+    setSelectedPosition(null);
+    setEditTitle('');
+    setEditDescription('');
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -132,9 +153,11 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
               <GrailCard
                 item={grail?.item || null}
                 artImageUrl={grail?.art_image_url || null}
+                title={grail?.title || null}
+                description={grail?.description || null}
                 position={position}
                 size={size}
-                sizePreset={(grail as any)?.size_preset || 'auto'}
+                sizePreset={(grail?.size_preset as SizePreset) || 'auto'}
                 isEditMode={isEditMode}
                 onSelect={() => {
                   setSelectedPosition(position);
@@ -146,6 +169,7 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
                 }}
                 onRemove={() => handleRemoveGrail(position)}
                 onSizeChange={(newSize) => handleSizeChange(position, newSize)}
+                onEditText={() => handleOpenTextEdit(position)}
                 onClick={() => {
                   if (grail?.item) {
                     setSelectedItem(grail.item);
@@ -245,6 +269,42 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
                 Uploading...
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Text Edit Dialog */}
+      <Dialog open={showTextDialog} onOpenChange={setShowTextDialog}>
+        <DialogContent className="bg-card">
+          <DialogHeader>
+            <DialogTitle>Edit Grail Text</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Title</Label>
+              <Input
+                placeholder="Enter title..."
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                placeholder="Enter description..."
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowTextDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveText}>
+                Save
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

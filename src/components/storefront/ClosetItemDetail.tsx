@@ -6,7 +6,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, MessageCircle, ZoomIn } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MessageCircle, ZoomIn, ArrowLeft } from 'lucide-react';
 import { ImageLightbox } from './ImageLightbox';
 
 interface ClosetItemDetailProps {
@@ -56,6 +56,16 @@ export function ClosetItemDetail({ item, open, onOpenChange }: ClosetItemDetailP
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-6xl max-h-[90vh] p-0 gap-0 overflow-hidden">
+          {/* Back Arrow */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 left-4 z-20 bg-background/80 hover:bg-background"
+            onClick={() => onOpenChange(false)}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          
           <div className="grid md:grid-cols-2 gap-0 max-h-[90vh]">
             {/* Image Gallery */}
             <div className="relative bg-muted/20">

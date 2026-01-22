@@ -8,6 +8,9 @@ export interface StorefrontGrail {
   inventory_item_id: string | null;
   position: number;
   art_image_url: string | null;
+  title: string | null;
+  description: string | null;
+  size_preset: string | null;
   created_at: string;
   updated_at: string;
   // Joined item data
@@ -165,6 +168,23 @@ export function useStorefrontGrails() {
     },
   });
 
+  const updateTextMutation = useMutation({
+    mutationFn: async ({ position, title, description }: { position: number; title?: string; description?: string }) => {
+      const { error } = await supabase
+        .from('storefront_grails')
+        .update({ title, description } as any)
+        .eq('position', position);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['storefront-grails'] });
+      toast.success('Text updated');
+    },
+    onError: () => {
+      toast.error('Failed to update text');
+    },
+  });
+
   const uploadArtImage = async (position: number, file: File) => {
     const fileExt = file.name.split('.').pop();
     const fileName = `grails/pos${position}-${Date.now()}.${fileExt}`;
@@ -196,5 +216,6 @@ export function useStorefrontGrails() {
     removeGrail: removeGrailMutation.mutate,
     uploadArtImage,
     updateGrailSize: updateSizeMutation.mutate,
+    updateGrailText: updateTextMutation.mutate,
   };
 }
