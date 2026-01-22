@@ -149,6 +149,22 @@ export function useStorefrontGrails() {
     },
   });
 
+  const updateSizeMutation = useMutation({
+    mutationFn: async ({ position, sizePreset }: { position: number; sizePreset: string }) => {
+      const { error } = await supabase
+        .from('storefront_grails')
+        .update({ size_preset: sizePreset } as any)
+        .eq('position', position);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['storefront-grails'] });
+    },
+    onError: () => {
+      toast.error('Failed to update size');
+    },
+  });
+
   const uploadArtImage = async (position: number, file: File) => {
     const fileExt = file.name.split('.').pop();
     const fileName = `grails/pos${position}-${Date.now()}.${fileExt}`;
@@ -179,5 +195,6 @@ export function useStorefrontGrails() {
     addGrail: addGrailMutation.mutate,
     removeGrail: removeGrailMutation.mutate,
     uploadArtImage,
+    updateGrailSize: updateSizeMutation.mutate,
   };
 }

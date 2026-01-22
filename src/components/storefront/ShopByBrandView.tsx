@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,14 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
 import { useStorefrontBrands, StorefrontBrand } from '@/hooks/useStorefrontBrands';
 import { BrandShowcaseCard } from './BrandShowcaseCard';
 import { toast } from 'sonner';
@@ -27,78 +18,31 @@ interface ShopByBrandViewProps {
   onBrandClick: (brandName: string) => void;
 }
 
-interface BrandWithItemInfo extends StorefrontBrand {
-  featured_item_name?: string | null;
-}
+type SizePreset = 'auto' | 'portrait' | 'square' | 'wide' | 'tall';
 
 export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewProps) {
-  const { brands, isLoading, addBrand, deleteBrand, uploadArtImage } = useStorefrontBrands();
+  const { brands, isLoading, addBrand, deleteBrand, uploadArtImage, updateBrand } = useStorefrontBrands();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showArtDialog, setShowArtDialog] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<StorefrontBrand | null>(null);
   const [newBrandName, setNewBrandName] = useState('');
-  const [selectedItemId, setSelectedItemId] = useState<string>('');
   const [uploading, setUploading] = useState(false);
+  const [artFile, setArtFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const addArtInputRef = useRef<HTMLInputElement>(null);
 
-  // Get all unique brands from inventory for suggestions with item names
-  const { data: inventoryBrands } = useQuery({
-    queryKey: ['inventory-brands-with-names'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('inventory_items')
-        .select('brand, id, name, image_urls, image_url')
-        .not('brand', 'is', null);
-      
-      if (error) throw error;
-      
-      // Group by brand
-      const brandMap = new Map<string, { id: string; name: string; imageUrl: string | null }[]>();
-      (data || []).forEach((item) => {
-        if (!item.brand) return;
-        const existing = brandMap.get(item.brand) || [];
-        existing.push({
-          id: item.id,
-          name: item.name,
-          imageUrl: (item.image_urls as string[])?.[0] || item.image_url,
-        });
-        brandMap.set(item.brand, existing);
-      });
-      
-      return brandMap;
-    },
-  });
-
-  // Enrich brands with featured item names
-  const brandsWithItemNames: BrandWithItemInfo[] = brands.map((brand) => {
-    if (!brand.featured_item_id || !inventoryBrands) {
-      return { ...brand, featured_item_name: null };
-    }
-    
-    // Find the item name across all brands
-    for (const items of inventoryBrands.values()) {
-      const item = items.find((i) => i.id === brand.featured_item_id);
-      if (item) {
-        return { ...brand, featured_item_name: item.name };
-      }
-    }
-    return { ...brand, featured_item_name: null };
-  });
-
-  // Brands not yet added to storefront
-  const availableBrands = Array.from(inventoryBrands?.keys() || [])
-    .filter((b) => !brands.find((sb) => sb.brand_name.toLowerCase() === b.toLowerCase()))
-    .sort();
-
-  const handleAddBrand = () => {
+  const handleAddBrand = async () => {
     if (!newBrandName.trim()) {
       toast.error('Please enter a brand name');
       return;
     }
-    addBrand({ brandName: newBrandName.trim(), featuredItemId: selectedItemId || undefined });
+    
+    // Add brand first
+    addBrand({ brandName: newBrandName.trim() });
+    
     setShowAddDialog(false);
     setNewBrandName('');
-    setSelectedItemId('');
+    setArtFile(null);
   };
 
   const handleArtUpload = async (file: File) => {
@@ -116,6 +60,10 @@ export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewPro
     }
   };
 
+  const handleSizeChange = (brandId: string, newSize: SizePreset) => {
+    updateBrand({ id: brandId, updates: { size_preset: newSize } as any });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -125,12 +73,12 @@ export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewPro
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 bg-black -m-6 p-6 min-h-[calc(100vh-4rem)]">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-serif tracking-wide">Shop by Brand</h2>
-          <p className="text-muted-foreground text-sm mt-1">
+          <h2 className="text-3xl font-serif tracking-wide text-white">Shop by Brand</h2>
+          <p className="text-white/60 text-sm mt-1">
             Explore our curated collection by brand
           </p>
         </div>
@@ -144,25 +92,26 @@ export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewPro
 
       {/* Brand Grid - Staggered Fine Art Layout using CSS Columns */}
       {brands.length === 0 ? (
-        <div className="text-center py-16 border-2 border-dashed border-muted-foreground/30 rounded-lg">
-          <p className="text-muted-foreground">
+        <div className="text-center py-16 border-2 border-dashed border-white/30 rounded-lg">
+          <p className="text-white/60">
             {isEditMode ? 'Click "Add Brand" to start showcasing brands' : 'No brands added yet'}
           </p>
         </div>
       ) : (
         <div className="columns-2 md:columns-3 gap-6">
-          {brandsWithItemNames.map((brand) => (
+          {brands.map((brand) => (
             <div key={brand.id} className="relative group break-inside-avoid mb-6">
               <BrandShowcaseCard
                 brandName={brand.brand_name}
-                itemName={brand.featured_item_name || undefined}
                 featuredImageUrl={brand.featured_image_url}
                 artImageUrl={brand.art_image_url}
                 isEditMode={isEditMode}
+                sizePreset={(brand as any).size_preset || 'auto'}
                 onArtUpload={() => {
                   setSelectedBrand(brand);
                   setShowArtDialog(true);
                 }}
+                onSizeChange={(size) => handleSizeChange(brand.id, size)}
                 onClick={() => onBrandClick(brand.brand_name)}
               />
               {isEditMode && (
@@ -183,7 +132,7 @@ export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewPro
         </div>
       )}
 
-      {/* Add Brand Dialog */}
+      {/* Add Brand Dialog - Simplified to just name + art */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="bg-card">
           <DialogHeader>
@@ -192,45 +141,17 @@ export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewPro
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Brand Name</Label>
-              {availableBrands.length > 0 ? (
-                <Select value={newBrandName} onValueChange={setNewBrandName}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a brand from inventory" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    {availableBrands.map((brand) => (
-                      <SelectItem key={brand} value={brand}>
-                        {brand}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input
-                  value={newBrandName}
-                  onChange={(e) => setNewBrandName(e.target.value)}
-                  placeholder="Enter brand name"
-                />
-              )}
+              <Input
+                value={newBrandName}
+                onChange={(e) => setNewBrandName(e.target.value)}
+                placeholder="Enter brand name (e.g., Chrome Hearts)"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddBrand();
+                  }
+                }}
+              />
             </div>
-
-            {newBrandName && inventoryBrands?.get(newBrandName) && (
-              <div className="space-y-2">
-                <Label>Featured Item (optional)</Label>
-                <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an item to feature" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    {inventoryBrands.get(newBrandName)?.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
 
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowAddDialog(false)}>
@@ -250,7 +171,7 @@ export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewPro
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              This image will appear in grayscale when hovering over the brand card.
+              Upload an image to display for this brand. The brand name will appear over the image.
             </p>
             <div className="space-y-2">
               <Label>Art Image</Label>
