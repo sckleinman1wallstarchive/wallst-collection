@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Upload, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Upload, Pencil } from 'lucide-react';
 
 interface BrandShowcaseCardProps {
   brandName: string;
@@ -23,73 +23,59 @@ export function BrandShowcaseCard({
 }: BrandShowcaseCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
+  // Use art image as base, featured image as fallback
+  const displayImage = artImageUrl || featuredImageUrl;
+
   return (
     <div
-      className="relative cursor-pointer overflow-hidden group"
+      className="relative cursor-pointer overflow-hidden rounded-lg group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={onClick}
     >
-      {/* Base Layer - Featured Inventory Image */}
-      {featuredImageUrl ? (
-        <img
-          src={featuredImageUrl}
-          alt={brandName}
-          className={`w-full h-auto object-cover transition-all duration-500 ${
-            isHovered && artImageUrl ? 'opacity-0' : 'opacity-100'
-          }`}
-        />
-      ) : (
-        <div className="aspect-[3/4] bg-muted flex items-center justify-center">
-          <span className="text-muted-foreground text-sm">No image</span>
-        </div>
-      )}
+      {/* Base Image */}
+      <div className="relative">
+        {displayImage ? (
+          <img
+            src={displayImage}
+            alt={brandName}
+            className="w-full h-auto object-cover"
+          />
+        ) : (
+          <div className="aspect-square bg-secondary/20 flex items-center justify-center text-muted-foreground">
+            No image
+          </div>
+        )}
 
-      {/* Hover Layer - Art Image (B&W) */}
-      {artImageUrl && (
-        <img
-          src={artImageUrl}
-          alt={`${brandName} art`}
-          className={`absolute inset-0 w-full h-full object-cover grayscale transition-all duration-500 ${
-            isHovered ? 'opacity-100' : 'opacity-0'
+        {/* Red Text Overlay - visible by default, hidden on hover */}
+        <div
+          className={`absolute inset-0 flex items-center justify-center bg-black/30 transition-opacity duration-300 ${
+            isHovered ? 'opacity-0' : 'opacity-100'
           }`}
-        />
-      )}
-
-      {/* Text Overlay - Centered - Shows item name/description on hover */}
-      <div
-        className={`absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity duration-300 ${
-          isHovered ? 'opacity-100' : 'opacity-0'
-        }`}
-      >
-        <h3 
-          className="text-xl md:text-2xl font-serif tracking-wider text-center px-4 leading-relaxed"
-          style={{ color: 'hsl(0, 70%, 50%)' }}
         >
-          {itemName || brandName}
-        </h3>
+          <div className="text-center px-4">
+            <h3 className="text-xl md:text-2xl font-serif text-red-600 tracking-wider">
+              {itemName || brandName}
+            </h3>
+          </div>
+        </div>
       </div>
 
-      {/* Edit Mode Upload Button */}
+      {/* Edit Mode Controls */}
       {isEditMode && (
-        <div className="absolute top-2 right-2 z-10">
-          <Button
-            size="sm"
-            variant="secondary"
-            className="gap-1 opacity-80 hover:opacity-100"
-            onClick={(e) => {
-              e.stopPropagation();
-              onArtUpload();
-            }}
-          >
-            {artImageUrl ? <Pencil className="h-3 w-3" /> : <Upload className="h-3 w-3" />}
-            {artImageUrl ? 'Edit Art' : 'Add Art'}
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          variant="secondary"
+          className="absolute top-2 right-2 gap-1 z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            onArtUpload();
+          }}
+        >
+          {artImageUrl ? <Pencil className="h-3 w-3" /> : <Upload className="h-3 w-3" />}
+          {artImageUrl ? 'Edit' : 'Upload'}
+        </Button>
       )}
-
-      {/* Subtle border */}
-      <div className="absolute inset-0 border border-border/20 pointer-events-none" />
     </div>
   );
 }
