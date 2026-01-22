@@ -359,6 +359,7 @@ export type Database = {
         | "in-closet-parker"
         | "in-closet-spencer"
         | "otw"
+        | "for-sale"
       platform:
         | "grailed"
         | "depop"
@@ -526,6 +527,7 @@ export const Constants = {
         "in-closet-parker",
         "in-closet-spencer",
         "otw",
+        "for-sale",
       ],
       platform: [
         "grailed",
