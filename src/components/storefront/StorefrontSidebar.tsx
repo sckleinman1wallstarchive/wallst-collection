@@ -1,4 +1,4 @@
-import { Store, Users, Info, ArrowLeft } from 'lucide-react';
+import { Store, Users, Info, ArrowLeft, Palette, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   Sidebar,
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 
-type StorefrontView = 'shop-all' | 'closet-selection' | 'parker-closet' | 'spencer-closet' | 'about-us';
+export type StorefrontView = 'shop-all' | 'closet-selection' | 'parker-closet' | 'spencer-closet' | 'shop-by-brand' | 'collection-grails' | 'about-us';
 
 interface StorefrontSidebarProps {
   currentView: StorefrontView;
@@ -24,6 +24,8 @@ interface StorefrontSidebarProps {
 
 const navigation = [
   { title: 'Shop All', view: 'shop-all' as const, icon: Store },
+  { title: 'Shop by Brand', view: 'shop-by-brand' as const, icon: Palette },
+  { title: 'Collection Grails', view: 'collection-grails' as const, icon: Crown },
   { title: 'Personal Collection', view: 'closet-selection' as const, icon: Users },
   { title: 'About Us', view: 'about-us' as const, icon: Info },
 ];

@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      about_us_content: {
+        Row: {
+          art_image_url: string | null
+          art_title: string | null
+          bio: string | null
+          created_at: string
+          id: string
+          owner: string
+          updated_at: string
+        }
+        Insert: {
+          art_image_url?: string | null
+          art_title?: string | null
+          bio?: string | null
+          created_at?: string
+          id?: string
+          owner: string
+          updated_at?: string
+        }
+        Update: {
+          art_image_url?: string | null
+          art_title?: string | null
+          bio?: string | null
+          created_at?: string
+          id?: string
+          owner?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       allowed_emails: {
         Row: {
           created_at: string
@@ -208,6 +238,7 @@ export type Database = {
           source: string | null
           source_platform: string | null
           status: Database["public"]["Enums"]["item_status"]
+          storefront_display_order: number | null
           trade_cash_difference: number | null
           traded_for_item_id: string | null
           updated_at: string
@@ -246,6 +277,7 @@ export type Database = {
           source?: string | null
           source_platform?: string | null
           status?: Database["public"]["Enums"]["item_status"]
+          storefront_display_order?: number | null
           trade_cash_difference?: number | null
           traded_for_item_id?: string | null
           updated_at?: string
@@ -284,6 +316,7 @@ export type Database = {
           source?: string | null
           source_platform?: string | null
           status?: Database["public"]["Enums"]["item_status"]
+          storefront_display_order?: number | null
           trade_cash_difference?: number | null
           traded_for_item_id?: string | null
           updated_at?: string
@@ -292,6 +325,79 @@ export type Database = {
           {
             foreignKeyName: "inventory_items_traded_for_item_id_fkey"
             columns: ["traded_for_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      storefront_brands: {
+        Row: {
+          art_image_url: string | null
+          brand_name: string
+          created_at: string
+          display_order: number | null
+          featured_item_id: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          art_image_url?: string | null
+          brand_name: string
+          created_at?: string
+          display_order?: number | null
+          featured_item_id?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          art_image_url?: string | null
+          brand_name?: string
+          created_at?: string
+          display_order?: number | null
+          featured_item_id?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "storefront_brands_featured_item_id_fkey"
+            columns: ["featured_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      storefront_grails: {
+        Row: {
+          art_image_url: string | null
+          created_at: string
+          id: string
+          inventory_item_id: string | null
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          art_image_url?: string | null
+          created_at?: string
+          id?: string
+          inventory_item_id?: string | null
+          position: number
+          updated_at?: string
+        }
+        Update: {
+          art_image_url?: string | null
+          created_at?: string
+          id?: string
+          inventory_item_id?: string | null
+          position?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "storefront_grails_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
             isOneToOne: false
             referencedRelation: "inventory_items"
             referencedColumns: ["id"]
