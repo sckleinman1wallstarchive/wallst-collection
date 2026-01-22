@@ -1,4 +1,5 @@
-import { Store, Users, Info, ArrowLeft, Palette, Crown } from 'lucide-react';
+import { useEffect } from 'react';
+import { Store, Users, Info, ArrowLeft, Palette, Crown, Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   Sidebar,
@@ -31,7 +32,7 @@ const navigation = [
 ];
 
 export function StorefrontSidebar({ currentView, onNavigate }: StorefrontSidebarProps) {
-  const { state } = useSidebar();
+  const { state, setOpen, setOpenMobile, isMobile } = useSidebar();
   const collapsed = state === 'collapsed';
   const navigate = useNavigate();
 
@@ -48,51 +49,74 @@ export function StorefrontSidebar({ currentView, onNavigate }: StorefrontSidebar
     return currentView === view;
   };
 
+  const handleMouseEnter = () => {
+    if (isMobile) {
+      setOpenMobile(true);
+    } else {
+      setOpen(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    } else {
+      setOpen(false);
+    }
+  };
+
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border p-4">
-        {!collapsed && (
-          <div className="flex flex-col">
-            <span className="font-semibold text-sidebar-foreground tracking-tight">WSC</span>
-            <span className="text-xs text-sidebar-foreground/60">Wall St Collection</span>
-          </div>
-        )}
-        {collapsed && (
-          <span className="font-bold text-sidebar-foreground text-center">W</span>
-        )}
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Shop</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navigation.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    isActive={isViewActive(item.view)}
-                    tooltip={item.title}
-                    onClick={() => onNavigate(item.view)}
-                    className="cursor-pointer"
-                  >
-                    <item.icon className="h-4 w-4 shrink-0" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border p-2">
-        <Button
-          variant="ghost"
-          onClick={handleBackToDashboard}
-          className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+    <>
+      {/* Hover trigger zone - invisible area on the left edge */}
+      <div 
+        className="fixed left-0 top-0 w-3 h-full z-50"
+        onMouseEnter={handleMouseEnter}
+      />
+      <div onMouseLeave={handleMouseLeave}>
+        <Sidebar 
+          collapsible="offcanvas"
+          className="transition-all duration-300 ease-in-out"
         >
-          <ArrowLeft className="h-4 w-4" />
-          {!collapsed && <span>Back to Dashboard</span>}
-        </Button>
-      </SidebarFooter>
-    </Sidebar>
+          <SidebarHeader className="border-b border-sidebar-border p-4">
+            <div className="flex flex-col">
+              <span className="font-semibold text-sidebar-foreground tracking-tight">WSC</span>
+              <span className="text-xs text-sidebar-foreground/60">Wall St Collection</span>
+            </div>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Shop</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {navigation.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        isActive={isViewActive(item.view)}
+                        tooltip={item.title}
+                        onClick={() => onNavigate(item.view)}
+                        className="cursor-pointer"
+                      >
+                        <item.icon className="h-4 w-4 shrink-0" />
+                        <span>{item.title}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+          <SidebarFooter className="border-t border-sidebar-border p-2">
+            <Button
+              variant="ghost"
+              onClick={handleBackToDashboard}
+              className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to Dashboard</span>
+            </Button>
+          </SidebarFooter>
+        </Sidebar>
+      </div>
+    </>
   );
 }
