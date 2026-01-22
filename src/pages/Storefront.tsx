@@ -145,8 +145,8 @@ export default function Storefront() {
   const showSearchAndFilters = ['shop-all', 'parker-closet', 'spencer-closet'].includes(currentView);
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+    <SidebarProvider defaultOpen={false}>
+      <div className="min-h-screen flex w-full group/sidebar-wrapper">
         <StorefrontSidebar 
           currentView={currentView as StorefrontView}
           onNavigate={handleNavigate}
