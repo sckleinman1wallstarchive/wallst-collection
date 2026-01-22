@@ -27,6 +27,10 @@ interface ShopByBrandViewProps {
   onBrandClick: (brandName: string) => void;
 }
 
+interface BrandWithItemInfo extends StorefrontBrand {
+  featured_item_name?: string | null;
+}
+
 export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewProps) {
   const { brands, isLoading, addBrand, deleteBrand, uploadArtImage } = useStorefrontBrands();
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -37,24 +41,25 @@ export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewPro
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Get all unique brands from inventory for suggestions
+  // Get all unique brands from inventory for suggestions with item names
   const { data: inventoryBrands } = useQuery({
-    queryKey: ['inventory-brands'],
+    queryKey: ['inventory-brands-with-names'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('inventory_items')
-        .select('brand, id, image_urls, image_url')
+        .select('brand, id, name, image_urls, image_url')
         .not('brand', 'is', null);
       
       if (error) throw error;
       
       // Group by brand
-      const brandMap = new Map<string, { id: string; imageUrl: string | null }[]>();
+      const brandMap = new Map<string, { id: string; name: string; imageUrl: string | null }[]>();
       (data || []).forEach((item) => {
         if (!item.brand) return;
         const existing = brandMap.get(item.brand) || [];
         existing.push({
           id: item.id,
+          name: item.name,
           imageUrl: (item.image_urls as string[])?.[0] || item.image_url,
         });
         brandMap.set(item.brand, existing);
@@ -62,6 +67,22 @@ export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewPro
       
       return brandMap;
     },
+  });
+
+  // Enrich brands with featured item names
+  const brandsWithItemNames: BrandWithItemInfo[] = brands.map((brand) => {
+    if (!brand.featured_item_id || !inventoryBrands) {
+      return { ...brand, featured_item_name: null };
+    }
+    
+    // Find the item name across all brands
+    for (const items of inventoryBrands.values()) {
+      const item = items.find((i) => i.id === brand.featured_item_id);
+      if (item) {
+        return { ...brand, featured_item_name: item.name };
+      }
+    }
+    return { ...brand, featured_item_name: null };
   });
 
   // Brands not yet added to storefront
@@ -121,7 +142,7 @@ export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewPro
         )}
       </div>
 
-      {/* Brand Grid */}
+      {/* Brand Grid - Staggered Fine Art Layout using CSS Columns */}
       {brands.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed border-muted-foreground/30 rounded-lg">
           <p className="text-muted-foreground">
@@ -129,11 +150,12 @@ export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewPro
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-          {brands.map((brand) => (
-            <div key={brand.id} className="relative group">
+        <div className="columns-2 md:columns-3 gap-6">
+          {brandsWithItemNames.map((brand) => (
+            <div key={brand.id} className="relative group break-inside-avoid mb-6">
               <BrandShowcaseCard
                 brandName={brand.brand_name}
+                itemName={brand.featured_item_name || undefined}
                 featuredImageUrl={brand.featured_image_url}
                 artImageUrl={brand.art_image_url}
                 isEditMode={isEditMode}
@@ -200,9 +222,9 @@ export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewPro
                     <SelectValue placeholder="Select an item to feature" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover">
-                    {inventoryBrands.get(newBrandName)?.map((item, idx) => (
+                    {inventoryBrands.get(newBrandName)?.map((item) => (
                       <SelectItem key={item.id} value={item.id}>
-                        Item {idx + 1}
+                        {item.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
