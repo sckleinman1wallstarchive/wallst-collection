@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useStorefrontGrails, GRAIL_POSITIONS } from '@/hooks/useStorefrontGrails';
 import { GrailCard } from './GrailCard';
 import { StorefrontProductDetail } from './StorefrontProductDetail';
+import { StorefrontSearchBar } from './StorefrontSearchBar';
 import { PublicInventoryItem } from '@/hooks/usePublicInventory';
 import { toast } from 'sonner';
 
@@ -29,13 +30,14 @@ interface CollectionGrailsViewProps {
 }
 
 export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) {
-  const { grailsByPosition, isLoading, addGrail, uploadArtImage } = useStorefrontGrails();
+  const { grailsByPosition, isLoading, addGrail, removeGrail, uploadArtImage } = useStorefrontGrails();
   const [showSelectDialog, setShowSelectDialog] = useState(false);
   const [showArtDialog, setShowArtDialog] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
   const [selectedItemId, setSelectedItemId] = useState('');
   const [selectedItem, setSelectedItem] = useState<PublicInventoryItem | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Get all inventory items for selection
@@ -52,12 +54,31 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
     },
   });
 
+  // Filter grails based on search
+  const filteredPositions = useMemo(() => {
+    if (!searchQuery.trim()) return GRAIL_POSITIONS;
+    
+    const query = searchQuery.toLowerCase();
+    return GRAIL_POSITIONS.filter(({ position }) => {
+      const grail = grailsByPosition.get(position);
+      if (!grail?.item) return false;
+      return (
+        grail.item.name.toLowerCase().includes(query) ||
+        grail.item.brand?.toLowerCase().includes(query)
+      );
+    });
+  }, [searchQuery, grailsByPosition]);
+
   const handleAddGrail = () => {
     if (!selectedPosition || !selectedItemId) return;
     addGrail({ position: selectedPosition, inventoryItemId: selectedItemId });
     setShowSelectDialog(false);
     setSelectedPosition(null);
     setSelectedItemId('');
+  };
+
+  const handleRemoveGrail = (position: number) => {
+    removeGrail(position);
   };
 
   const handleArtUpload = async (file: File) => {
@@ -86,7 +107,7 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
   return (
     <div className="min-h-[80vh] bg-black -m-6 p-8">
       {/* Title */}
-      <div className="mb-12">
+      <div className="mb-8">
         <h1 className="text-4xl md:text-5xl font-serif tracking-[0.3em] text-white">
           COLLECTION GRAILS
         </h1>
@@ -95,14 +116,26 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
         </p>
       </div>
 
-      {/* Masonry Gallery Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-min">
-        {GRAIL_POSITIONS.map(({ position, size }) => {
+      {/* Search Bar */}
+      <div className="mb-8 max-w-md">
+        <StorefrontSearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search grails..."
+        />
+      </div>
+
+      {/* True Masonry Gallery using CSS Columns */}
+      <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-0">
+        {filteredPositions.map(({ position, size }) => {
           const grail = grailsByPosition.get(position);
+          // Skip empty slots in non-edit mode (handled in GrailCard)
+          if (!grail?.item && !isEditMode) return null;
+          
           return (
             <div
               key={position}
-              className={`${size === 'large' ? 'row-span-2' : size === 'medium' ? 'row-span-1' : 'row-span-1'}`}
+              className="break-inside-avoid mb-4"
             >
               <GrailCard
                 item={grail?.item || null}
@@ -118,6 +151,7 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
                   setSelectedPosition(position);
                   setShowArtDialog(true);
                 }}
+                onRemove={() => handleRemoveGrail(position)}
                 onClick={() => {
                   if (grail?.item) {
                     setSelectedItem(grail.item);

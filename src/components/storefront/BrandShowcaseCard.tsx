@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 
 interface BrandShowcaseCardProps {
   brandName: string;
+  itemName?: string;
   featuredImageUrl: string | null;
   artImageUrl: string | null;
   isEditMode: boolean;
@@ -13,6 +14,7 @@ interface BrandShowcaseCardProps {
 
 export function BrandShowcaseCard({
   brandName,
+  itemName,
   featuredImageUrl,
   artImageUrl,
   isEditMode,
@@ -23,7 +25,7 @@ export function BrandShowcaseCard({
 
   return (
     <div
-      className="relative aspect-[3/4] cursor-pointer overflow-hidden group"
+      className="relative cursor-pointer overflow-hidden group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={onClick}
@@ -33,12 +35,12 @@ export function BrandShowcaseCard({
         <img
           src={featuredImageUrl}
           alt={brandName}
-          className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${
+          className={`w-full h-auto object-cover transition-all duration-500 ${
             isHovered && artImageUrl ? 'opacity-0' : 'opacity-100'
           }`}
         />
       ) : (
-        <div className="absolute inset-0 bg-muted flex items-center justify-center">
+        <div className="aspect-[3/4] bg-muted flex items-center justify-center">
           <span className="text-muted-foreground text-sm">No image</span>
         </div>
       )}
@@ -54,17 +56,17 @@ export function BrandShowcaseCard({
         />
       )}
 
-      {/* Brand Name Overlay - Only visible on hover */}
+      {/* Text Overlay - Centered - Shows item name/description on hover */}
       <div
         className={`absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity duration-300 ${
           isHovered ? 'opacity-100' : 'opacity-0'
         }`}
       >
         <h3 
-          className="text-2xl md:text-3xl font-serif tracking-wider uppercase"
+          className="text-xl md:text-2xl font-serif tracking-wider text-center px-4 leading-relaxed"
           style={{ color: 'hsl(0, 70%, 50%)' }}
         >
-          {brandName}
+          {itemName || brandName}
         </h3>
       </div>
 

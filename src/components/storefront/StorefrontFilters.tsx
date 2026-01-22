@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -7,6 +7,10 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
 
 export interface FilterState {
@@ -30,6 +34,33 @@ const CATEGORY_OPTIONS = [
   { value: 'jacket', label: 'Jackets' },
   { value: 'top', label: 'Tops' },
   { value: 'other', label: 'Other' },
+];
+
+// Hierarchical size structure
+const SIZE_CATEGORIES = [
+  {
+    category: 'Tops',
+    sizes: ['S', 'M', 'L', 'XL'],
+  },
+  {
+    category: 'Pants',
+    sizes: ['S', 'M', 'L', 'XL'],
+  },
+  {
+    category: 'Outerwear',
+    sizes: ['S', 'M', 'L', 'XL'],
+  },
+  {
+    category: 'Footwear',
+    sizes: [
+      '8 (41)',
+      '9 (42)',
+      '10 (43)',
+      '11 (44)',
+      '12 (45)',
+      '13 (46)',
+    ],
+  },
 ];
 
 export function StorefrontFilters({ filters, onChange, availableSizes, availableBrands }: StorefrontFiltersProps) {
@@ -65,10 +96,10 @@ export function StorefrontFilters({ filters, onChange, availableSizes, available
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        {/* Size Filter */}
+        {/* Size Filter - Hierarchical */}
         <DropdownMenu open={openDropdown === 'size'} onOpenChange={(open) => setOpenDropdown(open ? 'size' : null)}>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-1">
+            <Button variant="outline" size="sm" className="gap-1 text-foreground">
               Size
               {filters.sizes.length > 0 && (
                 <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
@@ -78,15 +109,27 @@ export function StorefrontFilters({ filters, onChange, availableSizes, available
               <ChevronDown className="h-3 w-3" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto bg-popover">
-            {availableSizes.map((size) => (
-              <DropdownMenuCheckboxItem
-                key={size}
-                checked={filters.sizes.includes(size)}
-                onCheckedChange={() => toggleSize(size)}
-              >
-                {size}
-              </DropdownMenuCheckboxItem>
+          <DropdownMenuContent align="start" className="bg-popover">
+            {SIZE_CATEGORIES.map((cat) => (
+              <DropdownMenuSub key={cat.category}>
+                <DropdownMenuSubTrigger className="gap-2">
+                  <ChevronRight className="h-3 w-3" />
+                  {cat.category}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="bg-popover">
+                    {cat.sizes.map((size) => (
+                      <DropdownMenuCheckboxItem
+                        key={size}
+                        checked={filters.sizes.includes(size)}
+                        onCheckedChange={() => toggleSize(size)}
+                      >
+                        {size}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
@@ -94,7 +137,7 @@ export function StorefrontFilters({ filters, onChange, availableSizes, available
         {/* Brand Filter */}
         <DropdownMenu open={openDropdown === 'brand'} onOpenChange={(open) => setOpenDropdown(open ? 'brand' : null)}>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-1">
+            <Button variant="outline" size="sm" className="gap-1 text-foreground">
               Brand
               {filters.brands.length > 0 && (
                 <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
@@ -120,7 +163,7 @@ export function StorefrontFilters({ filters, onChange, availableSizes, available
         {/* Category Filter */}
         <DropdownMenu open={openDropdown === 'category'} onOpenChange={(open) => setOpenDropdown(open ? 'category' : null)}>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-1">
+            <Button variant="outline" size="sm" className="gap-1 text-foreground">
               Category
               {filters.categories.length > 0 && (
                 <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
