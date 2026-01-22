@@ -20,8 +20,10 @@ export type Database = {
           art_title: string | null
           bio: string | null
           created_at: string
+          display_order: number | null
           id: string
           owner: string
+          size_preset: string | null
           updated_at: string
         }
         Insert: {
@@ -29,8 +31,10 @@ export type Database = {
           art_title?: string | null
           bio?: string | null
           created_at?: string
+          display_order?: number | null
           id?: string
           owner: string
+          size_preset?: string | null
           updated_at?: string
         }
         Update: {
@@ -38,8 +42,10 @@ export type Database = {
           art_title?: string | null
           bio?: string | null
           created_at?: string
+          display_order?: number | null
           id?: string
           owner?: string
+          size_preset?: string | null
           updated_at?: string
         }
         Relationships: []

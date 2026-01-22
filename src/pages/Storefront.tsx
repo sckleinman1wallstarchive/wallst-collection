@@ -151,8 +151,8 @@ export default function Storefront() {
           currentView={currentView as StorefrontView}
           onNavigate={handleNavigate}
         />
-        <SidebarInset className={['shop-all', 'parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails'].includes(currentView) ? 'bg-black' : ''}>
-          <header className={`flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4 ${['shop-all', 'parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails'].includes(currentView) ? 'border-white/10' : ''}`}>
+        <SidebarInset className={['parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails'].includes(currentView) ? 'bg-black' : ''}>
+          <header className={`flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4 ${['parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails'].includes(currentView) ? 'border-white/10' : ''}`}>
             <div className="flex items-center gap-2">
               <SidebarTrigger className="-ml-1" />
               <span className="text-lg font-medium tracking-wide">
@@ -175,7 +175,7 @@ export default function Storefront() {
             </div>
           </header>
 
-          <main className={`flex-1 p-6 ${['shop-all', 'parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails'].includes(currentView) ? 'text-white' : ''}`}>
+          <main className={`flex-1 p-6 ${['parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails'].includes(currentView) ? 'text-white' : ''}`}>
             {/* Search and Filters for applicable views */}
             {showSearchAndFilters && (
               <div className="space-y-4 mb-6">
@@ -262,11 +262,12 @@ export default function Storefront() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
                 ) : filteredParkerItems.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
                     {filteredParkerItems.map((item) => (
                       <PersonalCollectionCard 
                         key={item.id} 
                         item={item}
+                        isEditMode={isEditMode}
                         onClick={() => setSelectedClosetItem(item)}
                       />
                     ))}
@@ -300,11 +301,12 @@ export default function Storefront() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
                 ) : filteredSpencerItems.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
                     {filteredSpencerItems.map((item) => (
                       <PersonalCollectionCard 
                         key={item.id} 
                         item={item}
+                        isEditMode={isEditMode}
                         onClick={() => setSelectedClosetItem(item)}
                       />
                     ))}
