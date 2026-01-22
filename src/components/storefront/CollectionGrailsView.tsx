@@ -22,8 +22,10 @@ interface CollectionGrailsViewProps {
   isEditMode: boolean;
 }
 
+type SizePreset = 'auto' | 'portrait' | 'square' | 'wide' | 'tall';
+
 export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) {
-  const { grailsByPosition, isLoading, addGrail, removeGrail, uploadArtImage } = useStorefrontGrails();
+  const { grails, grailsByPosition, isLoading, addGrail, removeGrail, uploadArtImage, updateGrailSize } = useStorefrontGrails();
   const [showSelectDialog, setShowSelectDialog] = useState(false);
   const [showArtDialog, setShowArtDialog] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
@@ -84,6 +86,10 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
     }
   };
 
+  const handleSizeChange = (position: number, newSize: SizePreset) => {
+    updateGrailSize({ position, sizePreset: newSize });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -99,7 +105,7 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
         <h1 className="text-4xl md:text-5xl font-serif tracking-[0.3em] text-white">
           COLLECTION GRAILS
         </h1>
-        <p className="text-muted-foreground mt-2 tracking-wide">
+        <p className="text-white/60 mt-2 tracking-wide">
           The most coveted pieces in our collection
         </p>
       </div>
@@ -128,6 +134,7 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
                 artImageUrl={grail?.art_image_url || null}
                 position={position}
                 size={size}
+                sizePreset={(grail as any)?.size_preset || 'auto'}
                 isEditMode={isEditMode}
                 onSelect={() => {
                   setSelectedPosition(position);
@@ -138,6 +145,7 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
                   setShowArtDialog(true);
                 }}
                 onRemove={() => handleRemoveGrail(position)}
+                onSizeChange={(newSize) => handleSizeChange(position, newSize)}
                 onClick={() => {
                   if (grail?.item) {
                     setSelectedItem(grail.item);
@@ -246,6 +254,7 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
         item={selectedItem}
         open={!!selectedItem}
         onOpenChange={(open) => !open && setSelectedItem(null)}
+        isEditMode={isEditMode}
       />
     </div>
   );

@@ -2,28 +2,48 @@ import { useState } from 'react';
 import { Plus, X, Upload, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PublicInventoryItem } from '@/hooks/usePublicInventory';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
+type SizePreset = 'auto' | 'portrait' | 'square' | 'wide' | 'tall';
 
 interface GrailCardProps {
   item: PublicInventoryItem | null;
   artImageUrl: string | null;
   position: number;
   size: 'small' | 'medium' | 'large';
+  sizePreset?: SizePreset;
   isEditMode: boolean;
   onSelect: () => void;
   onArtUpload: () => void;
   onRemove: () => void;
+  onSizeChange?: (size: SizePreset) => void;
   onClick: () => void;
 }
+
+const SIZE_PRESETS: { value: SizePreset; label: string; aspect?: string }[] = [
+  { value: 'auto', label: 'Auto' },
+  { value: 'portrait', label: 'Portrait', aspect: '3/4' },
+  { value: 'square', label: 'Square', aspect: '1/1' },
+  { value: 'wide', label: 'Wide', aspect: '4/3' },
+  { value: 'tall', label: 'Tall', aspect: '2/3' },
+];
 
 export function GrailCard({
   item,
   artImageUrl,
   position,
   size,
+  sizePreset = 'auto',
   isEditMode,
   onSelect,
   onArtUpload,
   onRemove,
+  onSizeChange,
   onClick,
 }: GrailCardProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -50,6 +70,8 @@ export function GrailCard({
   }
 
   const imageUrl = item.imageUrls?.[0] || item.imageUrl;
+  const currentPreset = SIZE_PRESETS.find(p => p.value === sizePreset) || SIZE_PRESETS[0];
+  const aspectStyle = currentPreset.aspect ? { aspectRatio: currentPreset.aspect } : {};
 
   return (
     <div
@@ -58,15 +80,16 @@ export function GrailCard({
       onMouseLeave={() => setIsHovered(false)}
       onClick={onClick}
     >
-      {/* Base Image - natural aspect ratio for staggered look */}
-      <div className="relative">
+      {/* Base Image - with aspect ratio control */}
+      <div className="relative" style={aspectStyle}>
         {imageUrl ? (
           <img
             src={imageUrl}
             alt={item.name}
-            className={`w-full h-auto object-cover transition-opacity duration-300 ${
+            className={`w-full object-cover transition-opacity duration-300 ${
               artImageUrl && isHovered ? 'opacity-0' : 'opacity-100'
             }`}
+            style={currentPreset.aspect ? { height: '100%' } : { height: 'auto' }}
           />
         ) : (
           <div className="aspect-[3/4] flex items-center justify-center text-muted-foreground bg-secondary/20">
@@ -111,6 +134,38 @@ export function GrailCard({
           >
             <X className="h-3 w-3" />
           </Button>
+        </div>
+      )}
+
+      {/* Size Preset Control - bottom right corner in edit mode */}
+      {isEditMode && onSizeChange && (
+        <div className="absolute bottom-2 right-2 z-10">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="text-xs h-7 px-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {currentPreset.label}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {SIZE_PRESETS.map((preset) => (
+                <DropdownMenuItem
+                  key={preset.value}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSizeChange(preset.value);
+                  }}
+                  className={sizePreset === preset.value ? 'bg-accent' : ''}
+                >
+                  {preset.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )}
     </div>

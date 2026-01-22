@@ -15,6 +15,7 @@ export interface PublicInventoryItem {
   brandCategory: string | null;
   status: string;
   closetDisplay: ClosetDisplayType;
+  notes?: string | null;
 }
 
 // Fetch items for Shop All (for-sale status)
@@ -24,7 +25,7 @@ export function usePublicInventory() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('inventory_items')
-        .select('id, name, brand, size, asking_price, image_url, image_urls, category, brand_category, status, closet_display')
+        .select('id, name, brand, size, asking_price, image_url, image_urls, category, brand_category, status, closet_display, notes')
         .eq('status', 'for-sale')
         .order('created_at', { ascending: false });
 
@@ -45,6 +46,7 @@ export function usePublicInventory() {
         brandCategory: item.brand_category,
         status: item.status,
         closetDisplay: (item.closet_display as ClosetDisplayType) || 'nfs',
+        notes: item.notes,
       })) as PublicInventoryItem[];
     },
     staleTime: 1000 * 60 * 2, // 2 minutes
@@ -60,7 +62,7 @@ export function useClosetInventory(owner: 'parker' | 'spencer') {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('inventory_items')
-        .select('id, name, brand, size, asking_price, image_url, image_urls, category, brand_category, status, closet_display')
+        .select('id, name, brand, size, asking_price, image_url, image_urls, category, brand_category, status, closet_display, notes')
         .eq('status', status)
         .order('created_at', { ascending: false });
 
@@ -81,6 +83,7 @@ export function useClosetInventory(owner: 'parker' | 'spencer') {
         brandCategory: item.brand_category,
         status: item.status,
         closetDisplay: (item.closet_display as ClosetDisplayType) || 'nfs',
+        notes: item.notes,
       })) as PublicInventoryItem[];
     },
     staleTime: 1000 * 60 * 2, // 2 minutes

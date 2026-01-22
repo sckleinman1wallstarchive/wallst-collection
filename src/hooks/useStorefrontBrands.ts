@@ -8,6 +8,7 @@ export interface StorefrontBrand {
   featured_item_id: string | null;
   art_image_url: string | null;
   display_order: number;
+  size_preset?: string | null;
   created_at: string;
   updated_at: string;
   // Joined data

@@ -339,6 +339,7 @@ export type Database = {
           display_order: number | null
           featured_item_id: string | null
           id: string
+          size_preset: string | null
           updated_at: string
         }
         Insert: {
@@ -348,6 +349,7 @@ export type Database = {
           display_order?: number | null
           featured_item_id?: string | null
           id?: string
+          size_preset?: string | null
           updated_at?: string
         }
         Update: {
@@ -357,6 +359,7 @@ export type Database = {
           display_order?: number | null
           featured_item_id?: string | null
           id?: string
+          size_preset?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -376,6 +379,7 @@ export type Database = {
           id: string
           inventory_item_id: string | null
           position: number
+          size_preset: string | null
           updated_at: string
         }
         Insert: {
@@ -384,6 +388,7 @@ export type Database = {
           id?: string
           inventory_item_id?: string | null
           position: number
+          size_preset?: string | null
           updated_at?: string
         }
         Update: {
@@ -392,6 +397,7 @@ export type Database = {
           id?: string
           inventory_item_id?: string | null
           position?: number
+          size_preset?: string | null
           updated_at?: string
         }
         Relationships: [
