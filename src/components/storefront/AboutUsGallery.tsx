@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Upload, Pencil, Loader2 } from 'lucide-react';
+import { Upload, Pencil, Loader2, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,8 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+type SizePreset = 'auto' | 'portrait' | 'square' | 'wide' | 'tall';
 
 interface AboutUsContent {
   id: string;
@@ -19,11 +27,21 @@ interface AboutUsContent {
   art_image_url: string | null;
   art_title: string | null;
   bio: string | null;
+  size_preset?: string | null;
+  display_order?: number | null;
 }
 
 interface AboutUsGalleryProps {
   isEditMode: boolean;
 }
+
+const SIZE_PRESETS: { value: SizePreset; label: string; aspect?: string }[] = [
+  { value: 'auto', label: 'Auto' },
+  { value: 'portrait', label: 'Portrait', aspect: '3/4' },
+  { value: 'square', label: 'Square', aspect: '1/1' },
+  { value: 'wide', label: 'Wide', aspect: '16/9' },
+  { value: 'tall', label: 'Tall', aspect: '2/3' },
+];
 
 export function AboutUsGallery({ isEditMode }: AboutUsGalleryProps) {
   const queryClient = useQueryClient();
@@ -61,6 +79,22 @@ export function AboutUsGallery({ isEditMode }: AboutUsGalleryProps) {
     },
   });
 
+  const updateSizePresetMutation = useMutation({
+    mutationFn: async ({ owner, sizePreset }: { owner: string; sizePreset: string }) => {
+      const { error } = await supabase
+        .from('about_us_content')
+        .update({ size_preset: sizePreset } as any)
+        .eq('owner', owner);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['about-us-content'] });
+    },
+    onError: () => {
+      toast.error('Failed to update size preset');
+    },
+  });
+
   const handleFileUpload = async (owner: string, file: File) => {
     setUploading(true);
     try {
@@ -83,6 +117,10 @@ export function AboutUsGallery({ isEditMode }: AboutUsGalleryProps) {
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleSizeChange = (owner: string, size: SizePreset) => {
+    updateSizePresetMutation.mutate({ owner, sizePreset: size });
   };
 
   const parkerContent = content?.find((c) => c.owner === 'parker');
@@ -117,11 +155,13 @@ export function AboutUsGallery({ isEditMode }: AboutUsGalleryProps) {
             owner="Parker"
             imageUrl={parkerContent?.art_image_url}
             title={parkerContent?.art_title}
+            sizePreset={(parkerContent?.size_preset as SizePreset) || 'wide'}
             isEditMode={isEditMode}
             onEdit={() => {
               setArtTitle(parkerContent?.art_title || '');
               setEditingOwner('parker');
             }}
+            onSizeChange={(size) => handleSizeChange('parker', size)}
           />
 
           {/* Spencer's Art Piece */}
@@ -129,11 +169,13 @@ export function AboutUsGallery({ isEditMode }: AboutUsGalleryProps) {
             owner="Spencer"
             imageUrl={spencerContent?.art_image_url}
             title={spencerContent?.art_title}
+            sizePreset={(spencerContent?.size_preset as SizePreset) || 'wide'}
             isEditMode={isEditMode}
             onEdit={() => {
               setArtTitle(spencerContent?.art_title || '');
               setEditingOwner('spencer');
             }}
+            onSizeChange={(size) => handleSizeChange('spencer', size)}
           />
         </div>
 
@@ -194,19 +236,85 @@ interface ArtPieceFrameProps {
   owner: string;
   imageUrl: string | null | undefined;
   title: string | null | undefined;
+  sizePreset: SizePreset;
   isEditMode: boolean;
   onEdit: () => void;
+  onSizeChange: (size: SizePreset) => void;
 }
 
-function ArtPieceFrame({ owner, imageUrl, title, isEditMode, onEdit }: ArtPieceFrameProps) {
+function ArtPieceFrame({ owner, imageUrl, title, sizePreset, isEditMode, onEdit, onSizeChange }: ArtPieceFrameProps) {
+  const currentPreset = SIZE_PRESETS.find(p => p.value === sizePreset) || SIZE_PRESETS.find(p => p.value === 'wide')!;
+  const aspectStyle = currentPreset.aspect ? { aspectRatio: currentPreset.aspect } : {};
+
   return (
     <div className="flex flex-col items-center">
-      {/* Frame Container - wider for horizontal art */}
+      {/* Frame Container */}
       <div className="relative w-full">
         {/* Outer Frame */}
-        <div className="border-8 border-white/20 p-2 bg-white/5">
-          {/* Inner Frame - landscape aspect ratio */}
-          <div className="border-2 border-white/10 aspect-[16/9] relative overflow-hidden bg-black">
+        <div className="border-8 border-white/20 p-2 bg-white/5 relative">
+          {/* Edit Mode Controls */}
+          {isEditMode && (
+            <>
+              {/* Grip Handle - top left */}
+              <div className="absolute top-4 left-4 z-20">
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  className="h-7 w-7 cursor-grab"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <GripVertical className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Edit Button - top right */}
+              <Button
+                size="sm"
+                variant="secondary"
+                className="absolute top-4 right-4 gap-1 z-20"
+                onClick={onEdit}
+              >
+                {imageUrl ? <Pencil className="h-3 w-3" /> : <Upload className="h-3 w-3" />}
+                {imageUrl ? 'Edit' : 'Add'}
+              </Button>
+
+              {/* Size Preset - bottom right */}
+              <div className="absolute bottom-4 right-4 z-20">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="text-xs h-7 px-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {currentPreset.label}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {SIZE_PRESETS.map((preset) => (
+                      <DropdownMenuItem
+                        key={preset.value}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSizeChange(preset.value);
+                        }}
+                        className={sizePreset === preset.value ? 'bg-accent' : ''}
+                      >
+                        {preset.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </>
+          )}
+
+          {/* Inner Frame with dynamic aspect ratio */}
+          <div 
+            className="border-2 border-white/10 relative overflow-hidden bg-black"
+            style={aspectStyle}
+          >
             {imageUrl ? (
               <img
                 src={imageUrl}
@@ -218,25 +326,12 @@ function ArtPieceFrame({ owner, imageUrl, title, isEditMode, onEdit }: ArtPieceF
                 {isEditMode ? (
                   <div className="text-center">
                     <Upload className="h-8 w-8 mx-auto mb-2" />
-                    <span className="text-sm">Click edit to add horizontal art</span>
+                    <span className="text-sm">Click edit to add art</span>
                   </div>
                 ) : (
                   <span className="text-sm">Art piece coming soon</span>
                 )}
               </div>
-            )}
-
-            {/* Edit Button */}
-            {isEditMode && (
-              <Button
-                size="sm"
-                variant="secondary"
-                className="absolute top-2 right-2 gap-1"
-                onClick={onEdit}
-              >
-                {imageUrl ? <Pencil className="h-3 w-3" /> : <Upload className="h-3 w-3" />}
-                {imageUrl ? 'Edit' : 'Add'}
-              </Button>
             )}
           </div>
         </div>

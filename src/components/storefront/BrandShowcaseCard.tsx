@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, Pencil } from 'lucide-react';
+import { Upload, Pencil, GripVertical } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -85,20 +85,35 @@ export function BrandShowcaseCard({
 
       {/* Edit Mode Controls */}
       {isEditMode && (
-        <div className="absolute top-2 right-2 flex gap-1 z-10">
-          <Button
-            size="sm"
-            variant="secondary"
-            className="gap-1"
-            onClick={(e) => {
-              e.stopPropagation();
-              onArtUpload();
-            }}
-          >
-            {artImageUrl ? <Pencil className="h-3 w-3" /> : <Upload className="h-3 w-3" />}
-            {artImageUrl ? 'Edit' : 'Upload'}
-          </Button>
-        </div>
+        <>
+          {/* Grip Handle - top left */}
+          <div className="absolute top-2 left-2 z-10">
+            <Button
+              size="icon"
+              variant="secondary"
+              className="h-7 w-7 cursor-grab"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <GripVertical className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Upload Button - top right */}
+          <div className="absolute top-2 right-2 flex gap-1 z-10">
+            <Button
+              size="sm"
+              variant="secondary"
+              className="gap-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                onArtUpload();
+              }}
+            >
+              {artImageUrl ? <Pencil className="h-3 w-3" /> : <Upload className="h-3 w-3" />}
+              {artImageUrl ? 'Edit' : 'Upload'}
+            </Button>
+          </div>
+        </>
       )}
 
       {/* Size Preset Control - bottom right corner in edit mode */}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, X, Upload, Pencil } from 'lucide-react';
+import { Plus, X, Upload, Pencil, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PublicInventoryItem } from '@/hooks/usePublicInventory';
 import {
@@ -111,30 +111,45 @@ export function GrailCard({
 
       {/* Edit Mode Controls */}
       {isEditMode && (
-        <div className="absolute top-2 right-2 flex gap-1 z-10">
-          <Button
-            size="icon"
-            variant="secondary"
-            className="h-7 w-7"
-            onClick={(e) => {
-              e.stopPropagation();
-              onArtUpload();
-            }}
-          >
-            {artImageUrl ? <Pencil className="h-3 w-3" /> : <Upload className="h-3 w-3" />}
-          </Button>
-          <Button
-            size="icon"
-            variant="destructive"
-            className="h-7 w-7"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
-          >
-            <X className="h-3 w-3" />
-          </Button>
-        </div>
+        <>
+          {/* Grip Handle - top left */}
+          <div className="absolute top-2 left-2 z-10">
+            <Button
+              size="icon"
+              variant="secondary"
+              className="h-7 w-7 cursor-grab"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <GripVertical className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Art Upload & Remove - top right */}
+          <div className="absolute top-2 right-2 flex gap-1 z-10">
+            <Button
+              size="icon"
+              variant="secondary"
+              className="h-7 w-7"
+              onClick={(e) => {
+                e.stopPropagation();
+                onArtUpload();
+              }}
+            >
+              {artImageUrl ? <Pencil className="h-3 w-3" /> : <Upload className="h-3 w-3" />}
+            </Button>
+            <Button
+              size="icon"
+              variant="destructive"
+              className="h-7 w-7"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
+              }}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        </>
       )}
 
       {/* Size Preset Control - bottom right corner in edit mode */}
