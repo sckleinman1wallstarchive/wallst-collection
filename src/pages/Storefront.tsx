@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Loader2, User, ShoppingBag, Pencil, Check } from 'lucide-react';
 import { usePublicInventory, useClosetInventory, PublicInventoryItem } from '@/hooks/usePublicInventory';
 import { StorefrontProductCard } from '@/components/storefront/StorefrontProductCard';
@@ -151,11 +151,11 @@ export default function Storefront() {
           currentView={currentView as StorefrontView}
           onNavigate={handleNavigate}
         />
-        <SidebarInset className={['parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails'].includes(currentView) ? 'bg-black' : ''}>
-          <header className={`flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4 ${['parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails'].includes(currentView) ? 'border-white/10' : ''}`}>
+        <SidebarInset className={['shop-all', 'parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails', 'about-us'].includes(currentView) ? 'bg-black' : ''}>
+          <header className={`flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4 ${['shop-all', 'parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails', 'about-us'].includes(currentView) ? 'border-white/10' : ''}`}>
             <div className="flex items-center gap-2">
-              <SidebarTrigger className="-ml-1" />
-              <span className="text-lg font-medium tracking-wide">
+              <SidebarTrigger className={`-ml-1 ${['shop-all', 'parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails', 'about-us'].includes(currentView) ? 'text-white' : ''}`} />
+              <span className={`text-lg font-medium tracking-wide ${['shop-all', 'parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails', 'about-us'].includes(currentView) ? 'text-white' : ''}`}>
                 {getViewTitle()}
               </span>
             </div>
@@ -165,7 +165,7 @@ export default function Storefront() {
                   variant={isEditMode ? 'secondary' : 'ghost'}
                   size="sm"
                   onClick={() => setIsEditMode(!isEditMode)}
-                  className="gap-1"
+                  className={`gap-1 ${['shop-all', 'parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails', 'about-us'].includes(currentView) && !isEditMode ? 'text-white hover:text-white hover:bg-white/10' : ''}`}
                 >
                   {isEditMode ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
                   {isEditMode ? 'Done' : 'Edit'}
@@ -175,7 +175,7 @@ export default function Storefront() {
             </div>
           </header>
 
-          <main className={`flex-1 p-6 ${['parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails'].includes(currentView) ? 'text-white' : ''}`}>
+          <main className={`flex-1 p-6 ${['shop-all', 'parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails', 'about-us'].includes(currentView) ? 'text-white' : ''}`}>
             {/* Search and Filters for applicable views */}
             {showSearchAndFilters && (
               <div className="space-y-4 mb-6">

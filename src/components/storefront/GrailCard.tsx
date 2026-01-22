@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Plus, X, Upload, Pencil, GripVertical } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { PublicInventoryItem } from '@/hooks/usePublicInventory';
+import { Button } from '@/components/ui/button';
+import { GripVertical, Upload, Plus, Pencil, X } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +14,8 @@ type SizePreset = 'auto' | 'portrait' | 'square' | 'wide' | 'tall';
 interface GrailCardProps {
   item: PublicInventoryItem | null;
   artImageUrl: string | null;
+  title?: string | null;
+  description?: string | null;
   position: number;
   size: 'small' | 'medium' | 'large';
   sizePreset?: SizePreset;
@@ -22,6 +24,7 @@ interface GrailCardProps {
   onArtUpload: () => void;
   onRemove: () => void;
   onSizeChange?: (size: SizePreset) => void;
+  onEditText?: () => void;
   onClick: () => void;
 }
 
@@ -36,6 +39,8 @@ const SIZE_PRESETS: { value: SizePreset; label: string; aspect?: string }[] = [
 export function GrailCard({
   item,
   artImageUrl,
+  title,
+  description,
   position,
   size,
   sizePreset = 'auto',
@@ -44,6 +49,7 @@ export function GrailCard({
   onArtUpload,
   onRemove,
   onSizeChange,
+  onEditText,
   onClick,
 }: GrailCardProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -124,8 +130,21 @@ export function GrailCard({
             </Button>
           </div>
 
-          {/* Art Upload & Remove - top right */}
+          {/* Art Upload, Edit Text & Remove - top right */}
           <div className="absolute top-2 right-2 flex gap-1 z-10">
+            {onEditText && (
+              <Button
+                size="icon"
+                variant="secondary"
+                className="h-7 w-7"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditText();
+                }}
+              >
+                <Pencil className="h-3 w-3" />
+              </Button>
+            )}
             <Button
               size="icon"
               variant="secondary"
@@ -135,7 +154,7 @@ export function GrailCard({
                 onArtUpload();
               }}
             >
-              {artImageUrl ? <Pencil className="h-3 w-3" /> : <Upload className="h-3 w-3" />}
+              {artImageUrl ? <Upload className="h-3 w-3" /> : <Upload className="h-3 w-3" />}
             </Button>
             <Button
               size="icon"

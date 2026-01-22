@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { GripVertical } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useState, useRef } from 'react';
 import { PublicInventoryItem } from '@/hooks/usePublicInventory';
+import { Button } from '@/components/ui/button';
+import { GripVertical, Upload, Pencil } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +15,9 @@ interface PersonalCollectionCardProps {
   item: PublicInventoryItem;
   isEditMode?: boolean;
   sizePreset?: SizePreset;
+  artImageUrl?: string | null;
   onSizeChange?: (size: SizePreset) => void;
+  onArtUpload?: (file: File) => void;
   onClick?: () => void;
 }
 
@@ -27,33 +29,55 @@ const SIZE_PRESETS: { value: SizePreset; label: string; aspect?: string }[] = [
   { value: 'tall', label: 'Tall', aspect: '2/3' },
 ];
 
-export function PersonalCollectionCard({ 
-  item, 
+export function PersonalCollectionCard({
+  item,
   isEditMode = false,
   sizePreset = 'auto',
+  artImageUrl,
   onSizeChange,
-  onClick 
+  onArtUpload,
+  onClick
 }: PersonalCollectionCardProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const firstImage = item.imageUrls?.[0] || item.imageUrl;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Display art image if available, otherwise use item's primary image
+  const displayImage = artImageUrl || item.imageUrls?.[0] || item.imageUrl;
 
   const currentPreset = SIZE_PRESETS.find(p => p.value === sizePreset) || SIZE_PRESETS[0];
   const aspectStyle = currentPreset.aspect ? { aspectRatio: currentPreset.aspect } : {};
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onArtUpload) {
+      onArtUpload(file);
+    }
+    e.target.value = '';
+  };
+
   return (
-    <div 
-      className="relative cursor-pointer overflow-hidden rounded-lg group break-inside-avoid"
+    <div
+      className="relative cursor-pointer overflow-hidden rounded-lg group break-inside-avoid mb-4"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={onClick}
     >
-      {/* Base Image - art style, no text overlays */}
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileSelect}
+        accept="image/*"
+        className="hidden"
+      />
+
+      {/* Image Container */}
       <div className="relative" style={aspectStyle}>
-        {firstImage ? (
-          <img 
-            src={firstImage} 
+        {displayImage ? (
+          <img
+            src={displayImage}
             alt={item.name}
-            className="w-full h-full object-cover transition-transform group-hover:scale-105"
+            className="w-full h-full object-cover"
             style={currentPreset.aspect ? {} : { height: 'auto' }}
           />
         ) : (
@@ -61,12 +85,25 @@ export function PersonalCollectionCard({
             No image
           </div>
         )}
+
+        {/* Hover Overlay - Wine red box with brand name (only for non-edit mode) */}
+        <div
+          className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
+            isHovered && !isEditMode ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <div className="bg-[#722F37]/90 px-6 py-3 rounded">
+            <span className="text-white font-serif text-lg tracking-wide">
+              {item.brand || item.name}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Edit Mode Controls */}
       {isEditMode && (
         <>
-          {/* Grip Handle */}
+          {/* Grip Handle - top left */}
           <div className="absolute top-2 left-2 z-10">
             <Button
               size="icon"
@@ -78,7 +115,25 @@ export function PersonalCollectionCard({
             </Button>
           </div>
 
-          {/* Size Preset Control */}
+          {/* Art Upload Button - top right */}
+          {onArtUpload && (
+            <div className="absolute top-2 right-2 z-10">
+              <Button
+                size="sm"
+                variant="secondary"
+                className="gap-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+              >
+                {artImageUrl ? <Pencil className="h-3 w-3" /> : <Upload className="h-3 w-3" />}
+                {artImageUrl ? 'Edit' : 'Upload'}
+              </Button>
+            </div>
+          )}
+
+          {/* Size Preset Control - bottom right corner */}
           {onSizeChange && (
             <div className="absolute bottom-2 right-2 z-10">
               <DropdownMenu>

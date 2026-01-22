@@ -175,31 +175,9 @@ export function ImageLightbox({ images, initialIndex, open, onClose }: ImageLigh
         </Button>
       </div>
 
-      {/* Navigation Arrows */}
-      {images.length > 1 && (
-        <>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12 z-10"
-            onClick={handlePrev}
-          >
-            <ChevronLeft className="h-8 w-8" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12 z-10"
-            onClick={handleNext}
-          >
-            <ChevronRight className="h-8 w-8" />
-          </Button>
-        </>
-      )}
-
-      {/* Image */}
+      {/* Image with Navigation Arrows Inside */}
       <div
-        className="max-w-[90vw] max-h-[90vh] overflow-hidden"
+        className="relative max-w-[90vw] max-h-[90vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
@@ -218,6 +196,28 @@ export function ImageLightbox({ images, initialIndex, open, onClose }: ImageLigh
           }}
           draggable={false}
         />
+        
+        {/* Navigation Arrows - Inside Image Container */}
+        {images.length > 1 && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12 z-10"
+              onClick={handlePrev}
+            >
+              <ChevronLeft className="h-8 w-8" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 h-12 w-12 z-10"
+              onClick={handleNext}
+            >
+              <ChevronRight className="h-8 w-8" />
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Image Counter */}

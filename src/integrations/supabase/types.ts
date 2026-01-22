@@ -217,6 +217,7 @@ export type Database = {
           brand: string | null
           brand_category: string | null
           category: Database["public"]["Enums"]["item_category"]
+          closet_art_url: string | null
           closet_display:
             | Database["public"]["Enums"]["closet_display_type"]
             | null
@@ -245,6 +246,7 @@ export type Database = {
           source_platform: string | null
           status: Database["public"]["Enums"]["item_status"]
           storefront_display_order: number | null
+          storefront_size_preset: string | null
           trade_cash_difference: number | null
           traded_for_item_id: string | null
           updated_at: string
@@ -256,6 +258,7 @@ export type Database = {
           brand?: string | null
           brand_category?: string | null
           category?: Database["public"]["Enums"]["item_category"]
+          closet_art_url?: string | null
           closet_display?:
             | Database["public"]["Enums"]["closet_display_type"]
             | null
@@ -284,6 +287,7 @@ export type Database = {
           source_platform?: string | null
           status?: Database["public"]["Enums"]["item_status"]
           storefront_display_order?: number | null
+          storefront_size_preset?: string | null
           trade_cash_difference?: number | null
           traded_for_item_id?: string | null
           updated_at?: string
@@ -295,6 +299,7 @@ export type Database = {
           brand?: string | null
           brand_category?: string | null
           category?: Database["public"]["Enums"]["item_category"]
+          closet_art_url?: string | null
           closet_display?:
             | Database["public"]["Enums"]["closet_display_type"]
             | null
@@ -323,6 +328,7 @@ export type Database = {
           source_platform?: string | null
           status?: Database["public"]["Enums"]["item_status"]
           storefront_display_order?: number | null
+          storefront_size_preset?: string | null
           trade_cash_difference?: number | null
           traded_for_item_id?: string | null
           updated_at?: string
@@ -382,28 +388,34 @@ export type Database = {
         Row: {
           art_image_url: string | null
           created_at: string
+          description: string | null
           id: string
           inventory_item_id: string | null
           position: number
           size_preset: string | null
+          title: string | null
           updated_at: string
         }
         Insert: {
           art_image_url?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           inventory_item_id?: string | null
           position: number
           size_preset?: string | null
+          title?: string | null
           updated_at?: string
         }
         Update: {
           art_image_url?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           inventory_item_id?: string | null
           position?: number
           size_preset?: string | null
+          title?: string | null
           updated_at?: string
         }
         Relationships: [
