@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AccessGate } from "@/components/auth/AccessGate";
-import { useCartSync } from "@/hooks/useCartSync";
 import Index from "./pages/Index";
 import Inventory from "./pages/Inventory";
 import PopUps from "./pages/PopUps";
@@ -15,13 +14,14 @@ import Analytics from "./pages/Analytics";
 import Tasks from "./pages/Tasks";
 import Content from "./pages/Content";
 import Storefront from "./pages/Storefront";
+import Shop from "./pages/Shop";
+import CheckoutSuccess from "./pages/CheckoutSuccess";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-function AppContent() {
-  useCartSync();
-  
+// Protected routes that require authentication
+function ProtectedRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Index />} />
@@ -44,11 +44,20 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <AccessGate>
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
-      </AccessGate>
+      <BrowserRouter>
+        <Routes>
+          {/* Public shop routes - no auth required */}
+          <Route path="/shop" element={<Shop />} />
+          <Route path="/shop/success" element={<CheckoutSuccess />} />
+          
+          {/* All other routes require authentication */}
+          <Route path="/*" element={
+            <AccessGate>
+              <ProtectedRoutes />
+            </AccessGate>
+          } />
+        </Routes>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
