@@ -12,6 +12,7 @@ import {
   Users,
   LogOut,
   Store,
+  Eraser,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -33,6 +34,7 @@ import { toast } from 'sonner';
 const navigation = [
   { title: 'Overview', url: '/', icon: LayoutDashboard },
   { title: 'Inventory', url: '/inventory', icon: Package },
+  { title: 'Image Tools', url: '/image-tools', icon: Eraser },
   { title: 'Storefront', url: '/storefront', icon: Store },
   { title: 'Pop Ups', url: '/pop-ups', icon: Ticket },
   { title: 'Contacts', url: '/contacts', icon: Users },
