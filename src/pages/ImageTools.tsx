@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useStorageImages } from '@/hooks/useStorageImages';
+import { useRemoveBgUsage } from '@/hooks/useRemoveBgUsage';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,8 +10,19 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Eraser, Download, RefreshCw, CheckCircle2, XCircle, Upload, ImageOff } from 'lucide-react';
+import { Eraser, Download, RefreshCw, CheckCircle2, XCircle, Upload, ImageOff, AlertTriangle } from 'lucide-react';
 import { BackgroundSelector, BackgroundOptions } from '@/components/imagetools/BackgroundSelector';
+import { UsageDisplay } from '@/components/imagetools/UsageDisplay';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface ProcessedImage {
   originalUrl: string;
@@ -20,6 +32,7 @@ interface ProcessedImage {
 
 export default function ImageTools() {
   const { images, isLoading, refetch } = useStorageImages('inventory-images', 'items');
+  const { data: usage, isLoading: usageLoading, invalidate: invalidateUsage } = useRemoveBgUsage();
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedCount, setProcessedCount] = useState(0);
@@ -27,6 +40,8 @@ export default function ImageTools() {
   const [results, setResults] = useState<ProcessedImage[]>([]);
   const [uploadedImages, setUploadedImages] = useState<{ url: string; file: File }[]>([]);
   const [backgroundOptions, setBackgroundOptions] = useState<BackgroundOptions>({ type: 'transparent' });
+  const [showLimitWarning, setShowLimitWarning] = useState(false);
+  const [pendingProcessCount, setPendingProcessCount] = useState(0);
 
   const toggleImageSelection = (url: string) => {
     setSelectedImages(prev => {
@@ -63,17 +78,30 @@ export default function ImageTools() {
     setUploadedImages(prev => [...prev, ...newImages]);
   };
 
-  const processImages = async () => {
-    const urlsToProcess = Array.from(selectedImages);
+  const processImages = async (limitToRemaining?: number) => {
+    let urlsToProcess = Array.from(selectedImages);
+    
+    if (limitToRemaining !== undefined) {
+      urlsToProcess = urlsToProcess.slice(0, limitToRemaining);
+    }
+
     if (urlsToProcess.length === 0) {
       toast.error('Please select at least one image');
       return;
     }
 
-    // Validate background image if using image type
-    if (backgroundOptions.type === 'image' && !backgroundOptions.imageUrl) {
-      toast.error('Please upload a background image first');
-      return;
+    // Check if we'll exceed the limit
+    if (usage && !limitToRemaining) {
+      const wouldExceed = usage.used + urlsToProcess.length > usage.limit;
+      if (wouldExceed && usage.remaining > 0) {
+        setPendingProcessCount(usage.remaining);
+        setShowLimitWarning(true);
+        return;
+      }
+      if (usage.remaining === 0) {
+        toast.error(`Monthly limit reached. Resets ${usage.resetDate}`);
+        return;
+      }
     }
 
     setIsProcessing(true);
@@ -87,7 +115,6 @@ export default function ImageTools() {
       
       for (const url of urlsToProcess) {
         if (url.startsWith('blob:')) {
-          // Find the uploaded file and upload to storage temporarily
           const uploadedImg = uploadedImages.find(i => i.url === url);
           if (uploadedImg) {
             const fileName = `temp-${Date.now()}-${uploadedImg.file.name}`;
@@ -111,28 +138,10 @@ export default function ImageTools() {
         }
       }
 
-      // Handle background image upload if using image type
-      let backgroundImageUrl: string | undefined;
-      if (backgroundOptions.type === 'image' && backgroundOptions.imageFile) {
-        const bgFileName = `bg-${Date.now()}-${backgroundOptions.imageFile.name}`;
-        const { error: bgError } = await supabase.storage
-          .from('inventory-images')
-          .upload(`temp/${bgFileName}`, backgroundOptions.imageFile);
-        
-        if (!bgError) {
-          const { data: { publicUrl } } = supabase.storage
-            .from('inventory-images')
-            .getPublicUrl(`temp/${bgFileName}`);
-          backgroundImageUrl = publicUrl;
-        }
-      }
-
       // Build background payload
       const backgroundPayload = backgroundOptions.type === 'transparent' 
         ? { type: 'transparent' as const }
-        : backgroundOptions.type === 'solid'
-        ? { type: 'solid' as const, color: backgroundOptions.color }
-        : { type: 'image' as const, imageUrl: backgroundImageUrl };
+        : { type: 'solid' as const, color: backgroundOptions.color };
 
       const { data, error } = await supabase.functions.invoke('remove-background', {
         body: { 
@@ -149,10 +158,23 @@ export default function ImageTools() {
       setProcessedCount(processableUrls.length);
 
       const successCount = (data.results || []).filter((r: ProcessedImage) => r.processedUrl).length;
+      
+      // Show skipped message if any
+      if (data.skipped) {
+        toast.warning(data.skipped);
+      }
+      
       toast.success(`Processed ${successCount} of ${processableUrls.length} images`);
-    } catch (error) {
+      
+      // Refresh usage data
+      invalidateUsage();
+    } catch (error: any) {
       console.error('Processing error:', error);
-      toast.error('Failed to process images');
+      if (error.message?.includes('Monthly limit reached')) {
+        toast.error('Monthly limit reached. Please wait until next month.');
+      } else {
+        toast.error('Failed to process images');
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -181,7 +203,6 @@ export default function ImageTools() {
       const result = successfulResults[i];
       if (result.processedUrl) {
         await downloadImage(result.processedUrl, `processed-${i + 1}.png`);
-        // Small delay between downloads
         await new Promise(r => setTimeout(r, 500));
       }
     }
@@ -191,23 +212,14 @@ export default function ImageTools() {
   const getProcessButtonText = () => {
     if (backgroundOptions.type === 'transparent') {
       return 'Remove Backgrounds';
-    } else if (backgroundOptions.type === 'solid') {
-      return `Apply ${backgroundOptions.color || 'Color'} Background`;
     } else {
-      return 'Apply Custom Background';
+      return `Apply ${backgroundOptions.color || 'Color'} Background`;
     }
   };
 
   const getResultBackground = () => {
     if (backgroundOptions.type === 'solid' && backgroundOptions.color) {
       return { backgroundColor: backgroundOptions.color };
-    }
-    if (backgroundOptions.type === 'image' && backgroundOptions.imageUrl) {
-      return { 
-        backgroundImage: `url(${backgroundOptions.imageUrl})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      };
     }
     // Transparent checkerboard
     return {
@@ -219,18 +231,25 @@ export default function ImageTools() {
 
   const allImages = [...images.map(i => ({ url: i.url, name: i.name })), ...uploadedImages.map(i => ({ url: i.url, name: i.file.name }))];
 
+  const isAtLimit = usage?.warning === 'at_limit';
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Eraser className="h-8 w-8" />
-            Image Tools
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Swap or remove backgrounds from your product photos in batch
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+              <Eraser className="h-8 w-8" />
+              Image Tools
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Swap or remove backgrounds from your product photos in batch
+            </p>
+          </div>
+          <div className="w-80">
+            <UsageDisplay usage={usage} isLoading={usageLoading} />
+          </div>
         </div>
 
         {/* Main Content */}
@@ -344,8 +363,8 @@ export default function ImageTools() {
             {/* Process Button */}
             <div className="space-y-4">
               <Button
-                onClick={processImages}
-                disabled={selectedImages.size === 0 || isProcessing}
+                onClick={() => processImages()}
+                disabled={selectedImages.size === 0 || isProcessing || isAtLimit}
                 className="w-full"
                 size="lg"
               >
@@ -353,6 +372,11 @@ export default function ImageTools() {
                   <>
                     <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                     Processing...
+                  </>
+                ) : isAtLimit ? (
+                  <>
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Monthly Limit Reached
                   </>
                 ) : (
                   <>
@@ -475,6 +499,39 @@ export default function ImageTools() {
           </Card>
         </div>
       </div>
+
+      {/* Credit Warning Dialog */}
+      <AlertDialog open={showLimitWarning} onOpenChange={setShowLimitWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Credit Warning
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>You're about to process {selectedImages.size} images.</p>
+              <p className="font-medium">
+                Current usage: {usage?.used}/{usage?.limit}
+              </p>
+              <p>
+                After processing: {(usage?.used || 0) + selectedImages.size}/{usage?.limit} ({selectedImages.size - pendingProcessCount} over limit)
+              </p>
+              <p className="text-sm">
+                Only the first {pendingProcessCount} images will be processed.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              setShowLimitWarning(false);
+              processImages(pendingProcessCount);
+            }}>
+              Process {pendingProcessCount} Images
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

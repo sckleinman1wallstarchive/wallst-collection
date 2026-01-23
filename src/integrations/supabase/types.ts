@@ -343,6 +343,30 @@ export type Database = {
           },
         ]
       }
+      removebg_usage: {
+        Row: {
+          count: number | null
+          created_at: string | null
+          id: string
+          month_year: string
+          updated_at: string | null
+        }
+        Insert: {
+          count?: number | null
+          created_at?: string | null
+          id?: string
+          month_year: string
+          updated_at?: string | null
+        }
+        Update: {
+          count?: number | null
+          created_at?: string | null
+          id?: string
+          month_year?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       storefront_brands: {
         Row: {
           art_image_url: string | null

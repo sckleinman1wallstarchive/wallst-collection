@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.authenticate-item]
 verify_jwt = false
+
+[functions.check-removebg-usage]
+verify_jwt = false

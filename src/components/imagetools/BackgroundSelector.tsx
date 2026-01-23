@@ -3,15 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { Upload, Check, ImageIcon } from 'lucide-react';
+import { Check } from 'lucide-react';
 
-export type BackgroundType = 'transparent' | 'solid' | 'image';
+export type BackgroundType = 'transparent' | 'solid';
 
 export interface BackgroundOptions {
   type: BackgroundType;
   color?: string;
-  imageUrl?: string;
-  imageFile?: File;
 }
 
 interface BackgroundSelectorProps {
@@ -47,22 +45,12 @@ export function BackgroundSelector({ value, onChange }: BackgroundSelectorProps)
       onChange({ type });
     } else if (type === 'solid') {
       onChange({ type, color: value.color || '#FFFFFF' });
-    } else {
-      onChange({ type, imageUrl: value.imageUrl, imageFile: value.imageFile });
     }
   };
 
   const handleColorChange = (hex: string) => {
     setCustomColor(hex);
     onChange({ type: 'solid', color: hex });
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      const url = URL.createObjectURL(file);
-      onChange({ type: 'image', imageUrl: url, imageFile: file });
-    }
   };
 
   const prominentColors = PRESET_COLORS.filter(c => c.prominent);
@@ -91,15 +79,6 @@ export function BackgroundSelector({ value, onChange }: BackgroundSelectorProps)
           className="flex-1"
         >
           Solid Color
-        </Button>
-        <Button
-          type="button"
-          variant={value.type === 'image' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => handleTypeChange('image')}
-          className="flex-1"
-        >
-          Custom Image
         </Button>
       </div>
 
@@ -206,55 +185,6 @@ export function BackgroundSelector({ value, onChange }: BackgroundSelectorProps)
               style={{ backgroundColor: value.color || '#FFFFFF' }}
             />
           </div>
-        </div>
-      )}
-
-      {/* Image Background Options */}
-      {value.type === 'image' && (
-        <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/30">
-          {value.imageUrl ? (
-            <div className="space-y-3">
-              <div className="relative aspect-video rounded-lg overflow-hidden border border-border">
-                <img
-                  src={value.imageUrl}
-                  alt="Background"
-                  className="w-full h-full object-cover"
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="absolute bottom-2 right-2"
-                  onClick={() => onChange({ type: 'image' })}
-                >
-                  Change
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground text-center">
-                This image will be used as the background for all processed images
-              </p>
-            </div>
-          ) : (
-            <label className="block cursor-pointer">
-              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-muted-foreground/50 transition-colors">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <span className="text-sm font-medium">Upload Background Image</span>
-                  <span className="text-xs text-muted-foreground">
-                    Click to select or drag and drop
-                  </span>
-                </div>
-              </div>
-            </label>
-          )}
         </div>
       )}
     </div>
