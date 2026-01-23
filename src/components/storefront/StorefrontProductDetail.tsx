@@ -44,15 +44,25 @@ export function StorefrontProductDetail({ item, open, onOpenChange, isEditMode =
   const isLoading = useShopCartStore(state => state.isLoading);
   const queryClient = useQueryClient();
 
-  // Reset state when item changes
+  // Reset ALL state when item changes - including lightbox
   useEffect(() => {
     if (item) {
       setCurrentImageIndex(0);
+      setLightboxOpen(false); // Reset lightbox state
       setEditedDescription(item.notes || '');
       setEditedSize(item.size || '');
       setEditedCategory(item.category || 'other');
+      setJustAdded(false);
     }
   }, [item]);
+
+  // Also reset lightbox when dialog closes
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setLightboxOpen(false);
+    }
+    onOpenChange(newOpen);
+  };
 
   if (!item) return null;
 
@@ -108,15 +118,15 @@ export function StorefrontProductDetail({ item, open, onOpenChange, isEditMode =
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-6xl max-h-[90vh] p-0 gap-0 overflow-hidden">
-          <div className="grid md:grid-cols-2 gap-0 max-h-[90vh]">
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="max-w-6xl h-[90vh] p-0 gap-0 overflow-hidden">
+          <div className="grid md:grid-cols-2 gap-0 h-full">
             {/* Image Gallery */}
-            <div className="relative bg-muted/20">
+            <div className="relative bg-muted/20 h-full flex flex-col">
               {images.length > 0 ? (
                 <>
                   <div 
-                    className="aspect-square relative overflow-hidden cursor-zoom-in group"
+                    className="flex-1 relative overflow-hidden cursor-zoom-in group"
                     onClick={handleImageClick}
                   >
                     <img
@@ -171,7 +181,7 @@ export function StorefrontProductDetail({ item, open, onOpenChange, isEditMode =
                   )}
                 </>
               ) : (
-                <div className="aspect-square flex items-center justify-center text-muted-foreground">
+                <div className="flex-1 flex items-center justify-center text-muted-foreground">
                   No image available
                 </div>
               )}

@@ -208,7 +208,7 @@ export default function Storefront() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
                 ) : filteredShopItems.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
                     {filteredShopItems.map((item) => (
                       <StorefrontProductCard 
                         key={item.id} 
@@ -244,7 +244,7 @@ export default function Storefront() {
 
             {/* Closet Selection View */}
             {currentView === 'closet-selection' && (
-              <ClosetSelection onSelectCloset={handleSelectCloset} />
+              <ClosetSelection onSelectCloset={handleSelectCloset} isEditMode={isEditMode} />
             )}
 
             {/* Parker's Closet View */}
@@ -333,16 +333,18 @@ export default function Storefront() {
         </SidebarInset>
       </div>
 
-      {/* Product Detail Dialog (for Shop All items) */}
+      {/* Product Detail Dialog (for Shop All items) - key forces remount on item change */}
       <StorefrontProductDetail 
+        key={selectedProduct?.id || 'none'}
         item={selectedProduct}
         open={!!selectedProduct}
         onOpenChange={(open) => !open && setSelectedProduct(null)}
         isEditMode={isEditMode}
       />
 
-      {/* Closet Item Detail Dialog (for Personal Collection items) */}
+      {/* Closet Item Detail Dialog (for Personal Collection items) - key forces remount on item change */}
       <ClosetItemDetail 
+        key={selectedClosetItem?.id || 'none'}
         item={selectedClosetItem}
         open={!!selectedClosetItem}
         onOpenChange={(open) => !open && setSelectedClosetItem(null)}
