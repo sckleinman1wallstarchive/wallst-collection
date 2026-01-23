@@ -11,9 +11,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
 import { supabase } from '@/integrations/supabase/client';
 import { useStorefrontGrails, GRAIL_POSITIONS } from '@/hooks/useStorefrontGrails';
-import { GrailCard } from './GrailCard';
+import { SortableGrailCard } from './SortableGrailCard';
 import { StorefrontProductDetail } from './StorefrontProductDetail';
 import { PublicInventoryItem } from '@/hooks/usePublicInventory';
 import { toast } from 'sonner';
@@ -26,7 +38,7 @@ interface CollectionGrailsViewProps {
 type SizePreset = 'auto' | 'portrait' | 'square' | 'wide' | 'tall';
 
 export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) {
-  const { grailsByPosition, isLoading, addGrail, removeGrail, uploadArtImage, updateGrailSize, updateGrailText } = useStorefrontGrails();
+  const { grailsByPosition, isLoading, addGrail, removeGrail, uploadArtImage, updateGrailSize, updateGrailText, reorderGrails } = useStorefrontGrails();
   const [showSelectDialog, setShowSelectDialog] = useState(false);
   const [showArtDialog, setShowArtDialog] = useState(false);
   const [showTextDialog, setShowTextDialog] = useState(false);
@@ -38,6 +50,10 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
 
   // Get all inventory items for selection
   const { data: allItems } = useQuery({
@@ -111,6 +127,18 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
     setEditDescription('');
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const fromPosition = parseInt(active.id as string);
+      const toPosition = parseInt(over.id as string);
+      reorderGrails([{ fromPosition, toPosition }]);
+    }
+  };
+
+  // Create sortable items list
+  const sortableItems = GRAIL_POSITIONS.map(({ position }) => position.toString());
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -118,6 +146,58 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
       </div>
     );
   }
+
+  const renderGrailCards = () => (
+    <div 
+      className="gap-4"
+      style={{
+        columnCount: 4,
+        columnGap: '1rem',
+      }}
+    >
+      {GRAIL_POSITIONS.map(({ position, size }) => {
+        const grail = grailsByPosition.get(position);
+        // Skip empty slots in non-edit mode
+        if (!grail?.item && !isEditMode) return null;
+        
+        return (
+          <div
+            key={position}
+            className="mb-4"
+            style={{ breakInside: 'avoid' }}
+          >
+            <SortableGrailCard
+              id={position.toString()}
+              item={grail?.item || null}
+              artImageUrl={grail?.art_image_url || null}
+              title={grail?.title || null}
+              description={grail?.description || null}
+              position={position}
+              size={size}
+              sizePreset={(grail?.size_preset as SizePreset) || 'auto'}
+              isEditMode={isEditMode}
+              onSelect={() => {
+                setSelectedPosition(position);
+                setShowSelectDialog(true);
+              }}
+              onArtUpload={() => {
+                setSelectedPosition(position);
+                setShowArtDialog(true);
+              }}
+              onRemove={() => handleRemoveGrail(position)}
+              onSizeChange={(newSize) => handleSizeChange(position, newSize)}
+              onEditText={() => handleOpenTextEdit(position)}
+              onClick={() => {
+                if (grail?.item) {
+                  setSelectedItem(grail.item);
+                }
+              }}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
 
   return (
     <div className="min-h-[80vh] bg-black -m-6 p-8">
@@ -132,54 +212,19 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
       </div>
 
       {/* True Masonry Gallery using CSS Columns with gaps */}
-      <div 
-        className="gap-4"
-        style={{
-          columnCount: 4,
-          columnGap: '1rem',
-        }}
-      >
-        {GRAIL_POSITIONS.map(({ position, size }) => {
-          const grail = grailsByPosition.get(position);
-          // Skip empty slots in non-edit mode
-          if (!grail?.item && !isEditMode) return null;
-          
-          return (
-            <div
-              key={position}
-              className="mb-4"
-              style={{ breakInside: 'avoid' }}
-            >
-              <GrailCard
-                item={grail?.item || null}
-                artImageUrl={grail?.art_image_url || null}
-                title={grail?.title || null}
-                description={grail?.description || null}
-                position={position}
-                size={size}
-                sizePreset={(grail?.size_preset as SizePreset) || 'auto'}
-                isEditMode={isEditMode}
-                onSelect={() => {
-                  setSelectedPosition(position);
-                  setShowSelectDialog(true);
-                }}
-                onArtUpload={() => {
-                  setSelectedPosition(position);
-                  setShowArtDialog(true);
-                }}
-                onRemove={() => handleRemoveGrail(position)}
-                onSizeChange={(newSize) => handleSizeChange(position, newSize)}
-                onEditText={() => handleOpenTextEdit(position)}
-                onClick={() => {
-                  if (grail?.item) {
-                    setSelectedItem(grail.item);
-                  }
-                }}
-              />
-            </div>
-          );
-        })}
-      </div>
+      {isEditMode ? (
+        <DndContext 
+          sensors={sensors} 
+          collisionDetection={closestCenter} 
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={sortableItems} strategy={rectSortingStrategy}>
+            {renderGrailCards()}
+          </SortableContext>
+        </DndContext>
+      ) : (
+        renderGrailCards()
+      )}
 
       {/* Select Item Dialog */}
       <Dialog open={showSelectDialog} onOpenChange={(open) => {

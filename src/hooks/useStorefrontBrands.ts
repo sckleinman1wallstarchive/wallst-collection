@@ -114,6 +114,24 @@ export function useStorefrontBrands() {
     },
   });
 
+  const reorderBrandsMutation = useMutation({
+    mutationFn: async (updates: { id: string; order: number }[]) => {
+      for (const { id, order } of updates) {
+        const { error } = await supabase
+          .from('storefront_brands')
+          .update({ display_order: order })
+          .eq('id', id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['storefront-brands'] });
+    },
+    onError: () => {
+      toast.error('Failed to reorder brands');
+    },
+  });
+
   const uploadArtImage = async (brandId: string, file: File) => {
     const fileExt = file.name.split('.').pop();
     const fileName = `brands/${brandId}-${Date.now()}.${fileExt}`;
@@ -138,6 +156,7 @@ export function useStorefrontBrands() {
     addBrand: addBrandMutation.mutate,
     updateBrand: updateBrandMutation.mutate,
     deleteBrand: deleteBrandMutation.mutate,
+    reorderBrands: reorderBrandsMutation.mutate,
     uploadArtImage,
   };
 }

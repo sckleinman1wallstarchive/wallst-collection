@@ -185,6 +185,41 @@ export function useStorefrontGrails() {
     },
   });
 
+  const reorderGrailsMutation = useMutation({
+    mutationFn: async (updates: { fromPosition: number; toPosition: number }[]) => {
+      // Swap positions in database
+      for (const { fromPosition, toPosition } of updates) {
+        // Get the grails at these positions
+        const fromGrail = grailsQuery.data?.find(g => g.position === fromPosition);
+        const toGrail = grailsQuery.data?.find(g => g.position === toPosition);
+        
+        if (fromGrail && toGrail) {
+          // Swap their positions
+          await supabase
+            .from('storefront_grails')
+            .update({ position: -1 } as any)
+            .eq('id', fromGrail.id);
+          
+          await supabase
+            .from('storefront_grails')
+            .update({ position: fromPosition } as any)
+            .eq('id', toGrail.id);
+            
+          await supabase
+            .from('storefront_grails')
+            .update({ position: toPosition } as any)
+            .eq('id', fromGrail.id);
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['storefront-grails'] });
+    },
+    onError: () => {
+      toast.error('Failed to reorder grails');
+    },
+  });
+
   const uploadArtImage = async (position: number, file: File) => {
     const fileExt = file.name.split('.').pop();
     const fileName = `grails/pos${position}-${Date.now()}.${fileExt}`;
@@ -217,5 +252,6 @@ export function useStorefrontGrails() {
     uploadArtImage,
     updateGrailSize: updateSizeMutation.mutate,
     updateGrailText: updateTextMutation.mutate,
+    reorderGrails: reorderGrailsMutation.mutate,
   };
 }

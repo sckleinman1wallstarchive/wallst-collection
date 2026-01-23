@@ -1,4 +1,6 @@
 import { useState, useRef } from 'react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { PublicInventoryItem } from '@/hooks/usePublicInventory';
 import { Button } from '@/components/ui/button';
 import { GripVertical, Upload, Pencil } from 'lucide-react';
@@ -41,6 +43,21 @@ export function PersonalCollectionCard({
   const [isHovered, setIsHovered] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id, disabled: !isEditMode });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
   // Display art image if available, otherwise use item's primary image
   const displayImage = artImageUrl || item.imageUrls?.[0] || item.imageUrl;
 
@@ -57,6 +74,8 @@ export function PersonalCollectionCard({
 
   return (
     <div
+      ref={setNodeRef}
+      style={style}
       className="relative cursor-pointer overflow-hidden rounded-lg group break-inside-avoid mb-4"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -103,12 +122,16 @@ export function PersonalCollectionCard({
       {/* Edit Mode Controls */}
       {isEditMode && (
         <>
-          {/* Grip Handle - top left */}
-          <div className="absolute top-2 left-2 z-10">
+          {/* Grip Handle - top left with drag listeners */}
+          <div 
+            className="absolute top-2 left-2 z-10"
+            {...attributes}
+            {...listeners}
+          >
             <Button
               size="icon"
               variant="secondary"
-              className="h-7 w-7 cursor-grab"
+              className="h-7 w-7 cursor-grab active:cursor-grabbing"
               onClick={(e) => e.stopPropagation()}
             >
               <GripVertical className="h-4 w-4" />
