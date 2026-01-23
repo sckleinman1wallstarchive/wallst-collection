@@ -5,14 +5,13 @@ import {
   Package,
   Target,
   BarChart3,
-  CheckSquare,
-  FileText,
   Calculator,
   Ticket,
   Users,
   LogOut,
   Store,
   Eraser,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -35,14 +34,13 @@ const navigation = [
   { title: 'Overview', url: '/', icon: LayoutDashboard },
   { title: 'Inventory', url: '/inventory', icon: Package },
   { title: 'Image Tools', url: '/image-tools', icon: Eraser },
+  { title: 'Authenticate', url: '/authenticate', icon: ShieldCheck },
   { title: 'Storefront', url: '/storefront', icon: Store },
   { title: 'Pop Ups', url: '/pop-ups', icon: Ticket },
   { title: 'Contacts', url: '/contacts', icon: Users },
   { title: 'Accounting', url: '/accounting', icon: Calculator },
   { title: 'Goals', url: '/goals', icon: Target },
   { title: 'Analytics', url: '/analytics', icon: BarChart3 },
-  { title: 'Tasks', url: '/tasks', icon: CheckSquare },
-  { title: 'Content', url: '/content', icon: FileText },
 ];
 
 export function AppSidebar() {
