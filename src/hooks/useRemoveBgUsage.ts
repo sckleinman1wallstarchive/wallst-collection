@@ -1,14 +1,25 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-export interface RemoveBgUsage {
+export interface KeyUsage {
+  id: string;
+  name: string;
   used: number;
   limit: number;
   remaining: number;
+  exhausted: boolean;
+}
+
+export interface RemoveBgUsage {
+  totalUsed: number;
+  totalLimit: number;
+  totalRemaining: number;
+  keys: KeyUsage[];
+  activeKey: string | null;
+  keyCount: number;
   monthYear: string;
   resetDate: string;
   warning: 'approaching_limit' | 'near_limit' | 'at_limit' | null;
-  lastUpdated: string | null;
 }
 
 export function useRemoveBgUsage() {
@@ -25,8 +36,8 @@ export function useRemoveBgUsage() {
       
       return data;
     },
-    staleTime: 1000 * 60, // 1 minute
-    refetchInterval: 1000 * 60 * 5, // Refetch every 5 minutes
+    staleTime: 1000 * 60,
+    refetchInterval: 1000 * 60 * 5,
   });
 
   const invalidate = () => {
@@ -35,6 +46,7 @@ export function useRemoveBgUsage() {
 
   return {
     ...query,
+    usage: query.data,
     invalidate,
   };
 }

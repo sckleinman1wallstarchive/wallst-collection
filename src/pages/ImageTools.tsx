@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { Eraser, Download, RefreshCw, CheckCircle2, XCircle, Upload, ImageOff, AlertTriangle } from 'lucide-react';
 import { BackgroundSelector, BackgroundOptions } from '@/components/imagetools/BackgroundSelector';
 import { UsageDisplay } from '@/components/imagetools/UsageDisplay';
+import { ApiKeyManager } from '@/components/imagetools/ApiKeyManager';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,7 +33,7 @@ interface ProcessedImage {
 
 export default function ImageTools() {
   const { images, isLoading, refetch } = useStorageImages('inventory-images', 'items');
-  const { data: usage, isLoading: usageLoading, invalidate: invalidateUsage } = useRemoveBgUsage();
+  const { usage, isLoading: usageLoading, invalidate: invalidateUsage } = useRemoveBgUsage();
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedCount, setProcessedCount] = useState(0);
@@ -92,14 +93,14 @@ export default function ImageTools() {
 
     // Check if we'll exceed the limit
     if (usage && !limitToRemaining) {
-      const wouldExceed = usage.used + urlsToProcess.length > usage.limit;
-      if (wouldExceed && usage.remaining > 0) {
-        setPendingProcessCount(usage.remaining);
+      const wouldExceed = usage.totalUsed + urlsToProcess.length > usage.totalLimit;
+      if (wouldExceed && usage.totalRemaining > 0) {
+        setPendingProcessCount(usage.totalRemaining);
         setShowLimitWarning(true);
         return;
       }
-      if (usage.remaining === 0) {
-        toast.error(`Monthly limit reached. Resets ${usage.resetDate}`);
+      if (usage.totalRemaining === 0) {
+        toast.error(`All keys exhausted. Resets ${usage.resetDate}`);
         return;
       }
     }
@@ -360,6 +361,8 @@ export default function ImageTools() {
               </CardContent>
             </Card>
 
+            {/* API Key Management */}
+            <ApiKeyManager />
             {/* Process Button */}
             <div className="space-y-4">
               <Button
@@ -511,10 +514,10 @@ export default function ImageTools() {
             <AlertDialogDescription className="space-y-2">
               <p>You're about to process {selectedImages.size} images.</p>
               <p className="font-medium">
-                Current usage: {usage?.used}/{usage?.limit}
+                Current usage: {usage?.totalUsed}/{usage?.totalLimit}
               </p>
               <p>
-                After processing: {(usage?.used || 0) + selectedImages.size}/{usage?.limit} ({selectedImages.size - pendingProcessCount} over limit)
+                After processing: {(usage?.totalUsed || 0) + selectedImages.size}/{usage?.totalLimit} ({selectedImages.size - pendingProcessCount} over limit)
               </p>
               <p className="text-sm">
                 Only the first {pendingProcessCount} images will be processed.
