@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useStorageImages } from '@/hooks/useStorageImages';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Eraser, Download, RefreshCw, CheckCircle2, XCircle, Upload, ImageOff } from 'lucide-react';
+import { BackgroundSelector, BackgroundOptions } from '@/components/imagetools/BackgroundSelector';
 
 interface ProcessedImage {
   originalUrl: string;
@@ -25,6 +26,7 @@ export default function ImageTools() {
   const [totalToProcess, setTotalToProcess] = useState(0);
   const [results, setResults] = useState<ProcessedImage[]>([]);
   const [uploadedImages, setUploadedImages] = useState<{ url: string; file: File }[]>([]);
+  const [backgroundOptions, setBackgroundOptions] = useState<BackgroundOptions>({ type: 'transparent' });
 
   const toggleImageSelection = (url: string) => {
     setSelectedImages(prev => {
@@ -68,6 +70,12 @@ export default function ImageTools() {
       return;
     }
 
+    // Validate background image if using image type
+    if (backgroundOptions.type === 'image' && !backgroundOptions.imageUrl) {
+      toast.error('Please upload a background image first');
+      return;
+    }
+
     setIsProcessing(true);
     setProcessedCount(0);
     setTotalToProcess(urlsToProcess.length);
@@ -103,8 +111,34 @@ export default function ImageTools() {
         }
       }
 
+      // Handle background image upload if using image type
+      let backgroundImageUrl: string | undefined;
+      if (backgroundOptions.type === 'image' && backgroundOptions.imageFile) {
+        const bgFileName = `bg-${Date.now()}-${backgroundOptions.imageFile.name}`;
+        const { error: bgError } = await supabase.storage
+          .from('inventory-images')
+          .upload(`temp/${bgFileName}`, backgroundOptions.imageFile);
+        
+        if (!bgError) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('inventory-images')
+            .getPublicUrl(`temp/${bgFileName}`);
+          backgroundImageUrl = publicUrl;
+        }
+      }
+
+      // Build background payload
+      const backgroundPayload = backgroundOptions.type === 'transparent' 
+        ? { type: 'transparent' as const }
+        : backgroundOptions.type === 'solid'
+        ? { type: 'solid' as const, color: backgroundOptions.color }
+        : { type: 'image' as const, imageUrl: backgroundImageUrl };
+
       const { data, error } = await supabase.functions.invoke('remove-background', {
-        body: { imageUrls: processableUrls },
+        body: { 
+          imageUrls: processableUrls,
+          background: backgroundPayload,
+        },
       });
 
       if (error) {
@@ -146,12 +180,41 @@ export default function ImageTools() {
     for (let i = 0; i < successfulResults.length; i++) {
       const result = successfulResults[i];
       if (result.processedUrl) {
-        await downloadImage(result.processedUrl, `no-bg-${i + 1}.png`);
+        await downloadImage(result.processedUrl, `processed-${i + 1}.png`);
         // Small delay between downloads
         await new Promise(r => setTimeout(r, 500));
       }
     }
     toast.success(`Downloaded ${successfulResults.length} images`);
+  };
+
+  const getProcessButtonText = () => {
+    if (backgroundOptions.type === 'transparent') {
+      return 'Remove Backgrounds';
+    } else if (backgroundOptions.type === 'solid') {
+      return `Apply ${backgroundOptions.color || 'Color'} Background`;
+    } else {
+      return 'Apply Custom Background';
+    }
+  };
+
+  const getResultBackground = () => {
+    if (backgroundOptions.type === 'solid' && backgroundOptions.color) {
+      return { backgroundColor: backgroundOptions.color };
+    }
+    if (backgroundOptions.type === 'image' && backgroundOptions.imageUrl) {
+      return { 
+        backgroundImage: `url(${backgroundOptions.imageUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      };
+    }
+    // Transparent checkerboard
+    return {
+      backgroundImage: 'linear-gradient(45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(-45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(var(--muted)) 75%), linear-gradient(-45deg, transparent 75%, hsl(var(--muted)) 75%)',
+      backgroundSize: '20px 20px',
+      backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+    };
   };
 
   const allImages = [...images.map(i => ({ url: i.url, name: i.name })), ...uploadedImages.map(i => ({ url: i.url, name: i.file.name }))];
@@ -166,116 +229,138 @@ export default function ImageTools() {
             Image Tools
           </h1>
           <p className="text-muted-foreground mt-1">
-            Remove backgrounds from your product photos in batch
+            Swap or remove backgrounds from your product photos in batch
           </p>
         </div>
 
         {/* Main Content */}
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Image Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Select Images</span>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={selectAll}>
-                    Select All
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={clearSelection}>
-                    Clear
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={refetch}>
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
+          {/* Left Column: Image Selection + Background Options */}
+          <div className="space-y-6">
+            {/* Image Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Select Images</span>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={selectAll}>
+                      Select All
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={clearSelection}>
+                      Clear
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={refetch}>
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardTitle>
+                <CardDescription>
+                  Choose images from your inventory or upload new ones
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Upload Zone */}
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center hover:border-muted-foreground/50 transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="image-upload"
+                  />
+                  <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                    <Upload className="h-8 w-8 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Click to upload or drag and drop
+                    </span>
+                  </label>
                 </div>
-              </CardTitle>
-              <CardDescription>
-                Choose images from your inventory or upload new ones
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Upload Zone */}
-              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center hover:border-muted-foreground/50 transition-colors">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  id="image-upload"
-                />
-                <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center gap-2">
-                  <Upload className="h-8 w-8 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    Click to upload or drag and drop
-                  </span>
-                </label>
-              </div>
 
-              {/* Image Grid */}
-              <ScrollArea className="h-[400px]">
-                {isLoading ? (
-                  <div className="grid grid-cols-4 gap-2">
-                    {Array.from({ length: 12 }).map((_, i) => (
-                      <Skeleton key={i} className="aspect-square rounded-md" />
-                    ))}
-                  </div>
-                ) : allImages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                    <ImageOff className="h-12 w-12 mb-2" />
-                    <p>No images found</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-4 gap-2">
-                    {allImages.map((image) => (
-                      <div
-                        key={image.url}
-                        className={`relative aspect-square rounded-md overflow-hidden cursor-pointer border-2 transition-all ${
-                          selectedImages.has(image.url)
-                            ? 'border-primary ring-2 ring-primary/20'
-                            : 'border-transparent hover:border-muted-foreground/50'
-                        }`}
-                        onClick={() => toggleImageSelection(image.url)}
-                      >
-                        <img
-                          src={image.url}
-                          alt={image.name}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute top-1 right-1">
-                          <Checkbox
-                            checked={selectedImages.has(image.url)}
-                            className="bg-background/80"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-
-              {/* Selection Info & Process Button */}
-              <div className="flex items-center justify-between pt-4 border-t">
-                <span className="text-sm text-muted-foreground">
-                  {selectedImages.size} images selected
-                </span>
-                <Button
-                  onClick={processImages}
-                  disabled={selectedImages.size === 0 || isProcessing}
-                >
-                  {isProcessing ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
+                {/* Image Grid */}
+                <ScrollArea className="h-[250px]">
+                  {isLoading ? (
+                    <div className="grid grid-cols-4 gap-2">
+                      {Array.from({ length: 12 }).map((_, i) => (
+                        <Skeleton key={i} className="aspect-square rounded-md" />
+                      ))}
+                    </div>
+                  ) : allImages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                      <ImageOff className="h-12 w-12 mb-2" />
+                      <p>No images found</p>
+                    </div>
                   ) : (
-                    <>
-                      <Eraser className="h-4 w-4 mr-2" />
-                      Remove Backgrounds
-                    </>
+                    <div className="grid grid-cols-4 gap-2">
+                      {allImages.map((image) => (
+                        <div
+                          key={image.url}
+                          className={`relative aspect-square rounded-md overflow-hidden cursor-pointer border-2 transition-all ${
+                            selectedImages.has(image.url)
+                              ? 'border-primary ring-2 ring-primary/20'
+                              : 'border-transparent hover:border-muted-foreground/50'
+                          }`}
+                          onClick={() => toggleImageSelection(image.url)}
+                        >
+                          <img
+                            src={image.url}
+                            alt={image.name}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute top-1 right-1">
+                            <Checkbox
+                              checked={selectedImages.has(image.url)}
+                              className="bg-background/80"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
-                </Button>
-              </div>
+                </ScrollArea>
+
+                <div className="text-sm text-muted-foreground text-center">
+                  {selectedImages.size} images selected
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Background Options */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Background</CardTitle>
+                <CardDescription>
+                  Choose what to replace the background with
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <BackgroundSelector 
+                  value={backgroundOptions} 
+                  onChange={setBackgroundOptions} 
+                />
+              </CardContent>
+            </Card>
+
+            {/* Process Button */}
+            <div className="space-y-4">
+              <Button
+                onClick={processImages}
+                disabled={selectedImages.size === 0 || isProcessing}
+                className="w-full"
+                size="lg"
+              >
+                {isProcessing ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Eraser className="h-4 w-4 mr-2" />
+                    {getProcessButtonText()}
+                  </>
+                )}
+              </Button>
 
               {/* Progress Bar */}
               {isProcessing && (
@@ -286,10 +371,10 @@ export default function ImageTools() {
                   </p>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Results */}
+          {/* Right Column: Results */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -306,7 +391,7 @@ export default function ImageTools() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[500px]">
+              <ScrollArea className="h-[600px]">
                 {results.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-12">
                     <Eraser className="h-12 w-12 mb-2 opacity-50" />
@@ -350,14 +435,10 @@ export default function ImageTools() {
 
                           {/* Processed */}
                           <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">No Background</p>
+                            <p className="text-xs text-muted-foreground">Processed</p>
                             <div 
                               className="aspect-square rounded-md overflow-hidden"
-                              style={{
-                                backgroundImage: 'linear-gradient(45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(-45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(var(--muted)) 75%), linear-gradient(-45deg, transparent 75%, hsl(var(--muted)) 75%)',
-                                backgroundSize: '20px 20px',
-                                backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
-                              }}
+                              style={getResultBackground()}
                             >
                               {result.processedUrl ? (
                                 <img
@@ -379,7 +460,7 @@ export default function ImageTools() {
                             variant="outline"
                             size="sm"
                             className="w-full"
-                            onClick={() => downloadImage(result.processedUrl!, `no-bg-${index + 1}.png`)}
+                            onClick={() => downloadImage(result.processedUrl!, `processed-${index + 1}.png`)}
                           >
                             <Download className="h-4 w-4 mr-2" />
                             Download

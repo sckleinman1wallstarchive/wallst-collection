@@ -5,8 +5,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface BackgroundOptions {
+  type: 'transparent' | 'solid' | 'image';
+  color?: string;        // Hex color for solid backgrounds
+  imageUrl?: string;     // URL for image backgrounds
+}
+
 interface RemoveBackgroundRequest {
   imageUrls: string[];
+  background?: BackgroundOptions;
+}
+
+function buildPrompt(background?: BackgroundOptions): string {
+  if (!background || background.type === 'transparent') {
+    return 'Remove the background from this image completely. Make the background fully transparent. Keep only the main subject/product with clean edges. Output a PNG with transparent background.';
+  }
+  
+  if (background.type === 'solid' && background.color) {
+    return `Remove the background from this image and replace it with a solid ${background.color} color background. Keep only the main subject/product with clean edges. The entire background should be exactly ${background.color} (hex color). Output the image with the new solid color background.`;
+  }
+  
+  if (background.type === 'image') {
+    return 'Remove the background from this image and replace it with the provided background image. Keep only the main subject/product with clean edges and composite it naturally onto the new background.';
+  }
+  
+  return 'Remove the background from this image completely. Make the background fully transparent. Keep only the main subject/product with clean edges. Output a PNG with transparent background.';
 }
 
 serve(async (req) => {
@@ -24,7 +47,7 @@ serve(async (req) => {
       );
     }
 
-    const { imageUrls }: RemoveBackgroundRequest = await req.json();
+    const { imageUrls, background }: RemoveBackgroundRequest = await req.json();
 
     if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
       return new Response(
@@ -32,6 +55,8 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const prompt = buildPrompt(background);
 
     // Process images in parallel (limit to 5 concurrent)
     const results: { originalUrl: string; processedUrl: string | null; error?: string }[] = [];
@@ -43,6 +68,30 @@ serve(async (req) => {
       const batchResults = await Promise.all(
         batch.map(async (imageUrl) => {
           try {
+            // Build content array based on background type
+            const contentArray: Array<{ type: string; text?: string; image_url?: { url: string } }> = [
+              {
+                type: 'text',
+                text: prompt,
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: imageUrl,
+                },
+              },
+            ];
+
+            // If using image background, add the background image to the request
+            if (background?.type === 'image' && background.imageUrl) {
+              contentArray.push({
+                type: 'image_url',
+                image_url: {
+                  url: background.imageUrl,
+                },
+              });
+            }
+
             const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
               method: 'POST',
               headers: {
@@ -54,18 +103,7 @@ serve(async (req) => {
                 messages: [
                   {
                     role: 'user',
-                    content: [
-                      {
-                        type: 'text',
-                        text: 'Remove the background from this image completely. Make the background fully transparent. Keep only the main subject/product with clean edges. Output a PNG with transparent background.',
-                      },
-                      {
-                        type: 'image_url',
-                        image_url: {
-                          url: imageUrl,
-                        },
-                      },
-                    ],
+                    content: contentArray,
                   },
                 ],
                 modalities: ['image', 'text'],
