@@ -38,10 +38,11 @@ interface CollectionGrailsViewProps {
 type SizePreset = 'auto' | 'portrait' | 'square' | 'wide' | 'tall';
 
 export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) {
-  const { grailsByPosition, isLoading, addGrail, removeGrail, uploadArtImage, updateGrailSize, updateGrailText, reorderGrails } = useStorefrontGrails();
+  const { grailsByPosition, isLoading, addGrail, removeGrail, uploadArtImage, updateGrailSize, updateGrailText, reorderGrails, markGrailSold } = useStorefrontGrails();
   const [showSelectDialog, setShowSelectDialog] = useState(false);
   const [showArtDialog, setShowArtDialog] = useState(false);
   const [showTextDialog, setShowTextDialog] = useState(false);
+  const [showSoldDialog, setShowSoldDialog] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
   const [selectedItemId, setSelectedItemId] = useState('');
   const [selectedItem, setSelectedItem] = useState<PublicInventoryItem | null>(null);
@@ -49,6 +50,7 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
   const [searchQuery, setSearchQuery] = useState('');
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [soldPrice, setSoldPrice] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
@@ -127,6 +129,31 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
     setEditDescription('');
   };
 
+  const handleOpenSoldDialog = (position: number) => {
+    const grail = grailsByPosition.get(position);
+    if (grail?.is_sold) {
+      // Toggle off - unmark as sold
+      markGrailSold({ position, isSold: false });
+    } else {
+      // Open dialog to enter price
+      setSelectedPosition(position);
+      setSoldPrice('');
+      setShowSoldDialog(true);
+    }
+  };
+
+  const handleConfirmSold = () => {
+    if (!selectedPosition) return;
+    markGrailSold({ 
+      position: selectedPosition, 
+      isSold: true, 
+      soldPrice: soldPrice ? parseFloat(soldPrice) : undefined 
+    });
+    setShowSoldDialog(false);
+    setSelectedPosition(null);
+    setSoldPrice('');
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
@@ -176,6 +203,8 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
               size={size}
               sizePreset={(grail?.size_preset as SizePreset) || 'auto'}
               isEditMode={isEditMode}
+              isSold={grail?.is_sold || false}
+              soldPrice={grail?.sold_price}
               onSelect={() => {
                 setSelectedPosition(position);
                 setShowSelectDialog(true);
@@ -187,6 +216,7 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
               onRemove={() => handleRemoveGrail(position)}
               onSizeChange={(newSize) => handleSizeChange(position, newSize)}
               onEditText={() => handleOpenTextEdit(position)}
+              onMarkSold={() => handleOpenSoldDialog(position)}
               onClick={() => {
                 if (grail?.item) {
                   setSelectedItem(grail.item);
@@ -349,6 +379,30 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
               <Button onClick={handleSaveText}>
                 Save
               </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sold Price Dialog */}
+      <Dialog open={showSoldDialog} onOpenChange={setShowSoldDialog}>
+        <DialogContent className="bg-card">
+          <DialogHeader>
+            <DialogTitle>Mark Grail as Sold</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Sale Price (optional)</Label>
+              <Input
+                type="number"
+                placeholder="Enter sale price..."
+                value={soldPrice}
+                onChange={(e) => setSoldPrice(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowSoldDialog(false)}>Cancel</Button>
+              <Button onClick={handleConfirmSold}>Mark as Sold</Button>
             </div>
           </div>
         </DialogContent>

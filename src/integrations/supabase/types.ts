@@ -391,8 +391,10 @@ export type Database = {
           description: string | null
           id: string
           inventory_item_id: string | null
+          is_sold: boolean | null
           position: number
           size_preset: string | null
+          sold_price: number | null
           title: string | null
           updated_at: string
         }
@@ -402,8 +404,10 @@ export type Database = {
           description?: string | null
           id?: string
           inventory_item_id?: string | null
+          is_sold?: boolean | null
           position: number
           size_preset?: string | null
+          sold_price?: number | null
           title?: string | null
           updated_at?: string
         }
@@ -413,8 +417,10 @@ export type Database = {
           description?: string | null
           id?: string
           inventory_item_id?: string | null
+          is_sold?: boolean | null
           position?: number
           size_preset?: string | null
+          sold_price?: number | null
           title?: string | null
           updated_at?: string
         }
