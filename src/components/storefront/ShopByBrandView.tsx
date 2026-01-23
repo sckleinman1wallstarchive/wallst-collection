@@ -9,8 +9,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
 import { useStorefrontBrands, StorefrontBrand } from '@/hooks/useStorefrontBrands';
-import { BrandShowcaseCard } from './BrandShowcaseCard';
+import { SortableBrandCard } from './SortableBrandCard';
 import { toast } from 'sonner';
 
 interface ShopByBrandViewProps {
@@ -21,15 +34,17 @@ interface ShopByBrandViewProps {
 type SizePreset = 'auto' | 'portrait' | 'square' | 'wide' | 'tall';
 
 export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewProps) {
-  const { brands, isLoading, addBrand, deleteBrand, uploadArtImage, updateBrand } = useStorefrontBrands();
+  const { brands, isLoading, addBrand, deleteBrand, uploadArtImage, updateBrand, reorderBrands } = useStorefrontBrands();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showArtDialog, setShowArtDialog] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<StorefrontBrand | null>(null);
   const [newBrandName, setNewBrandName] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [artFile, setArtFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const addArtInputRef = useRef<HTMLInputElement>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
 
   const handleAddBrand = async () => {
     if (!newBrandName.trim()) {
@@ -37,12 +52,10 @@ export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewPro
       return;
     }
     
-    // Add brand first
     addBrand({ brandName: newBrandName.trim() });
     
     setShowAddDialog(false);
     setNewBrandName('');
-    setArtFile(null);
   };
 
   const handleArtUpload = async (file: File) => {
@@ -62,6 +75,16 @@ export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewPro
 
   const handleSizeChange = (brandId: string, newSize: SizePreset) => {
     updateBrand({ id: brandId, updates: { size_preset: newSize } as any });
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = brands.findIndex(b => b.id === active.id);
+      const newIndex = brands.findIndex(b => b.id === over.id);
+      const newOrder = arrayMove(brands, oldIndex, newIndex);
+      reorderBrands(newOrder.map((b, i) => ({ id: b.id, order: i })));
+    }
   };
 
   if (isLoading) {
@@ -97,42 +120,67 @@ export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewPro
             {isEditMode ? 'Click "Add Brand" to start showcasing brands' : 'No brands added yet'}
           </p>
         </div>
+      ) : isEditMode ? (
+        <DndContext 
+          sensors={sensors} 
+          collisionDetection={closestCenter} 
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={brands.map(b => b.id)} strategy={rectSortingStrategy}>
+            <div className="columns-2 md:columns-3 gap-6">
+              {brands.map((brand) => (
+                <div key={brand.id} className="relative group break-inside-avoid mb-6">
+                  <SortableBrandCard
+                    id={brand.id}
+                    brandName={brand.brand_name}
+                    featuredImageUrl={brand.featured_image_url}
+                    artImageUrl={brand.art_image_url}
+                    isEditMode={isEditMode}
+                    sizePreset={(brand as any).size_preset || 'auto'}
+                    onArtUpload={() => {
+                      setSelectedBrand(brand);
+                      setShowArtDialog(true);
+                    }}
+                    onSizeChange={(size) => handleSizeChange(brand.id, size)}
+                    onClick={() => onBrandClick(brand.brand_name)}
+                  />
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteBrand(brand.id);
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       ) : (
         <div className="columns-2 md:columns-3 gap-6">
           {brands.map((brand) => (
             <div key={brand.id} className="relative group break-inside-avoid mb-6">
-              <BrandShowcaseCard
+              <SortableBrandCard
+                id={brand.id}
                 brandName={brand.brand_name}
                 featuredImageUrl={brand.featured_image_url}
                 artImageUrl={brand.art_image_url}
-                isEditMode={isEditMode}
+                isEditMode={false}
                 sizePreset={(brand as any).size_preset || 'auto'}
-                onArtUpload={() => {
-                  setSelectedBrand(brand);
-                  setShowArtDialog(true);
-                }}
-                onSizeChange={(size) => handleSizeChange(brand.id, size)}
+                onArtUpload={() => {}}
+                onSizeChange={() => {}}
                 onClick={() => onBrandClick(brand.brand_name)}
               />
-              {isEditMode && (
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteBrand(brand.id);
-                  }}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              )}
             </div>
           ))}
         </div>
       )}
 
-      {/* Add Brand Dialog - Simplified to just name + art */}
+      {/* Add Brand Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="bg-card">
           <DialogHeader>

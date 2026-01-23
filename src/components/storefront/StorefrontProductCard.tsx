@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ShoppingCart, GripVertical, Loader2 } from 'lucide-react';
+import { ShoppingCart, Loader2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -16,6 +16,7 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
+import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 
 interface StorefrontProductCardProps {
   item: PublicInventoryItem;
@@ -28,6 +29,7 @@ const CATEGORIES = ['footwear', 'tops', 'bottoms', 'outerwear', 'accessories', '
 export function StorefrontProductCard({ item, onClick, isEditMode = false }: StorefrontProductCardProps) {
   const addItem = useShopCartStore(state => state.addItem);
   const queryClient = useQueryClient();
+  const { ref, isVisible } = useScrollAnimation();
   
   const [editedDescription, setEditedDescription] = useState(item.notes || '');
   const [editedSize, setEditedSize] = useState(item.size || '');
@@ -73,27 +75,26 @@ export function StorefrontProductCard({ item, onClick, isEditMode = false }: Sto
   };
 
   return (
-    <div className="space-y-2">
+    <div 
+      ref={ref}
+      className={`space-y-2 transition-all duration-500 ease-out ${
+        isVisible 
+          ? 'opacity-100 translate-y-0' 
+          : 'opacity-0 translate-y-6'
+      }`}
+    >
       <Card 
         className="group cursor-pointer overflow-hidden transition-all hover:shadow-lg relative bg-card border-border"
         onClick={onClick}
       >
-        {isEditMode && (
-          <div 
-            className="absolute top-2 left-2 z-10 p-1.5 bg-secondary/90 rounded-md cursor-grab active:cursor-grabbing hover:bg-secondary"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <GripVertical className="h-4 w-4 text-secondary-foreground" />
-          </div>
-        )}
+        {/* Removed grip handle - Shop All items are auto-populated and not manually reorderable */}
 
         <div className="relative overflow-hidden">
           {firstImage ? (
             <img
               src={firstImage}
               alt={item.name}
-              className="w-full h-auto object-contain transition-transform group-hover:scale-105"
-              style={{ minHeight: '180px' }}
+              className="w-full aspect-square object-cover transition-transform group-hover:scale-105"
             />
           ) : (
             <div className="aspect-square flex items-center justify-center bg-muted text-muted-foreground">
