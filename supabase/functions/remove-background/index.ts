@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,9 +7,8 @@ const corsHeaders = {
 };
 
 interface BackgroundOptions {
-  type: 'transparent' | 'solid' | 'image';
-  color?: string;        // Hex color for solid backgrounds
-  imageUrl?: string;     // URL for image backgrounds
+  type: 'transparent' | 'solid';
+  color?: string;
 }
 
 interface RemoveBackgroundRequest {
@@ -16,36 +16,27 @@ interface RemoveBackgroundRequest {
   background?: BackgroundOptions;
 }
 
-function buildPrompt(background?: BackgroundOptions): string {
-  if (!background || background.type === 'transparent') {
-    return 'Remove the background from this image completely. Make the background fully transparent. Keep only the main subject/product with clean edges. Output a PNG with transparent background.';
-  }
-  
-  if (background.type === 'solid' && background.color) {
-    return `Remove the background from this image and replace it with a solid ${background.color} color background. Keep only the main subject/product with clean edges. The entire background should be exactly ${background.color} (hex color). Output the image with the new solid color background.`;
-  }
-  
-  if (background.type === 'image') {
-    return 'Remove the background from this image and replace it with the provided background image. Keep only the main subject/product with clean edges and composite it naturally onto the new background.';
-  }
-  
-  return 'Remove the background from this image completely. Make the background fully transparent. Keep only the main subject/product with clean edges. Output a PNG with transparent background.';
+function getCurrentMonthYear(): string {
+  return new Date().toISOString().slice(0, 7); // "2025-01"
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
+    const REMOVE_BG_API_KEY = Deno.env.get('REMOVE_BG_API_KEY');
+    if (!REMOVE_BG_API_KEY) {
       return new Response(
-        JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }),
+        JSON.stringify({ error: 'REMOVE_BG_API_KEY not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { imageUrls, background }: RemoveBackgroundRequest = await req.json();
 
@@ -56,101 +47,111 @@ serve(async (req) => {
       );
     }
 
-    const prompt = buildPrompt(background);
+    // Check current usage
+    const monthYear = getCurrentMonthYear();
+    const { data: usageData } = await supabase
+      .from('removebg_usage')
+      .select('count')
+      .eq('month_year', monthYear)
+      .single();
 
-    // Process images in parallel (limit to 5 concurrent)
-    const results: { originalUrl: string; processedUrl: string | null; error?: string }[] = [];
-    const batchSize = 5;
+    const currentUsage = usageData?.count || 0;
+    const limit = 50;
+    const remaining = limit - currentUsage;
 
-    for (let i = 0; i < imageUrls.length; i += batchSize) {
-      const batch = imageUrls.slice(i, i + batchSize);
-      
-      const batchResults = await Promise.all(
-        batch.map(async (imageUrl) => {
-          try {
-            // Build content array based on background type
-            const contentArray: Array<{ type: string; text?: string; image_url?: { url: string } }> = [
-              {
-                type: 'text',
-                text: prompt,
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: imageUrl,
-                },
-              },
-            ];
-
-            // If using image background, add the background image to the request
-            if (background?.type === 'image' && background.imageUrl) {
-              contentArray.push({
-                type: 'image_url',
-                image_url: {
-                  url: background.imageUrl,
-                },
-              });
-            }
-
-            const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                model: 'google/gemini-2.5-flash-image-preview',
-                messages: [
-                  {
-                    role: 'user',
-                    content: contentArray,
-                  },
-                ],
-                modalities: ['image', 'text'],
-              }),
-            });
-
-            if (!response.ok) {
-              const errorText = await response.text();
-              console.error('AI API error:', errorText);
-              return {
-                originalUrl: imageUrl,
-                processedUrl: null,
-                error: `AI processing failed: ${response.status}`,
-              };
-            }
-
-            const data = await response.json();
-            const processedImageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-            if (!processedImageUrl) {
-              return {
-                originalUrl: imageUrl,
-                processedUrl: null,
-                error: 'No processed image returned from AI',
-              };
-            }
-
-            return {
-              originalUrl: imageUrl,
-              processedUrl: processedImageUrl,
-            };
-          } catch (error) {
-            console.error('Error processing image:', imageUrl, error);
-            return {
-              originalUrl: imageUrl,
-              processedUrl: null,
-              error: error instanceof Error ? error.message : 'Unknown error',
-            };
-          }
-        })
+    if (remaining <= 0) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Monthly limit reached',
+          usage: { used: currentUsage, limit, remaining: 0 }
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
-
-      results.push(...batchResults);
     }
 
+    // Limit processing to remaining credits
+    const urlsToProcess = imageUrls.slice(0, remaining);
+    const skippedCount = imageUrls.length - urlsToProcess.length;
+
+    const results: { originalUrl: string; processedUrl: string | null; error?: string }[] = [];
+
+    // Process images sequentially to respect rate limits
+    for (const imageUrl of urlsToProcess) {
+      try {
+        const formData = new FormData();
+        formData.append('image_url', imageUrl);
+        formData.append('size', 'auto');
+        formData.append('format', 'png');
+
+        // Handle background options
+        if (background?.type === 'solid' && background.color) {
+          // Remove # from hex color
+          formData.append('bg_color', background.color.replace('#', ''));
+        }
+        // For transparent, we don't add bg_color (default behavior)
+
+        const response = await fetch('https://api.remove.bg/v1.0/removebg', {
+          method: 'POST',
+          headers: {
+            'X-Api-Key': REMOVE_BG_API_KEY,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('remove.bg API error:', response.status, errorData);
+          results.push({
+            originalUrl: imageUrl,
+            processedUrl: null,
+            error: errorData.errors?.[0]?.title || `API error: ${response.status}`,
+          });
+          continue;
+        }
+
+        // Get the image as base64
+        const imageBuffer = await response.arrayBuffer();
+        const base64 = btoa(
+          new Uint8Array(imageBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+        );
+        const dataUrl = `data:image/png;base64,${base64}`;
+
+        results.push({
+          originalUrl: imageUrl,
+          processedUrl: dataUrl,
+        });
+
+      } catch (error) {
+        console.error('Error processing image:', imageUrl, error);
+        results.push({
+          originalUrl: imageUrl,
+          processedUrl: null,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+
+    // Update final usage count
+    const successCount = results.filter(r => r.processedUrl).length;
+    const newUsage = currentUsage + successCount;
+
+    await supabase
+      .from('removebg_usage')
+      .upsert(
+        { month_year: monthYear, count: newUsage, updated_at: new Date().toISOString() },
+        { onConflict: 'month_year' }
+      );
+
     return new Response(
-      JSON.stringify({ results }),
+      JSON.stringify({ 
+        results,
+        usage: {
+          used: newUsage,
+          limit,
+          remaining: limit - newUsage,
+        },
+        skipped: skippedCount > 0 ? `${skippedCount} images skipped due to limit` : undefined,
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
