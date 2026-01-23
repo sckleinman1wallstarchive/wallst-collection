@@ -7,13 +7,12 @@ import { AccessGate } from "@/components/auth/AccessGate";
 import Index from "./pages/Index";
 import Inventory from "./pages/Inventory";
 import ImageTools from "./pages/ImageTools";
+import Authenticate from "./pages/Authenticate";
 import PopUps from "./pages/PopUps";
 import Contacts from "./pages/Contacts";
 import Accounting from "./pages/Accounting";
 import Goals from "./pages/Goals";
 import Analytics from "./pages/Analytics";
-import Tasks from "./pages/Tasks";
-import Content from "./pages/Content";
 import Storefront from "./pages/Storefront";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
 import NotFound from "./pages/NotFound";
@@ -27,13 +26,12 @@ function ProtectedRoutes() {
       <Route path="/" element={<Index />} />
       <Route path="/inventory" element={<Inventory />} />
       <Route path="/image-tools" element={<ImageTools />} />
+      <Route path="/authenticate" element={<Authenticate />} />
       <Route path="/pop-ups" element={<PopUps />} />
       <Route path="/contacts" element={<Contacts />} />
       <Route path="/accounting" element={<Accounting />} />
       <Route path="/goals" element={<Goals />} />
       <Route path="/analytics" element={<Analytics />} />
-      <Route path="/tasks" element={<Tasks />} />
-      <Route path="/content" element={<Content />} />
       <Route path="/storefront" element={<Storefront />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

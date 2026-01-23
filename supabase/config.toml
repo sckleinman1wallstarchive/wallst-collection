@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.remove-background]
 verify_jwt = false
+
+[functions.firecrawl-search]
+verify_jwt = false
+
+[functions.authenticate-item]
+verify_jwt = false
