@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 function getCurrentMonthYear(): string {
-  return new Date().toISOString().slice(0, 7); // "2025-01"
+  return new Date().toISOString().slice(0, 7);
 }
 
 function getResetDate(): string {
@@ -15,6 +15,8 @@ function getResetDate(): string {
   const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   return nextMonth.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
+
+const LIMIT_PER_KEY = 50;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -27,36 +29,76 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const monthYear = getCurrentMonthYear();
-    const limit = 50;
 
+    // Get all active API keys
+    const { data: apiKeys, error: keysError } = await supabase
+      .from('removebg_api_keys')
+      .select('id, key_name, priority, is_active')
+      .eq('is_active', true)
+      .order('priority', { ascending: true });
+
+    if (keysError) {
+      console.error('Error fetching API keys:', keysError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch API keys' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Get usage for all keys this month
     const { data: usageData } = await supabase
       .from('removebg_usage')
-      .select('count, updated_at')
-      .eq('month_year', monthYear)
-      .single();
+      .select('api_key_id, count')
+      .eq('month_year', monthYear);
 
-    const used = usageData?.count || 0;
-    const remaining = Math.max(0, limit - used);
+    const usageByKey: Record<string, number> = {};
+    if (usageData) {
+      for (const u of usageData) {
+        if (u.api_key_id) {
+          usageByKey[u.api_key_id] = u.count || 0;
+        }
+      }
+    }
 
-    // Determine warning level
+    // Build per-key stats
+    const keys = (apiKeys || []).map(k => ({
+      id: k.id,
+      name: k.key_name,
+      used: usageByKey[k.id] || 0,
+      limit: LIMIT_PER_KEY,
+      remaining: Math.max(0, LIMIT_PER_KEY - (usageByKey[k.id] || 0)),
+      exhausted: (usageByKey[k.id] || 0) >= LIMIT_PER_KEY
+    }));
+
+    // Calculate totals
+    const totalUsed = keys.reduce((sum, k) => sum + k.used, 0);
+    const totalLimit = keys.length * LIMIT_PER_KEY;
+    const totalRemaining = totalLimit - totalUsed;
+
+    // Find active key (first non-exhausted)
+    const activeKey = keys.find(k => !k.exhausted)?.name || null;
+
+    // Determine warning level based on total remaining
     let warning: 'approaching_limit' | 'near_limit' | 'at_limit' | null = null;
-    if (used >= limit) {
+    if (totalRemaining === 0) {
       warning = 'at_limit';
-    } else if (used >= 45) {
+    } else if (totalRemaining <= 5) {
       warning = 'near_limit';
-    } else if (used >= 40) {
+    } else if (totalRemaining <= 10) {
       warning = 'approaching_limit';
     }
 
     return new Response(
       JSON.stringify({
-        used,
-        limit,
-        remaining,
+        totalUsed,
+        totalLimit,
+        totalRemaining,
+        keys,
+        activeKey,
+        keyCount: keys.length,
         monthYear,
         resetDate: getResetDate(),
-        warning,
-        lastUpdated: usageData?.updated_at || null,
+        warning
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

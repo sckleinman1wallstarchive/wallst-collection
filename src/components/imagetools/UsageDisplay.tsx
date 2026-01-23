@@ -1,6 +1,5 @@
 import { RemoveBgUsage } from '@/hooks/useRemoveBgUsage';
-import { Progress } from '@/components/ui/progress';
-import { AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, XCircle, Key } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface UsageDisplayProps {
@@ -22,7 +21,7 @@ export function UsageDisplay({ usage, isLoading }: UsageDisplayProps) {
     return null;
   }
 
-  const percentage = (usage.used / usage.limit) * 100;
+  const percentage = usage.totalLimit > 0 ? (usage.totalUsed / usage.totalLimit) * 100 : 0;
 
   const getStatusColor = () => {
     if (usage.warning === 'at_limit') return 'text-destructive';
@@ -50,15 +49,15 @@ export function UsageDisplay({ usage, isLoading }: UsageDisplayProps) {
 
   const getMessage = () => {
     if (usage.warning === 'at_limit') {
-      return `Monthly limit reached. Resets ${usage.resetDate}`;
+      return `All keys exhausted. Resets ${usage.resetDate}`;
     }
     if (usage.warning === 'near_limit') {
-      return `Almost out! Only ${usage.remaining} left`;
+      return `Almost out! Only ${usage.totalRemaining} left`;
     }
     if (usage.warning === 'approaching_limit') {
-      return `Approaching limit: ${usage.remaining} remaining`;
+      return `Approaching limit: ${usage.totalRemaining} remaining`;
     }
-    return `${usage.remaining} credits remaining`;
+    return `${usage.totalRemaining} credits remaining`;
   };
 
   return (
@@ -72,10 +71,16 @@ export function UsageDisplay({ usage, isLoading }: UsageDisplayProps) {
       <div className="flex items-center gap-2 mb-2">
         {getIcon()}
         <div className="flex-1">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <span className={cn('text-sm font-medium', getStatusColor())}>
-              {usage.used}/{usage.limit} free credits used
+              {usage.totalUsed}/{usage.totalLimit} credits used
             </span>
+            {usage.keyCount > 0 && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Key className="h-3 w-3" />
+                {usage.keyCount} {usage.keyCount === 1 ? 'key' : 'keys'}
+              </span>
+            )}
           </div>
           <span className="text-xs text-muted-foreground">
             {getMessage()}

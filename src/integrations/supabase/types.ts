@@ -343,8 +343,39 @@ export type Database = {
           },
         ]
       }
+      removebg_api_keys: {
+        Row: {
+          api_key: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          key_name: string
+          priority: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          api_key: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key_name: string
+          priority?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          api_key?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key_name?: string
+          priority?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       removebg_usage: {
         Row: {
+          api_key_id: string | null
           count: number | null
           created_at: string | null
           id: string
@@ -352,6 +383,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          api_key_id?: string | null
           count?: number | null
           created_at?: string | null
           id?: string
@@ -359,13 +391,22 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          api_key_id?: string | null
           count?: number | null
           created_at?: string | null
           id?: string
           month_year?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "removebg_usage_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "removebg_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       storefront_brands: {
         Row: {
