@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ShoppingCart, Loader2 } from 'lucide-react';
+import { ShoppingCart, Loader2, GripVertical } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -17,6 +17,8 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface StorefrontProductCardProps {
   item: PublicInventoryItem;
@@ -29,12 +31,27 @@ const CATEGORIES = ['footwear', 'tops', 'bottoms', 'outerwear', 'accessories', '
 export function StorefrontProductCard({ item, onClick, isEditMode = false }: StorefrontProductCardProps) {
   const addItem = useShopCartStore(state => state.addItem);
   const queryClient = useQueryClient();
-  const { ref, isVisible } = useScrollAnimation();
+  const { ref: scrollRef, isVisible } = useScrollAnimation();
   
   const [editedDescription, setEditedDescription] = useState(item.notes || '');
   const [editedSize, setEditedSize] = useState(item.size || '');
   const [editedCategory, setEditedCategory] = useState(item.category || 'other');
   const [saving, setSaving] = useState(false);
+  
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id, disabled: !isEditMode });
+
+  const sortableStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
   
   const firstImage = item.imageUrls?.[0] || item.imageUrl;
   const price = item.askingPrice;
@@ -74,9 +91,18 @@ export function StorefrontProductCard({ item, onClick, isEditMode = false }: Sto
     }
   };
 
+  // Combine refs
+  const combinedRef = (node: HTMLDivElement | null) => {
+    setNodeRef(node);
+    if (scrollRef && typeof scrollRef === 'object' && 'current' in scrollRef) {
+      (scrollRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    }
+  };
+
   return (
     <div 
-      ref={ref}
+      ref={combinedRef}
+      style={sortableStyle}
       className={`space-y-2 transition-all duration-500 ease-out ${
         isVisible 
           ? 'opacity-100 translate-y-0' 
@@ -87,7 +113,23 @@ export function StorefrontProductCard({ item, onClick, isEditMode = false }: Sto
         className="group cursor-pointer overflow-hidden transition-all hover:shadow-lg relative bg-card border-border"
         onClick={onClick}
       >
-        {/* Removed grip handle - Shop All items are auto-populated and not manually reorderable */}
+        {/* Grip handle for edit mode */}
+        {isEditMode && (
+          <div 
+            className="absolute top-2 left-2 z-10"
+            {...attributes}
+            {...listeners}
+          >
+            <Button
+              size="icon"
+              variant="secondary"
+              className="h-7 w-7 cursor-grab active:cursor-grabbing"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <GripVertical className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
 
         <div className="relative overflow-hidden">
           {firstImage ? (

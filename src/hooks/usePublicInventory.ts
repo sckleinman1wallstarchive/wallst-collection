@@ -27,7 +27,7 @@ export function usePublicInventory() {
         .from('inventory_items')
         .select('id, name, brand, size, asking_price, image_url, image_urls, category, brand_category, status, closet_display, notes')
         .eq('status', 'for-sale')
-        .order('created_at', { ascending: false });
+        .order('storefront_display_order', { ascending: true });
 
       if (error) {
         console.error('Error fetching public inventory:', error);

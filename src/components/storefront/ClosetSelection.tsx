@@ -25,9 +25,6 @@ interface ClosetSelectionProps {
   isEditMode?: boolean;
 }
 
-// Wine-red color for hover overlay
-const WINE_RED_BG = 'rgba(114, 47, 55, 0.9)';
-
 interface ClosetArt {
   owner: string;
   art_image_url: string | null;
@@ -49,7 +46,6 @@ function SortableClosetCard({
   onSelectCloset: (closet: 'parker' | 'spencer') => void;
   onUploadClick: () => void;
 }) {
-  const [isHovered, setIsHovered] = useState(false);
   const hasArt = !!artUrl;
   const label = owner === 'parker' ? "PARKER'S" : "SPENCER'S";
 
@@ -73,8 +69,6 @@ function SortableClosetCard({
       ref={setNodeRef}
       style={style}
       className="group cursor-pointer overflow-hidden rounded-2xl border-0 transition-all duration-300 relative"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       onClick={() => !isEditMode && onSelectCloset(owner)}
     >
       <CardContent className="p-0">
@@ -88,46 +82,23 @@ function SortableClosetCard({
             />
           ) : (
             <div 
-              className="absolute inset-0"
+              className="absolute inset-0 transition-transform duration-300 group-hover:scale-105"
               style={{ backgroundColor: 'hsl(0, 45%, 22%)' }}
             />
           )}
 
-          {/* Hover Overlay - Wine red with white text (only when art exists) */}
-          {hasArt && (
-            <div
-              className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
-                isHovered ? 'opacity-100' : 'opacity-0'
-              }`}
-              style={{ backgroundColor: WINE_RED_BG }}
-            >
-              <div className="text-center">
-                <h3 className="text-2xl font-light tracking-[0.15em] mb-2 text-white">
-                  {label}
-                </h3>
-                <p className="text-lg tracking-[0.2em] text-white/80">
-                  CLOSET
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Default Text - Only visible when no art OR when not hovered */}
-          {!hasArt && (
-            <div className="relative z-10 text-center">
-              <h3 
-                className="text-2xl font-light tracking-[0.15em] mb-2 transition-colors duration-300 text-white"
-              >
-                {label}
-              </h3>
-              <p 
-                className="text-lg tracking-[0.2em] transition-colors duration-300 text-white/70"
-              >
-                CLOSET
-              </p>
-            </div>
-          )}
-
+          {/* Always visible centered text with strong shadow for readability */}
+          <div 
+            className="relative z-10 text-center"
+            style={{ textShadow: '0 2px 12px rgba(0,0,0,0.9), 0 4px 20px rgba(0,0,0,0.6)' }}
+          >
+            <h3 className="text-3xl font-light tracking-[0.2em] mb-2 text-white">
+              {label}
+            </h3>
+            <p className="text-xl tracking-[0.25em] text-white/90">
+              CLOSET
+            </p>
+          </div>
           {/* Edit Mode Controls */}
           {isEditMode && (
             <>

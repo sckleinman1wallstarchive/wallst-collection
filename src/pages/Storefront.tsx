@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Loader2, User, ShoppingBag, Pencil, Check } from 'lucide-react';
 import { usePublicInventory, useClosetInventory, PublicInventoryItem } from '@/hooks/usePublicInventory';
 import { StorefrontProductCard } from '@/components/storefront/StorefrontProductCard';
@@ -17,7 +17,20 @@ import { ShopCart } from '@/components/shop/ShopCart';
 import { Button } from '@/components/ui/button';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  rectSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
 
 export default function Storefront() {
   const [currentView, setCurrentView] = useState<StorefrontView | 'welcome'>('welcome');
@@ -26,6 +39,13 @@ export default function Storefront() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterState>({ sizes: [], brands: [], categories: [] });
   const [isEditMode, setIsEditMode] = useState(false);
+  const [localShopItems, setLocalShopItems] = useState<PublicInventoryItem[]>([]);
+  
+  const queryClient = useQueryClient();
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
   
   // Check if user is allowed (for edit mode)
   const { data: isAllowedUser } = useQuery({
@@ -104,6 +124,32 @@ export default function Storefront() {
   const filteredShopItems = useMemo(() => filterItems(shopItems), [shopItems, searchQuery, filters]);
   const filteredParkerItems = useMemo(() => filterItems(parkerItems), [parkerItems, searchQuery, filters]);
   const filteredSpencerItems = useMemo(() => filterItems(spencerItems), [spencerItems, searchQuery, filters]);
+
+  // Sync local shop items with filtered items
+  useEffect(() => {
+    if (filteredShopItems.length > 0) {
+      setLocalShopItems(filteredShopItems);
+    }
+  }, [filteredShopItems]);
+
+  const handleShopAllDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = localShopItems.findIndex(item => item.id === active.id);
+      const newIndex = localShopItems.findIndex(item => item.id === over.id);
+      const newOrder = arrayMove(localShopItems, oldIndex, newIndex);
+      setLocalShopItems(newOrder);
+      
+      // Persist to database
+      for (let i = 0; i < newOrder.length; i++) {
+        await supabase
+          .from('inventory_items')
+          .update({ storefront_display_order: i })
+          .eq('id', newOrder[i].id);
+      }
+      queryClient.invalidateQueries({ queryKey: ['public-inventory'] });
+    }
+  };
 
   const handleEnterShop = () => {
     setCurrentView('shop-all');
@@ -207,17 +253,34 @@ export default function Storefront() {
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
-                ) : filteredShopItems.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {filteredShopItems.map((item) => (
-                      <StorefrontProductCard 
-                        key={item.id} 
-                        item={item}
-                        isEditMode={isEditMode}
-                        onClick={() => setSelectedProduct(item)}
-                      />
-                    ))}
-                  </div>
+                ) : localShopItems.length > 0 ? (
+                  isEditMode ? (
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleShopAllDragEnd}>
+                      <SortableContext items={localShopItems.map(i => i.id)} strategy={rectSortingStrategy}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                          {localShopItems.map((item) => (
+                            <StorefrontProductCard 
+                              key={item.id} 
+                              item={item}
+                              isEditMode={isEditMode}
+                              onClick={() => setSelectedProduct(item)}
+                            />
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                      {filteredShopItems.map((item) => (
+                        <StorefrontProductCard 
+                          key={item.id} 
+                          item={item}
+                          isEditMode={false}
+                          onClick={() => setSelectedProduct(item)}
+                        />
+                      ))}
+                    </div>
+                  )
                 ) : (
                   <div className="text-center py-12">
                     <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

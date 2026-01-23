@@ -11,6 +11,8 @@ export interface StorefrontGrail {
   title: string | null;
   description: string | null;
   size_preset: string | null;
+  is_sold: boolean;
+  sold_price: number | null;
   created_at: string;
   updated_at: string;
   // Joined item data
@@ -185,6 +187,23 @@ export function useStorefrontGrails() {
     },
   });
 
+  const markSoldMutation = useMutation({
+    mutationFn: async ({ position, isSold, soldPrice }: { position: number; isSold: boolean; soldPrice?: number }) => {
+      const { error } = await supabase
+        .from('storefront_grails')
+        .update({ is_sold: isSold, sold_price: soldPrice || null } as any)
+        .eq('position', position);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['storefront-grails'] });
+      toast.success('Grail status updated');
+    },
+    onError: () => {
+      toast.error('Failed to update sold status');
+    },
+  });
+
   const reorderGrailsMutation = useMutation({
     mutationFn: async (updates: { fromPosition: number; toPosition: number }[]) => {
       // Swap positions in database
@@ -253,5 +272,6 @@ export function useStorefrontGrails() {
     updateGrailSize: updateSizeMutation.mutate,
     updateGrailText: updateTextMutation.mutate,
     reorderGrails: reorderGrailsMutation.mutate,
+    markGrailSold: markSoldMutation.mutate,
   };
 }

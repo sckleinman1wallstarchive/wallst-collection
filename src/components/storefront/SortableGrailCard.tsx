@@ -3,7 +3,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { PublicInventoryItem } from '@/hooks/usePublicInventory';
 import { Button } from '@/components/ui/button';
-import { GripVertical, Upload, Plus, Pencil, X } from 'lucide-react';
+import { GripVertical, Upload, Plus, Pencil, X, DollarSign } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,11 +23,14 @@ interface SortableGrailCardProps {
   size: 'small' | 'medium' | 'large';
   sizePreset?: SizePreset;
   isEditMode: boolean;
+  isSold?: boolean;
+  soldPrice?: number | null;
   onSelect: () => void;
   onArtUpload: () => void;
   onRemove: () => void;
   onSizeChange?: (size: SizePreset) => void;
   onEditText?: () => void;
+  onMarkSold?: () => void;
   onClick: () => void;
 }
 
@@ -49,11 +52,14 @@ export function SortableGrailCard({
   size,
   sizePreset = 'auto',
   isEditMode,
+  isSold = false,
+  soldPrice,
   onSelect,
   onArtUpload,
   onRemove,
   onSizeChange,
   onEditText,
+  onMarkSold,
   onClick,
 }: SortableGrailCardProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -136,6 +142,16 @@ export function SortableGrailCard({
         )}
       </div>
 
+      {/* Sold Overlay */}
+      {isSold && (
+        <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-10 pointer-events-none">
+          <span className="text-white text-xl font-bold tracking-wider">SOLD</span>
+          {soldPrice && (
+            <span className="text-white/80 text-lg mt-1">${soldPrice.toFixed(0)}</span>
+          )}
+        </div>
+      )}
+
       {/* Edit Mode Controls */}
       {isEditMode && (
         <>
@@ -155,8 +171,21 @@ export function SortableGrailCard({
             </Button>
           </div>
 
-          {/* Art Upload, Edit Text & Remove - top right */}
-          <div className="absolute top-2 right-2 flex gap-1 z-10">
+          {/* Art Upload, Edit Text, Mark Sold & Remove - top right */}
+          <div className="absolute top-2 right-2 flex gap-1 z-20">
+            {onMarkSold && (
+              <Button
+                size="icon"
+                variant={isSold ? 'default' : 'secondary'}
+                className="h-7 w-7"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMarkSold();
+                }}
+              >
+                <DollarSign className="h-3 w-3" />
+              </Button>
+            )}
             {onEditText && (
               <Button
                 size="icon"
