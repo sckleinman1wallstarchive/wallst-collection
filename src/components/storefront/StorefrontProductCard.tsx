@@ -87,15 +87,16 @@ export function StorefrontProductCard({ item, onClick, isEditMode = false }: Sto
           </div>
         )}
 
-        <div className="aspect-square relative overflow-hidden">
+        <div className="relative overflow-hidden">
           {firstImage ? (
             <img
               src={firstImage}
               alt={item.name}
-              className="w-full h-full object-cover transition-transform group-hover:scale-105"
+              className="w-full h-auto object-contain transition-transform group-hover:scale-105"
+              style={{ minHeight: '180px' }}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">
+            <div className="aspect-square flex items-center justify-center bg-muted text-muted-foreground">
               No image
             </div>
           )}
