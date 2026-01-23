@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.sync-to-shopify]
 verify_jwt = false
+
+[functions.remove-background]
+verify_jwt = false
