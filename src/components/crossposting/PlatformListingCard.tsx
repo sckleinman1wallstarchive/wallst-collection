@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Copy, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, Copy, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
+
+const PLATFORM_SELL_URLS: Record<string, string> = {
+  Grailed: 'https://www.grailed.com/sell',
+  Depop: 'https://www.depop.com/products/create/',
+  eBay: 'https://www.ebay.com/sl/sell',
+  Mercari: 'https://www.mercari.com/sell/',
+  Vinted: 'https://www.vinted.com/items/new',
+};
 
 export interface PlatformListing {
   platform: string;
@@ -29,15 +37,26 @@ export function PlatformListingCard({ listing, onUpdate }: PlatformListingCardPr
   const [copied, setCopied] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
 
-  const handleCopy = async () => {
-    const fullListing = `${listing.title}\n\n${listing.description}${
+  const getFullListing = () => {
+    return `${listing.title}\n\n${listing.description}${
       listing.hashtags?.length ? `\n\n${listing.hashtags.join(' ')}` : ''
     }`;
-    
-    await navigator.clipboard.writeText(fullListing);
+  };
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(getFullListing());
     setCopied(true);
     toast.success(`${listing.platform} listing copied!`);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCopyAndOpen = async () => {
+    await navigator.clipboard.writeText(getFullListing());
+    const sellUrl = PLATFORM_SELL_URLS[listing.platform];
+    if (sellUrl) {
+      window.open(sellUrl, '_blank');
+    }
+    toast.success(`${listing.platform} listing copied! Opening sell page...`);
   };
 
   const titleLength = listing.title.length;
@@ -60,6 +79,15 @@ export function PlatformListingCard({ listing, onUpdate }: PlatformListingCardPr
               <span className="text-sm text-muted-foreground">{listing.fee} fee</span>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleCopyAndOpen}
+                className="gap-1"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Copy & Open
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
