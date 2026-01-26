@@ -12,6 +12,7 @@ import {
   Store,
   Eraser,
   ShieldCheck,
+  Share2,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -34,6 +35,7 @@ const navigation = [
   { title: 'Overview', url: '/', icon: LayoutDashboard },
   { title: 'Inventory', url: '/inventory', icon: Package },
   { title: 'Image Tools', url: '/image-tools', icon: Eraser },
+  { title: 'Cross-Posting', url: '/cross-posting', icon: Share2 },
   { title: 'Authenticate', url: '/authenticate', icon: ShieldCheck },
   { title: 'Storefront', url: '/storefront', icon: Store },
   { title: 'Pop Ups', url: '/pop-ups', icon: Ticket },
