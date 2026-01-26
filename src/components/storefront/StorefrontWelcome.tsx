@@ -30,7 +30,7 @@ export function StorefrontWelcome({ onEnterShop }: StorefrontWelcomeProps) {
           onClick={onEnterShop}
           className="bg-[#f5f5f0] hover:bg-[#e5e5e0] text-[#1a1a1a] uppercase tracking-[0.2em] px-12 py-6 text-lg font-medium transition-all duration-300"
         >
-          Shop
+          Take a Tour
         </Button>
       </div>
     </div>

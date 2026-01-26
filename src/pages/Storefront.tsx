@@ -13,6 +13,8 @@ import { ShopByBrandView } from '@/components/storefront/ShopByBrandView';
 import { CollectionGrailsView } from '@/components/storefront/CollectionGrailsView';
 import { AboutUsGallery } from '@/components/storefront/AboutUsGallery';
 import { ClosetSelection } from '@/components/storefront/ClosetSelection';
+import { StorefrontLanding } from '@/components/storefront/StorefrontLanding';
+import { LandingNavView } from '@/components/storefront/StorefrontTopNav';
 import { ShopCart } from '@/components/shop/ShopCart';
 import { Button } from '@/components/ui/button';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
@@ -32,8 +34,10 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 
+type ExtendedView = StorefrontView | 'welcome' | 'landing';
+
 export default function Storefront() {
-  const [currentView, setCurrentView] = useState<StorefrontView | 'welcome'>('welcome');
+  const [currentView, setCurrentView] = useState<ExtendedView>('welcome');
   const [selectedProduct, setSelectedProduct] = useState<PublicInventoryItem | null>(null);
   const [selectedClosetItem, setSelectedClosetItem] = useState<PublicInventoryItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -152,7 +156,17 @@ export default function Storefront() {
   };
 
   const handleEnterShop = () => {
-    setCurrentView('shop-all');
+    setCurrentView('landing');
+  };
+
+  const handleLandingNavigate = (view: LandingNavView) => {
+    if (view === 'home') {
+      setCurrentView('landing');
+    } else {
+      setCurrentView(view as StorefrontView);
+    }
+    setSearchQuery('');
+    setFilters({ sizes: [], brands: [], categories: [] });
   };
 
   const handleNavigate = (view: StorefrontView) => {
@@ -175,6 +189,31 @@ export default function Storefront() {
     return <StorefrontWelcome onEnterShop={handleEnterShop} />;
   }
 
+  // Landing page (no sidebar)
+  if (currentView === 'landing') {
+    return (
+      <>
+        <StorefrontLanding
+          onNavigate={handleLandingNavigate}
+          onItemClick={(item) => setSelectedProduct(item)}
+          onBrandClick={handleBrandClick}
+          isEditMode={isEditMode}
+          onEditModeToggle={() => setIsEditMode(!isEditMode)}
+          showEditButton={!!isAllowedUser}
+        />
+        
+        {/* Product Detail Dialog */}
+        <StorefrontProductDetail 
+          key={selectedProduct?.id || 'none'}
+          item={selectedProduct}
+          open={!!selectedProduct}
+          onOpenChange={(open) => !open && setSelectedProduct(null)}
+          isEditMode={isEditMode}
+        />
+      </>
+    );
+  }
+
   const getViewTitle = () => {
     switch (currentView) {
       case 'shop-all': return 'Shop All';
@@ -189,6 +228,7 @@ export default function Storefront() {
   };
 
   const showSearchAndFilters = currentView === 'shop-all';
+  const isDarkView = ['shop-all', 'parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails', 'about-us'].includes(currentView);
 
   return (
     <SidebarProvider defaultOpen={false}>
@@ -197,11 +237,11 @@ export default function Storefront() {
           currentView={currentView as StorefrontView}
           onNavigate={handleNavigate}
         />
-        <SidebarInset className={['shop-all', 'parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails', 'about-us'].includes(currentView) ? 'bg-black' : ''}>
-          <header className={`flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4 ${['shop-all', 'parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails', 'about-us'].includes(currentView) ? 'border-white/10' : ''}`}>
+        <SidebarInset className={isDarkView ? 'bg-black' : ''}>
+          <header className={`flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4 ${isDarkView ? 'border-white/10' : ''}`}>
             <div className="flex items-center gap-2">
-              <SidebarTrigger className={`-ml-1 ${['shop-all', 'parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails', 'about-us'].includes(currentView) ? 'text-white' : ''}`} />
-              <span className={`text-lg font-medium tracking-wide ${['shop-all', 'parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails', 'about-us'].includes(currentView) ? 'text-white' : ''}`}>
+              <SidebarTrigger className={`-ml-1 ${isDarkView ? 'text-white' : ''}`} />
+              <span className={`text-lg font-medium tracking-wide ${isDarkView ? 'text-white' : ''}`}>
                 {getViewTitle()}
               </span>
             </div>
@@ -211,7 +251,7 @@ export default function Storefront() {
                   variant={isEditMode ? 'secondary' : 'ghost'}
                   size="sm"
                   onClick={() => setIsEditMode(!isEditMode)}
-                  className={`gap-1 ${['shop-all', 'parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails', 'about-us'].includes(currentView) && !isEditMode ? 'text-white hover:text-white hover:bg-white/10' : ''}`}
+                  className={`gap-1 ${isDarkView && !isEditMode ? 'text-white hover:text-white hover:bg-white/10' : ''}`}
                 >
                   {isEditMode ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
                   {isEditMode ? 'Done' : 'Edit'}
@@ -221,7 +261,7 @@ export default function Storefront() {
             </div>
           </header>
 
-          <main className={`flex-1 p-6 ${['shop-all', 'parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails', 'about-us'].includes(currentView) ? 'text-white' : ''}`}>
+          <main className={`flex-1 p-6 ${isDarkView ? 'text-white' : ''}`}>
             {/* Search and Filters for applicable views */}
             {showSearchAndFilters && (
               <div className="space-y-4 mb-6">
@@ -257,7 +297,7 @@ export default function Storefront() {
                   isEditMode ? (
                     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleShopAllDragEnd}>
                       <SortableContext items={localShopItems.map(i => i.id)} strategy={rectSortingStrategy}>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                           {localShopItems.map((item) => (
                             <StorefrontProductCard 
                               key={item.id} 
@@ -270,7 +310,7 @@ export default function Storefront() {
                       </SortableContext>
                     </DndContext>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                       {filteredShopItems.map((item) => (
                         <StorefrontProductCard 
                           key={item.id} 
@@ -405,9 +445,9 @@ export default function Storefront() {
         isEditMode={isEditMode}
       />
 
-      {/* Closet Item Detail Dialog (for Personal Collection items) - key forces remount on item change */}
-      <ClosetItemDetail 
-        key={selectedClosetItem?.id || 'none'}
+      {/* Closet Item Detail Dialog - key forces remount on item change */}
+      <ClosetItemDetail
+        key={selectedClosetItem?.id || 'closet-none'}
         item={selectedClosetItem}
         open={!!selectedClosetItem}
         onOpenChange={(open) => !open && setSelectedClosetItem(null)}
