@@ -1,6 +1,5 @@
 import { StorefrontTopNav, LandingNavView } from './StorefrontTopNav';
 import { HeroCarousel } from './HeroCarousel';
-import { CollectionPhotosScroll } from './CollectionPhotosScroll';
 import { NewArrivalsSection } from './NewArrivalsSection';
 import { AboutUsGallery } from './AboutUsGallery';
 import { PublicInventoryItem } from '@/hooks/usePublicInventory';
@@ -43,9 +42,6 @@ export function StorefrontLanding({
 
       {/* Hero Carousel */}
       <HeroCarousel onShopBrand={handleShopBrand} />
-
-      {/* Collection Photos Scroll */}
-      <CollectionPhotosScroll isEditMode={isEditMode} />
 
       {/* New Arrivals Section */}
       <NewArrivalsSection onViewAll={handleViewAll} onItemClick={onItemClick} />

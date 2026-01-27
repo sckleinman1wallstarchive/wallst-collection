@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Loader2, User, ShoppingBag, Pencil, Check } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Loader2, User, ShoppingBag } from 'lucide-react';
 import { usePublicInventory, useClosetInventory, PublicInventoryItem } from '@/hooks/usePublicInventory';
 import { StorefrontProductCard } from '@/components/storefront/StorefrontProductCard';
 import { StorefrontProductDetail } from '@/components/storefront/StorefrontProductDetail';
 import { PersonalCollectionCard } from '@/components/storefront/PersonalCollectionCard';
 import { ClosetItemDetail } from '@/components/storefront/ClosetItemDetail';
 import { StorefrontWelcome } from '@/components/storefront/StorefrontWelcome';
-import { StorefrontSidebar, StorefrontView } from '@/components/storefront/StorefrontSidebar';
+import { StorefrontTopNav, LandingNavView } from '@/components/storefront/StorefrontTopNav';
 import { StorefrontSearchBar } from '@/components/storefront/StorefrontSearchBar';
 import { StorefrontFilters, FilterState } from '@/components/storefront/StorefrontFilters';
 import { ShopByBrandView } from '@/components/storefront/ShopByBrandView';
@@ -14,10 +15,6 @@ import { CollectionGrailsView } from '@/components/storefront/CollectionGrailsVi
 import { AboutUsGallery } from '@/components/storefront/AboutUsGallery';
 import { ClosetSelection } from '@/components/storefront/ClosetSelection';
 import { StorefrontLanding } from '@/components/storefront/StorefrontLanding';
-import { LandingNavView } from '@/components/storefront/StorefrontTopNav';
-import { ShopCart } from '@/components/shop/ShopCart';
-import { Button } from '@/components/ui/button';
-import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -34,10 +31,11 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 
-type ExtendedView = StorefrontView | 'welcome' | 'landing';
+type StorefrontView = 'welcome' | 'home' | 'shop-all' | 'shop-by-brand' | 'collection-grails' | 'closet-selection' | 'parker-closet' | 'spencer-closet' | 'about-us';
 
 export default function Storefront() {
-  const [currentView, setCurrentView] = useState<ExtendedView>('welcome');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [currentView, setCurrentView] = useState<StorefrontView>('welcome');
   const [selectedProduct, setSelectedProduct] = useState<PublicInventoryItem | null>(null);
   const [selectedClosetItem, setSelectedClosetItem] = useState<PublicInventoryItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -75,6 +73,31 @@ export default function Storefront() {
   const { data: parkerItems, isLoading: parkerLoading } = useClosetInventory('parker');
   const { data: spencerItems, isLoading: spencerLoading } = useClosetInventory('spencer');
 
+  // Handle URL parameters for direct item links
+  useEffect(() => {
+    const itemId = searchParams.get('item');
+    if (itemId && shopItems) {
+      const item = shopItems.find(i => i.id === itemId);
+      if (item) {
+        setSelectedProduct(item);
+        if (currentView === 'welcome') {
+          setCurrentView('home');
+        }
+      }
+    }
+  }, [searchParams, shopItems, currentView]);
+
+  // Update URL when item is selected/deselected
+  const handleProductSelect = (item: PublicInventoryItem | null) => {
+    setSelectedProduct(item);
+    if (item) {
+      setSearchParams({ item: item.id });
+    } else {
+      searchParams.delete('item');
+      setSearchParams(searchParams);
+    }
+  };
+
   // Get available sizes and brands for filters
   const availableSizes = useMemo(() => {
     const sizes = new Set<string>();
@@ -96,7 +119,6 @@ export default function Storefront() {
   const filterItems = (items: PublicInventoryItem[] | undefined) => {
     if (!items) return [];
     return items.filter((item) => {
-      // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesSearch = 
@@ -106,17 +128,14 @@ export default function Storefront() {
         if (!matchesSearch) return false;
       }
 
-      // Size filter
       if (filters.sizes.length > 0 && (!item.size || !filters.sizes.includes(item.size))) {
         return false;
       }
 
-      // Brand filter
       if (filters.brands.length > 0 && (!item.brand || !filters.brands.includes(item.brand))) {
         return false;
       }
 
-      // Category filter
       if (filters.categories.length > 0 && !filters.categories.includes(item.category)) {
         return false;
       }
@@ -144,7 +163,6 @@ export default function Storefront() {
       const newOrder = arrayMove(localShopItems, oldIndex, newIndex);
       setLocalShopItems(newOrder);
       
-      // Persist to database
       for (let i = 0; i < newOrder.length; i++) {
         await supabase
           .from('inventory_items')
@@ -156,21 +174,15 @@ export default function Storefront() {
   };
 
   const handleEnterShop = () => {
-    setCurrentView('landing');
+    setCurrentView('home');
   };
 
-  const handleLandingNavigate = (view: LandingNavView) => {
+  const handleNavigate = (view: LandingNavView) => {
     if (view === 'home') {
-      setCurrentView('landing');
+      setCurrentView('home');
     } else {
       setCurrentView(view as StorefrontView);
     }
-    setSearchQuery('');
-    setFilters({ sizes: [], brands: [], categories: [] });
-  };
-
-  const handleNavigate = (view: StorefrontView) => {
-    setCurrentView(view);
     setSearchQuery('');
     setFilters({ sizes: [], brands: [], categories: [] });
   };
@@ -189,25 +201,24 @@ export default function Storefront() {
     return <StorefrontWelcome onEnterShop={handleEnterShop} />;
   }
 
-  // Landing page (no sidebar)
-  if (currentView === 'landing') {
+  // Landing page
+  if (currentView === 'home') {
     return (
       <>
         <StorefrontLanding
-          onNavigate={handleLandingNavigate}
-          onItemClick={(item) => setSelectedProduct(item)}
+          onNavigate={handleNavigate}
+          onItemClick={(item) => handleProductSelect(item)}
           onBrandClick={handleBrandClick}
           isEditMode={isEditMode}
           onEditModeToggle={() => setIsEditMode(!isEditMode)}
           showEditButton={!!isAllowedUser}
         />
         
-        {/* Product Detail Dialog */}
         <StorefrontProductDetail 
           key={selectedProduct?.id || 'none'}
           item={selectedProduct}
           open={!!selectedProduct}
-          onOpenChange={(open) => !open && setSelectedProduct(null)}
+          onOpenChange={(open) => !open && handleProductSelect(null)}
           isEditMode={isEditMode}
         />
       </>
@@ -228,230 +239,207 @@ export default function Storefront() {
   };
 
   const showSearchAndFilters = currentView === 'shop-all';
-  const isDarkView = ['shop-all', 'parker-closet', 'spencer-closet', 'closet-selection', 'shop-by-brand', 'collection-grails', 'about-us'].includes(currentView);
 
   return (
-    <SidebarProvider defaultOpen={false}>
-      <div className="min-h-screen flex w-full group/sidebar-wrapper">
-        <StorefrontSidebar 
-          currentView={currentView as StorefrontView}
-          onNavigate={handleNavigate}
-        />
-        <SidebarInset className={isDarkView ? 'bg-black' : ''}>
-          <header className={`flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4 ${isDarkView ? 'border-white/10' : ''}`}>
-            <div className="flex items-center gap-2">
-              <SidebarTrigger className={`-ml-1 ${isDarkView ? 'text-white' : ''}`} />
-              <span className={`text-lg font-medium tracking-wide ${isDarkView ? 'text-white' : ''}`}>
-                {getViewTitle()}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              {isAllowedUser && (
-                <Button
-                  variant={isEditMode ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setIsEditMode(!isEditMode)}
-                  className={`gap-1 ${isDarkView && !isEditMode ? 'text-white hover:text-white hover:bg-white/10' : ''}`}
-                >
-                  {isEditMode ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                  {isEditMode ? 'Done' : 'Edit'}
-                </Button>
-              )}
-              {currentView === 'shop-all' && <ShopCart />}
-            </div>
-          </header>
+    <div className="min-h-screen bg-black">
+      {/* Top Navigation - visible on all views */}
+      <StorefrontTopNav
+        currentView={currentView === 'parker-closet' || currentView === 'spencer-closet' || currentView === 'closet-selection' || currentView === 'about-us' ? 'home' : currentView as LandingNavView}
+        onNavigate={handleNavigate}
+        isEditMode={isEditMode}
+        onEditModeToggle={() => setIsEditMode(!isEditMode)}
+        showEditButton={!!isAllowedUser}
+      />
 
-          <main className={`flex-1 p-6 ${isDarkView ? 'text-white' : ''}`}>
-            {/* Search and Filters for applicable views */}
-            {showSearchAndFilters && (
-              <div className="space-y-4 mb-6">
-                <StorefrontSearchBar
-                  value={searchQuery}
-                  onChange={setSearchQuery}
-                  placeholder="Search by name, brand, or size..."
-                />
-                <StorefrontFilters
-                  filters={filters}
-                  onChange={setFilters}
-                  availableSizes={availableSizes}
-                  availableBrands={availableBrands}
-                />
+      <main className="flex-1 p-6 text-white">
+        {/* View Title */}
+        <div className="max-w-7xl mx-auto mb-6">
+          <h2 className="text-2xl font-light tracking-wide">{getViewTitle()}</h2>
+        </div>
+
+        {/* Search and Filters for Shop All */}
+        {showSearchAndFilters && (
+          <div className="max-w-7xl mx-auto space-y-4 mb-6">
+            <StorefrontSearchBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Search by name, brand, or size..."
+            />
+            <StorefrontFilters
+              filters={filters}
+              onChange={setFilters}
+              availableSizes={availableSizes}
+              availableBrands={availableBrands}
+            />
+          </div>
+        )}
+
+        {/* Shop All View */}
+        {currentView === 'shop-all' && (
+          <div className="max-w-7xl mx-auto space-y-6">
+            <p className="text-white/60 text-sm">
+              {filteredShopItems.length} items available
+            </p>
+
+            {shopLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-white/50" />
               </div>
-            )}
-
-            {/* Shop All View */}
-            {currentView === 'shop-all' && (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-2xl font-light tracking-wide">Shop All</h2>
-                  <p className="text-muted-foreground text-sm">
-                    {filteredShopItems.length} items available
-                  </p>
-                </div>
-
-                {shopLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                  </div>
-                ) : localShopItems.length > 0 ? (
-                  isEditMode ? (
-                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleShopAllDragEnd}>
-                      <SortableContext items={localShopItems.map(i => i.id)} strategy={rectSortingStrategy}>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                          {localShopItems.map((item) => (
-                            <StorefrontProductCard 
-                              key={item.id} 
-                              item={item}
-                              isEditMode={isEditMode}
-                              onClick={() => setSelectedProduct(item)}
-                            />
-                          ))}
-                        </div>
-                      </SortableContext>
-                    </DndContext>
-                  ) : (
+            ) : localShopItems.length > 0 ? (
+              isEditMode ? (
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleShopAllDragEnd}>
+                  <SortableContext items={localShopItems.map(i => i.id)} strategy={rectSortingStrategy}>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                      {filteredShopItems.map((item) => (
+                      {localShopItems.map((item) => (
                         <StorefrontProductCard 
                           key={item.id} 
                           item={item}
-                          isEditMode={false}
-                          onClick={() => setSelectedProduct(item)}
+                          isEditMode={isEditMode}
+                          onClick={() => handleProductSelect(item)}
                         />
                       ))}
                     </div>
-                  )
-                ) : (
-                  <div className="text-center py-12">
-                    <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">No products found</h3>
-                    <p className="text-muted-foreground">
-                      {searchQuery || filters.sizes.length || filters.brands.length || filters.categories.length
-                        ? 'Try adjusting your search or filters.'
-                        : 'Items marked as "For Sale" will appear here.'}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Shop by Brand View */}
-            {currentView === 'shop-by-brand' && (
-              <ShopByBrandView isEditMode={isEditMode} onBrandClick={handleBrandClick} />
-            )}
-
-            {/* Collection Grails View */}
-            {currentView === 'collection-grails' && (
-              <CollectionGrailsView isEditMode={isEditMode} />
-            )}
-
-            {/* Closet Selection View */}
-            {currentView === 'closet-selection' && (
-              <ClosetSelection onSelectCloset={handleSelectCloset} isEditMode={isEditMode} />
-            )}
-
-            {/* Parker's Closet View */}
-            {currentView === 'parker-closet' && (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-2xl font-light tracking-wide">Parker's Closet</h2>
-                  <p className="text-muted-foreground text-sm">
-                    {filteredParkerItems.length} items in collection
-                  </p>
+                  </SortableContext>
+                </DndContext>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {filteredShopItems.map((item) => (
+                    <StorefrontProductCard 
+                      key={item.id} 
+                      item={item}
+                      isEditMode={false}
+                      onClick={() => handleProductSelect(item)}
+                    />
+                  ))}
                 </div>
-
-                {parkerLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                  </div>
-                ) : filteredParkerItems.length > 0 ? (
-                  <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
-                    {filteredParkerItems.map((item) => (
-                      <PersonalCollectionCard 
-                        key={item.id} 
-                        item={item}
-                        isEditMode={isEditMode}
-                        onClick={() => setSelectedClosetItem(item)}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">No items found</h3>
-                    <p className="text-muted-foreground">
-                      {searchQuery || filters.sizes.length || filters.brands.length || filters.categories.length
-                        ? 'Try adjusting your search or filters.'
-                        : 'Items marked as "In Closet - Parker" will appear here.'}
-                    </p>
-                  </div>
-                )}
+              )
+            ) : (
+              <div className="text-center py-12">
+                <ShoppingBag className="h-12 w-12 text-white/50 mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No products found</h3>
+                <p className="text-white/60">
+                  {searchQuery || filters.sizes.length || filters.brands.length || filters.categories.length
+                    ? 'Try adjusting your search or filters.'
+                    : 'Items marked as "For Sale" will appear here.'}
+                </p>
               </div>
             )}
+          </div>
+        )}
 
-            {/* Spencer's Closet View */}
-            {currentView === 'spencer-closet' && (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-2xl font-light tracking-wide">Spencer's Closet</h2>
-                  <p className="text-muted-foreground text-sm">
-                    {filteredSpencerItems.length} items in collection
-                  </p>
-                </div>
+        {/* Shop by Brand View */}
+        {currentView === 'shop-by-brand' && (
+          <div className="max-w-7xl mx-auto">
+            <ShopByBrandView isEditMode={isEditMode} onBrandClick={handleBrandClick} />
+          </div>
+        )}
 
-                {spencerLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                  </div>
-                ) : filteredSpencerItems.length > 0 ? (
-                  <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
-                    {filteredSpencerItems.map((item) => (
-                      <PersonalCollectionCard 
-                        key={item.id} 
-                        item={item}
-                        isEditMode={isEditMode}
-                        onClick={() => setSelectedClosetItem(item)}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">No items found</h3>
-                    <p className="text-muted-foreground">
-                      {searchQuery || filters.sizes.length || filters.brands.length || filters.categories.length
-                        ? 'Try adjusting your search or filters.'
-                        : 'Items marked as "In Closet - Spencer" will appear here.'}
-                    </p>
-                  </div>
-                )}
+        {/* Collection Grails View */}
+        {currentView === 'collection-grails' && (
+          <div className="max-w-7xl mx-auto">
+            <CollectionGrailsView isEditMode={isEditMode} />
+          </div>
+        )}
+
+        {/* Closet Selection View */}
+        {currentView === 'closet-selection' && (
+          <div className="max-w-7xl mx-auto">
+            <ClosetSelection onSelectCloset={handleSelectCloset} isEditMode={isEditMode} />
+          </div>
+        )}
+
+        {/* Parker's Closet View */}
+        {currentView === 'parker-closet' && (
+          <div className="max-w-7xl mx-auto space-y-6">
+            <p className="text-white/60 text-sm">
+              {filteredParkerItems.length} items in collection
+            </p>
+
+            {parkerLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-white/50" />
+              </div>
+            ) : filteredParkerItems.length > 0 ? (
+              <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
+                {filteredParkerItems.map((item) => (
+                  <PersonalCollectionCard 
+                    key={item.id} 
+                    item={item}
+                    isEditMode={isEditMode}
+                    onClick={() => setSelectedClosetItem(item)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <User className="h-12 w-12 text-white/50 mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No items found</h3>
+                <p className="text-white/60">
+                  Items marked as "In Closet - Parker" will appear here.
+                </p>
               </div>
             )}
+          </div>
+        )}
 
-            {/* About Us View */}
-            {currentView === 'about-us' && (
-              <AboutUsGallery isEditMode={isEditMode} />
+        {/* Spencer's Closet View */}
+        {currentView === 'spencer-closet' && (
+          <div className="max-w-7xl mx-auto space-y-6">
+            <p className="text-white/60 text-sm">
+              {filteredSpencerItems.length} items in collection
+            </p>
+
+            {spencerLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-white/50" />
+              </div>
+            ) : filteredSpencerItems.length > 0 ? (
+              <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
+                {filteredSpencerItems.map((item) => (
+                  <PersonalCollectionCard 
+                    key={item.id} 
+                    item={item}
+                    isEditMode={isEditMode}
+                    onClick={() => setSelectedClosetItem(item)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <User className="h-12 w-12 text-white/50 mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No items found</h3>
+                <p className="text-white/60">
+                  Items marked as "In Closet - Spencer" will appear here.
+                </p>
+              </div>
             )}
-          </main>
-        </SidebarInset>
-      </div>
+          </div>
+        )}
 
-      {/* Product Detail Dialog (for Shop All items) - key forces remount on item change */}
+        {/* About Us View */}
+        {currentView === 'about-us' && (
+          <div className="max-w-7xl mx-auto">
+            <AboutUsGallery isEditMode={isEditMode} />
+          </div>
+        )}
+      </main>
+
+      {/* Product Detail Dialog */}
       <StorefrontProductDetail 
         key={selectedProduct?.id || 'none'}
         item={selectedProduct}
         open={!!selectedProduct}
-        onOpenChange={(open) => !open && setSelectedProduct(null)}
+        onOpenChange={(open) => !open && handleProductSelect(null)}
         isEditMode={isEditMode}
       />
 
-      {/* Closet Item Detail Dialog - key forces remount on item change */}
+      {/* Closet Item Detail Dialog */}
       <ClosetItemDetail
         key={selectedClosetItem?.id || 'closet-none'}
         item={selectedClosetItem}
         open={!!selectedClosetItem}
         onOpenChange={(open) => !open && setSelectedClosetItem(null)}
       />
-    </SidebarProvider>
+    </div>
   );
 }
