@@ -229,16 +229,41 @@ export function CollectionGrailsView({ isEditMode }: CollectionGrailsViewProps) 
     </div>
   );
 
+  const handleOpenAddGrail = () => {
+    // Find first empty position
+    const emptyPosition = GRAIL_POSITIONS.find(({ position }) => !grailsByPosition.get(position)?.item);
+    if (emptyPosition) {
+      setSelectedPosition(emptyPosition.position);
+      setShowSelectDialog(true);
+    } else {
+      // All positions full, use next available position
+      const maxPosition = Math.max(...GRAIL_POSITIONS.map(p => p.position));
+      setSelectedPosition(maxPosition + 1);
+      setShowSelectDialog(true);
+    }
+  };
+
   return (
-    <div className="min-h-[80vh] bg-black -m-6 p-8">
+    <div className="min-h-[80vh] bg-black">
       {/* Title */}
-      <div className="mb-8">
-        <h1 className="text-4xl md:text-5xl font-serif tracking-[0.3em] text-white">
-          COLLECTION GRAILS
-        </h1>
-        <p className="text-white/60 mt-2 tracking-wide">
-          The most coveted pieces in our collection
-        </p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl md:text-5xl font-serif tracking-[0.3em] text-white">
+            COLLECTION GRAILS
+          </h1>
+          <p className="text-white/60 mt-2 tracking-wide">
+            The most coveted pieces in our collection
+          </p>
+        </div>
+        {isEditMode && (
+          <Button
+            variant="outline"
+            onClick={handleOpenAddGrail}
+            className="border-white/30 text-white hover:bg-white/10"
+          >
+            + Add Grail
+          </Button>
+        )}
       </div>
 
       {/* True Masonry Gallery using CSS Columns with gaps */}
