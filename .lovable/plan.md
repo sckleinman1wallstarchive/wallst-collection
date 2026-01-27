@@ -1,236 +1,138 @@
 
-# Storefront Landing Page Redesign
+# Storefront Navigation Simplification
 
-This plan transforms your storefront into a polished landing page experience inspired by Alex Maxamenko's website, with a top navigation bar, hero carousel, collection photos scroll, and a structured "New Arrivals" section.
-
----
-
-## Overview
-
-The redesign introduces a new **Landing Page** view that appears after the welcome gate. Users will see:
-
-1. **Top Navigation Bar**: `Home | Shop All | Shop By Brand | Grails` with About Us at page bottom
-2. **Hero Carousel**: Featured brands rotating with "Shop Now" buttons
-3. **Collection Photos**: Horizontal scroll of manually uploaded lifestyle/collection images
-4. **New Arrivals Section**: 12 items (4 per row), last 4 half-grayed with "Shop All" overlay
-5. **About Us**: Moved to bottom of landing page
+This plan removes the sidebar entirely and makes the top navigation the sole method for navigating the storefront. It also removes the Collection Photos feature, adds an "Add More" option to Grails, and implements shareable item links.
 
 ---
 
-## Visual Flow
+## Changes Overview
 
-```text
-+----------------------------------------------------------+
-|  Welcome Gate ("WALL ST COLLECTION" + "Take a Tour")     |
-+----------------------------------------------------------+
-                           |
-                           v
-+----------------------------------------------------------+
-|  TOP NAV: Home | Shop All | Shop By Brand | Grails       |
-+----------------------------------------------------------+
-|                                                          |
-|  HERO CAROUSEL                                           |
-|  [Featured Brand Image]                                  |
-|  "RICK OWENS"                                            |
-|  [Shop Now]                                              |
-|                                                          |
-+----------------------------------------------------------+
-|                                                          |
-|  COLLECTION PHOTOS (horizontal scroll)                   |
-|  [img] [img] [img] [img] [img] ...                       |
-|                                                          |
-+----------------------------------------------------------+
-|                                                          |
-|  NEW ARRIVALS                                            |
-|  [item] [item] [item] [item]  <- Row 1                   |
-|  [item] [item] [item] [item]  <- Row 2                   |
-|  [item] [item] [item] [item]  <- Row 3 (grayed overlay)  |
-|         [View All Button]                                |
-|                                                          |
-+----------------------------------------------------------+
-|                                                          |
-|  ABOUT US SECTION                                        |
-|  (existing AboutUsGallery component)                     |
-|                                                          |
-+----------------------------------------------------------+
-```
+1. **Remove Sidebar Navigation** - Delete sidebar from all storefront views
+2. **Remove Collection Photos** - Remove component and database table
+3. **Add Grails "Add More" Button** - Allow adding new grails from the Grails view
+4. **Individual Item Links** - Support URL parameters for direct item access
 
 ---
 
 ## Implementation Steps
 
-### Step 1: Update Welcome Screen
+### Step 1: Remove Collection Photos Feature
 
-**File**: `src/components/storefront/StorefrontWelcome.tsx`
-
-- Change button text from "Shop" to "Take a Tour"
-- Update `onEnterShop` callback naming to `onEnterTour` for clarity
-
----
-
-### Step 2: Create Top Navigation Component
-
-**New File**: `src/components/storefront/StorefrontTopNav.tsx`
-
-- Horizontal bar with links: `Home | Shop All | Shop By Brand | Grails`
-- Vertical bar separators (`|`) between each link
-- Sticky positioning at top
-- Dark background with white text
-- Cart icon on the right side
-- Edit mode toggle button (for authorized users)
+**Files to modify/delete:**
+- Delete `src/components/storefront/CollectionPhotosScroll.tsx`
+- Delete `src/hooks/useCollectionPhotos.ts`
+- Remove import and usage from `src/components/storefront/StorefrontLanding.tsx`
+- Database: Drop `collection_photos` table (migration)
 
 ---
 
-### Step 3: Create Hero Carousel Component
-
-**New File**: `src/components/storefront/HeroCarousel.tsx`
-
-- Uses existing `embla-carousel-react` (already installed)
-- Fetches featured brands from `storefront_brands` table
-- Displays brand art image fullscreen with overlay
-- Shows brand name in large typography
-- "Shop Now" button links to Shop All filtered by that brand
-- Auto-advances every 5 seconds
-- Navigation dots at bottom
-
----
-
-### Step 4: Create Collection Photos Component
-
-**New File**: `src/components/storefront/CollectionPhotosScroll.tsx`
-
-**Database**: New table `collection_photos` with columns:
-- `id` (uuid, primary key)
-- `image_url` (text)
-- `display_order` (integer)
-- `created_at` (timestamp)
-
-**Features**:
-- Horizontal scrolling container with overflow-x-auto
-- Displays manually uploaded collection/lifestyle photos
-- In edit mode: add/remove/reorder photos
-- Images stored in `inventory-images` bucket under `/collection/` folder
-
----
-
-### Step 5: Create New Arrivals Section Component
-
-**New File**: `src/components/storefront/NewArrivalsSection.tsx`
-
-- Displays first 12 items from `usePublicInventory` (ordered by most recent)
-- 4-column grid layout (`grid-cols-4`)
-- Last 4 items (row 3) have a semi-transparent gray overlay
-- "View All" button overlay on the grayed section
-- Clicking "View All" navigates to Shop All view
-
----
-
-### Step 6: Create Landing Page Component
-
-**New File**: `src/components/storefront/StorefrontLanding.tsx`
-
-Composes all sections:
-1. `StorefrontTopNav`
-2. `HeroCarousel`
-3. `CollectionPhotosScroll`
-4. `NewArrivalsSection`
-5. `AboutUsGallery` (existing component)
-
----
-
-### Step 7: Update Main Storefront Page
+### Step 2: Remove Sidebar from All Views
 
 **File**: `src/pages/Storefront.tsx`
 
-- Add new view state: `'landing'`
-- Welcome screen navigates to `'landing'` instead of `'shop-all'`
-- Landing page navigation:
-  - "Home" stays on landing
-  - "Shop All", "Shop By Brand", "Grails" navigate to respective views
-- Update Shop All grid from 3 columns to 4 columns (`lg:grid-cols-4`)
-- Remove sidebar completely when on landing page
-- Keep sidebar for other views (Shop All, Brands, Grails, Closets)
+Current behavior: Sidebar shows on Shop All, Brands, Grails, Closets views
+New behavior: No sidebar anywhere - only top nav on all views
+
+Changes:
+- Remove `StorefrontSidebar` component import and rendering
+- Remove `SidebarProvider` wrapper for non-landing views
+- Render `StorefrontTopNav` on ALL views (not just landing)
+- Update navigation state management
+
+**File**: `src/components/storefront/StorefrontTopNav.tsx`
+
+- Add navigation for all views (currently only handles landing)
+- Ensure it works on Shop All, Brands, Grails, Closets pages
+- Add active state styling for current view
 
 ---
 
-### Step 8: Update Shop All Grid Layout
+### Step 3: Add "Add More" to Grails
 
-**Files**: `src/pages/Storefront.tsx`, `src/components/storefront/StorefrontProductCard.tsx`
+**File**: `src/components/storefront/CollectionGrailsView.tsx`
 
-- Change grid from `lg:grid-cols-3` to `lg:grid-cols-4`
-- Adjust card sizing for 4-column layout
+In edit mode, add an "Add Grail" button that:
+- Opens the existing item selector dialog
+- Allows selecting an item to add as a new grail
+- Uses existing `useStorefrontGrails` hook's add functionality
+
+The button will appear at the end of the grails grid (similar to how empty slots work now).
 
 ---
 
-## Database Changes
+### Step 4: Individual Item Links
 
-### New Table: `collection_photos`
+**File**: `src/pages/Storefront.tsx`
 
-```sql
-CREATE TABLE public.collection_photos (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  image_url TEXT NOT NULL,
-  display_order INTEGER DEFAULT 0,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-);
+Add URL parameter support:
+- Check for `?item=<uuid>` parameter on load
+- If present, automatically open that item's detail sheet
+- Works with any view (Shop All, Closets, etc.)
 
--- Enable RLS
-ALTER TABLE public.collection_photos ENABLE ROW LEVEL SECURITY;
+Example URLs:
+- `https://yoursite.com/storefront?item=abc-123` - Opens item detail
+- `https://yoursite.com/storefront?view=shop-all&item=abc-123` - Shop All with item open
 
--- Public read access
-CREATE POLICY "Anyone can view collection photos"
-  ON public.collection_photos FOR SELECT
-  USING (true);
-
--- Authenticated users with allowed email can manage
-CREATE POLICY "Allowed users can manage collection photos"
-  ON public.collection_photos FOR ALL
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.allowed_emails
-      WHERE email = auth.jwt()->>'email'
-    )
-  );
+**Implementation:**
+```text
+1. Use useSearchParams() from react-router-dom
+2. On mount, check for 'item' parameter
+3. Find item in inventory data
+4. Set selectedItem state to open detail sheet
+5. Optionally update URL when opening/closing items
 ```
 
 ---
 
-## New/Modified Files Summary
+## Files Summary
 
 | Action | File |
 |--------|------|
-| Modify | `src/components/storefront/StorefrontWelcome.tsx` |
-| Create | `src/components/storefront/StorefrontTopNav.tsx` |
-| Create | `src/components/storefront/HeroCarousel.tsx` |
-| Create | `src/components/storefront/CollectionPhotosScroll.tsx` |
-| Create | `src/components/storefront/NewArrivalsSection.tsx` |
-| Create | `src/components/storefront/StorefrontLanding.tsx` |
-| Create | `src/hooks/useCollectionPhotos.ts` |
+| Delete | `src/components/storefront/CollectionPhotosScroll.tsx` |
+| Delete | `src/hooks/useCollectionPhotos.ts` |
+| Modify | `src/components/storefront/StorefrontLanding.tsx` |
 | Modify | `src/pages/Storefront.tsx` |
-| Modify | `src/hooks/usePublicInventory.ts` (add query for recent items) |
+| Modify | `src/components/storefront/StorefrontTopNav.tsx` |
+| Modify | `src/components/storefront/CollectionGrailsView.tsx` |
+| Create | Database migration to drop `collection_photos` table |
 
 ---
 
-## Technical Details
+## Navigation Flow After Changes
 
-### Hero Carousel Implementation
-- Uses Embla Carousel with autoplay plugin
-- Fetches from existing `storefront_brands` table (brands with art images)
-- Fallback to placeholder if no brands configured
+```text
+Welcome Gate
+     |
+     v
++----------------------------------------------------------+
+|  TOP NAV: Home | Shop All | Shop By Brand | Grails       |
++----------------------------------------------------------+
+     |
+     +-- Home (Landing) --> Hero, New Arrivals, About Us
+     |
+     +-- Shop All --> 4-column product grid (top nav stays)
+     |
+     +-- Shop By Brand --> Brand cards with art (top nav stays)
+     |
+     +-- Grails --> Curated grails + "Add More" button (top nav stays)
+```
 
-### Collection Photos Management
-- In edit mode, shows "+" button to add new photos
-- Drag-and-drop reordering with @dnd-kit
-- Delete button on hover
-- Images uploaded to `inventory-images/collection/` path
+No sidebar on any page. Top nav is persistent across all views.
 
-### New Arrivals Logic
-- Query `inventory_items` where `status = 'for-sale'`
-- Order by `created_at DESC` to get newest items
-- Limit to 12 items
-- Apply gray overlay CSS to items 9-12
+---
 
-### Navigation State
-- `currentView` now includes `'landing'` option
-- Top nav visible only on landing page
-- Sidebar hidden on landing page, visible on other views
+## Shareable Link Format
+
+Once implemented, you can share individual items like:
+- `https://wallst-collection.lovable.app/storefront?item=<item-uuid>`
+
+When someone opens this link, they'll see the storefront with that item's detail sheet already open.
+
+---
+
+## Database Migration
+
+```sql
+-- Drop the collection_photos table since feature is removed
+DROP TABLE IF EXISTS public.collection_photos;
+```
