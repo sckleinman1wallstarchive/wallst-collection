@@ -102,14 +102,30 @@ Respond with a JSON array of objects with id, brand, and brandCategory fields. O
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error("AI API error:", response.status, errorText);
+        
         if (response.status === 429) {
           console.error("Rate limited, waiting before retry...");
           await new Promise(resolve => setTimeout(resolve, 2000));
           continue;
         }
-        const errorText = await response.text();
-        console.error("AI API error:", response.status, errorText);
-        throw new Error(`AI API error: ${response.status}`);
+        
+        // For payment/credit issues (402) or other errors, return gracefully
+        if (response.status === 402) {
+          console.log("Insufficient credits - skipping brand extraction");
+          return new Response(
+            JSON.stringify({
+              message: "Brand extraction skipped - insufficient credits",
+              processed: 0,
+              results: [],
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        // For other errors, continue with next batch
+        continue;
       }
 
       const aiData = await response.json();
