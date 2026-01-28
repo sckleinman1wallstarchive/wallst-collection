@@ -78,7 +78,7 @@ export function BackgroundSelector({ value, onChange, processorType, onProcessor
             <Eraser className={cn('h-6 w-6', processorType === 'removebg' ? 'text-primary' : 'text-muted-foreground')} />
             <span className="font-medium text-sm">remove.bg</span>
             <span className="text-xs text-muted-foreground text-center">
-              Complex background extraction
+              Background removal & color fill
             </span>
           </button>
           <button
@@ -92,12 +92,17 @@ export function BackgroundSelector({ value, onChange, processorType, onProcessor
             )}
           >
             <Sparkles className={cn('h-6 w-6', processorType === 'lovable-ai' ? 'text-primary' : 'text-muted-foreground')} />
-            <span className="font-medium text-sm">Lovable AI</span>
+            <span className="font-medium text-sm">Color Switcher</span>
             <span className="text-xs text-muted-foreground text-center">
-              Backdrop color swaps
+              Swap colors on processed images
             </span>
           </button>
         </div>
+        {processorType === 'lovable-ai' && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2 rounded-md">
+            ⚠️ Use on images that already have backgrounds removed. For new extractions, use remove.bg first.
+          </p>
+        )}
       </div>
 
       {/* Background Options */}
