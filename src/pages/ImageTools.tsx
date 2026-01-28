@@ -1,19 +1,18 @@
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { useStorageImages } from '@/hooks/useStorageImages';
+import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
 import { useRemoveBgUsage } from '@/hooks/useRemoveBgUsage';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Eraser, Download, RefreshCw, CheckCircle2, XCircle, Upload, ImageOff, AlertTriangle } from 'lucide-react';
+import { Eraser, Download, RefreshCw, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { BackgroundSelector, BackgroundOptions, ProcessorType } from '@/components/imagetools/BackgroundSelector';
 import { UsageDisplay } from '@/components/imagetools/UsageDisplay';
 import { ApiKeyManager } from '@/components/imagetools/ApiKeyManager';
+import { InventoryImageSelector } from '@/components/imagetools/InventoryImageSelector';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,72 +28,62 @@ interface ProcessedImage {
   originalUrl: string;
   processedUrl: string | null;
   error?: string;
+  itemId?: string;
+  imageIndex?: number;
 }
 
 export default function ImageTools() {
-  const { images, isLoading, refetch } = useStorageImages('inventory-images', 'items');
+  const { inventory, isLoading, updateItem } = useSupabaseInventory();
   const { usage, isLoading: usageLoading, invalidate: invalidateUsage } = useRemoveBgUsage();
-  const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
+  
+  // Map: itemId -> Set of selected image URLs
+  const [selectedImages, setSelectedImages] = useState<Map<string, Set<string>>>(new Map());
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedCount, setProcessedCount] = useState(0);
   const [totalToProcess, setTotalToProcess] = useState(0);
   const [results, setResults] = useState<ProcessedImage[]>([]);
-  const [uploadedImages, setUploadedImages] = useState<{ url: string; file: File }[]>([]);
   const [backgroundOptions, setBackgroundOptions] = useState<BackgroundOptions>({ type: 'transparent' });
   const [processorType, setProcessorType] = useState<ProcessorType>('removebg');
   const [showLimitWarning, setShowLimitWarning] = useState(false);
   const [pendingProcessCount, setPendingProcessCount] = useState(0);
 
-  const toggleImageSelection = (url: string) => {
-    setSelectedImages(prev => {
-      const next = new Set(prev);
-      if (next.has(url)) {
-        next.delete(url);
-      } else {
-        next.add(url);
-      }
-      return next;
+  const getTotalSelectedCount = () => {
+    let total = 0;
+    selectedImages.forEach((urls) => {
+      total += urls.size;
     });
-  };
-
-  const selectAll = () => {
-    const allUrls = [...images.map(i => i.url), ...uploadedImages.map(i => i.url)];
-    setSelectedImages(new Set(allUrls));
-  };
-
-  const clearSelection = () => {
-    setSelectedImages(new Set());
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    const newImages: { url: string; file: File }[] = [];
-    for (const file of Array.from(files)) {
-      if (file.type.startsWith('image/')) {
-        const url = URL.createObjectURL(file);
-        newImages.push({ url, file });
-      }
-    }
-    setUploadedImages(prev => [...prev, ...newImages]);
+    return total;
   };
 
   const processImages = async (limitToRemaining?: number) => {
-    let urlsToProcess = Array.from(selectedImages);
+    // Build list of images to process with their item context
+    const imagesToProcess: { url: string; itemId: string; imageIndex: number }[] = [];
     
+    selectedImages.forEach((urls, itemId) => {
+      const item = inventory.find((i) => i.id === itemId);
+      if (!item) return;
+      
+      urls.forEach((url) => {
+        const imageIndex = item.imageUrls?.indexOf(url) ?? -1;
+        if (imageIndex !== -1) {
+          imagesToProcess.push({ url, itemId, imageIndex });
+        }
+      });
+    });
+
+    let toProcess = imagesToProcess;
     if (limitToRemaining !== undefined) {
-      urlsToProcess = urlsToProcess.slice(0, limitToRemaining);
+      toProcess = imagesToProcess.slice(0, limitToRemaining);
     }
 
-    if (urlsToProcess.length === 0) {
+    if (toProcess.length === 0) {
       toast.error('Please select at least one image');
       return;
     }
 
     // Only check remove.bg limits when using remove.bg processor
     if (processorType === 'removebg' && usage && !limitToRemaining) {
-      const wouldExceed = usage.totalUsed + urlsToProcess.length > usage.totalLimit;
+      const wouldExceed = usage.totalUsed + toProcess.length > usage.totalLimit;
       if (wouldExceed && usage.totalRemaining > 0) {
         setPendingProcessCount(usage.totalRemaining);
         setShowLimitWarning(true);
@@ -108,37 +97,11 @@ export default function ImageTools() {
 
     setIsProcessing(true);
     setProcessedCount(0);
-    setTotalToProcess(urlsToProcess.length);
+    setTotalToProcess(toProcess.length);
     setResults([]);
 
     try {
-      // For uploaded files that are blob URLs, we need to upload them first
-      const processableUrls: string[] = [];
-      
-      for (const url of urlsToProcess) {
-        if (url.startsWith('blob:')) {
-          const uploadedImg = uploadedImages.find(i => i.url === url);
-          if (uploadedImg) {
-            const fileName = `temp-${Date.now()}-${uploadedImg.file.name}`;
-            const { data, error } = await supabase.storage
-              .from('inventory-images')
-              .upload(`temp/${fileName}`, uploadedImg.file);
-            
-            if (error) {
-              console.error('Upload error:', error);
-              continue;
-            }
-            
-            const { data: { publicUrl } } = supabase.storage
-              .from('inventory-images')
-              .getPublicUrl(`temp/${fileName}`);
-            
-            processableUrls.push(publicUrl);
-          }
-        } else {
-          processableUrls.push(url);
-        }
-      }
+      const urlsToProcess = toProcess.map((img) => img.url);
 
       // Build background payload
       const backgroundPayload = backgroundOptions.type === 'transparent' 
@@ -150,7 +113,7 @@ export default function ImageTools() {
 
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: { 
-          imageUrls: processableUrls,
+          imageUrls: urlsToProcess,
           background: backgroundPayload,
         },
       });
@@ -159,22 +122,72 @@ export default function ImageTools() {
         throw error;
       }
 
-      setResults(data.results || []);
-      setProcessedCount(processableUrls.length);
+      const apiResults = data.results || [];
+      
+      // Map results back with item context
+      const enrichedResults: ProcessedImage[] = apiResults.map((result: ProcessedImage, idx: number) => ({
+        ...result,
+        itemId: toProcess[idx]?.itemId,
+        imageIndex: toProcess[idx]?.imageIndex,
+      }));
 
-      const successCount = (data.results || []).filter((r: ProcessedImage) => r.processedUrl).length;
+      setResults(enrichedResults);
+      setProcessedCount(toProcess.length);
+
+      // Auto-save processed images back to inventory
+      const successfulResults = enrichedResults.filter((r) => r.processedUrl);
+      
+      if (successfulResults.length > 0) {
+        // Group by item
+        const itemUpdates = new Map<string, { itemId: string; updates: { index: number; newUrl: string }[] }>();
+        
+        successfulResults.forEach((result) => {
+          if (!result.itemId || result.imageIndex === undefined || !result.processedUrl) return;
+          
+          if (!itemUpdates.has(result.itemId)) {
+            itemUpdates.set(result.itemId, { itemId: result.itemId, updates: [] });
+          }
+          itemUpdates.get(result.itemId)!.updates.push({
+            index: result.imageIndex,
+            newUrl: result.processedUrl,
+          });
+        });
+
+        // Apply updates to each item
+        for (const [itemId, { updates }] of itemUpdates) {
+          const item = inventory.find((i) => i.id === itemId);
+          if (!item) continue;
+
+          const newImageUrls = [...(item.imageUrls || [])];
+          updates.forEach(({ index, newUrl }) => {
+            if (index >= 0 && index < newImageUrls.length) {
+              newImageUrls[index] = newUrl;
+            }
+          });
+
+          // Update the item in the database
+          await updateItem(itemId, { 
+            imageUrls: newImageUrls,
+            imageUrl: newImageUrls[0] || null 
+          });
+        }
+
+        toast.success(`Updated ${itemUpdates.size} item(s) with ${successfulResults.length} processed image(s)`);
+      }
       
       // Show skipped message if any (only for remove.bg)
       if (data.skipped) {
         toast.warning(data.skipped);
       }
       
-      toast.success(`Processed ${successCount} of ${processableUrls.length} images`);
-      
       // Refresh usage data only for remove.bg
       if (processorType === 'removebg') {
         invalidateUsage();
       }
+
+      // Clear selection after successful processing
+      setSelectedImages(new Map());
+      
     } catch (error: any) {
       console.error('Processing error:', error);
       if (error.message?.includes('Monthly limit reached')) {
@@ -217,7 +230,7 @@ export default function ImageTools() {
   };
 
   const getProcessButtonText = () => {
-    const processorName = processorType === 'removebg' ? 'remove.bg' : 'Lovable AI';
+    const processorName = processorType === 'removebg' ? 'remove.bg' : 'Color Switcher';
     if (backgroundOptions.type === 'transparent') {
       return `Remove Backgrounds (${processorName})`;
     } else {
@@ -239,7 +252,7 @@ export default function ImageTools() {
     };
   };
 
-  const allImages = [...images.map(i => ({ url: i.url, name: i.name })), ...uploadedImages.map(i => ({ url: i.url, name: i.file.name }))];
+  const totalSelected = getTotalSelectedCount();
 
   return (
     <DashboardLayout>
@@ -252,7 +265,7 @@ export default function ImageTools() {
               Image Tools
             </h1>
             <p className="text-muted-foreground mt-1">
-              Swap or remove backgrounds from your product photos in batch
+              Swap or remove backgrounds from your product photos — changes save automatically
             </p>
           </div>
           {processorType === 'removebg' && (
@@ -266,91 +279,21 @@ export default function ImageTools() {
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Left Column: Image Selection + Background Options */}
           <div className="space-y-6">
-            {/* Image Selection */}
+            {/* Inventory Image Selection */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Select Images</span>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={selectAll}>
-                      Select All
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={clearSelection}>
-                      Clear
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={refetch}>
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardTitle>
+                <CardTitle>Select Inventory Images</CardTitle>
                 <CardDescription>
-                  Choose images from your inventory or upload new ones
+                  Choose images from your inventory items. Check the box to select all images, or click to expand and pick individual photos.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Upload Zone */}
-                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center hover:border-muted-foreground/50 transition-colors">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    id="image-upload"
-                  />
-                  <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center gap-2">
-                    <Upload className="h-8 w-8 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      Click to upload or drag and drop
-                    </span>
-                  </label>
-                </div>
-
-                {/* Image Grid */}
-                <ScrollArea className="h-[250px]">
-                  {isLoading ? (
-                    <div className="grid grid-cols-4 gap-2">
-                      {Array.from({ length: 12 }).map((_, i) => (
-                        <Skeleton key={i} className="aspect-square rounded-md" />
-                      ))}
-                    </div>
-                  ) : allImages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                      <ImageOff className="h-12 w-12 mb-2" />
-                      <p>No images found</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-4 gap-2">
-                      {allImages.map((image) => (
-                        <div
-                          key={image.url}
-                          className={`relative aspect-square rounded-md overflow-hidden cursor-pointer border-2 transition-all ${
-                            selectedImages.has(image.url)
-                              ? 'border-primary ring-2 ring-primary/20'
-                              : 'border-transparent hover:border-muted-foreground/50'
-                          }`}
-                          onClick={() => toggleImageSelection(image.url)}
-                        >
-                          <img
-                            src={image.url}
-                            alt={image.name}
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute top-1 right-1">
-                            <Checkbox
-                              checked={selectedImages.has(image.url)}
-                              className="bg-background/80"
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </ScrollArea>
-
-                <div className="text-sm text-muted-foreground text-center">
-                  {selectedImages.size} images selected
-                </div>
+              <CardContent>
+                <InventoryImageSelector
+                  inventory={inventory}
+                  isLoading={isLoading}
+                  selectedImages={selectedImages}
+                  onSelectionChange={setSelectedImages}
+                />
               </CardContent>
             </Card>
 
@@ -374,11 +317,12 @@ export default function ImageTools() {
 
             {/* API Key Management */}
             <ApiKeyManager />
+
             {/* Process Button */}
             <div className="space-y-4">
               <Button
                 onClick={() => processImages()}
-                disabled={selectedImages.size === 0 || isProcessing || isAtLimit}
+                disabled={totalSelected === 0 || isProcessing || isAtLimit}
                 className="w-full"
                 size="lg"
               >
@@ -395,7 +339,7 @@ export default function ImageTools() {
                 ) : (
                   <>
                     <Eraser className="h-4 w-4 mr-2" />
-                    {getProcessButtonText()}
+                    {getProcessButtonText()} ({totalSelected} images)
                   </>
                 )}
               </Button>
@@ -425,7 +369,7 @@ export default function ImageTools() {
                 )}
               </CardTitle>
               <CardDescription>
-                Preview and download your processed images
+                Processed images are automatically saved to your inventory
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -434,78 +378,87 @@ export default function ImageTools() {
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-12">
                     <Eraser className="h-12 w-12 mb-2 opacity-50" />
                     <p>Processed images will appear here</p>
+                    <p className="text-xs mt-1">They're auto-saved to inventory</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {results.map((result, index) => (
-                      <div
-                        key={index}
-                        className="border rounded-lg p-3 space-y-3"
-                      >
-                        <div className="flex items-center gap-2">
-                          {result.processedUrl ? (
-                            <CheckCircle2 className="h-5 w-5 text-green-500" />
-                          ) : (
-                            <XCircle className="h-5 w-5 text-destructive" />
-                          )}
-                          <span className="text-sm font-medium">
-                            {result.processedUrl ? 'Success' : 'Failed'}
-                          </span>
-                          {result.error && (
-                            <span className="text-xs text-destructive">
-                              {result.error}
+                    {results.map((result, index) => {
+                      const item = inventory.find((i) => i.id === result.itemId);
+                      return (
+                        <div
+                          key={index}
+                          className="border rounded-lg p-3 space-y-3"
+                        >
+                          <div className="flex items-center gap-2">
+                            {result.processedUrl ? (
+                              <CheckCircle2 className="h-5 w-5 text-green-500" />
+                            ) : (
+                              <XCircle className="h-5 w-5 text-destructive" />
+                            )}
+                            <span className="text-sm font-medium">
+                              {result.processedUrl ? 'Saved' : 'Failed'}
                             </span>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          {/* Original */}
-                          <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">Original</p>
-                            <div className="aspect-square rounded-md overflow-hidden bg-muted">
-                              <img
-                                src={result.originalUrl}
-                                alt="Original"
-                                className="w-full h-full object-contain"
-                              />
-                            </div>
+                            {item && (
+                              <span className="text-xs text-muted-foreground truncate">
+                                — {item.name}
+                              </span>
+                            )}
+                            {result.error && (
+                              <span className="text-xs text-destructive">
+                                {result.error}
+                              </span>
+                            )}
                           </div>
 
-                          {/* Processed */}
-                          <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">Processed</p>
-                            <div 
-                              className="aspect-square rounded-md overflow-hidden"
-                              style={getResultBackground()}
-                            >
-                              {result.processedUrl ? (
+                          <div className="grid grid-cols-2 gap-3">
+                            {/* Original */}
+                            <div className="space-y-1">
+                              <p className="text-xs text-muted-foreground">Original</p>
+                              <div className="aspect-square rounded-md overflow-hidden bg-muted">
                                 <img
-                                  src={result.processedUrl}
-                                  alt="Processed"
+                                  src={result.originalUrl}
+                                  alt="Original"
                                   className="w-full h-full object-contain"
                                 />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-muted/50">
-                                  <XCircle className="h-8 w-8 text-muted-foreground" />
-                                </div>
-                              )}
+                              </div>
+                            </div>
+
+                            {/* Processed */}
+                            <div className="space-y-1">
+                              <p className="text-xs text-muted-foreground">Processed</p>
+                              <div 
+                                className="aspect-square rounded-md overflow-hidden"
+                                style={getResultBackground()}
+                              >
+                                {result.processedUrl ? (
+                                  <img
+                                    src={result.processedUrl}
+                                    alt="Processed"
+                                    className="w-full h-full object-contain"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-muted/50">
+                                    <XCircle className="h-8 w-8 text-muted-foreground" />
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        {result.processedUrl && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full"
-                            onClick={() => downloadImage(result.processedUrl!, `processed-${index + 1}.png`)}
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            Download
-                          </Button>
-                        )}
-                      </div>
-                    ))}
+                          {result.processedUrl && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full"
+                              onClick={() => downloadImage(result.processedUrl!, `processed-${index + 1}.png`)}
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Download
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </ScrollArea>
@@ -523,12 +476,12 @@ export default function ImageTools() {
               Credit Warning
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <p>You're about to process {selectedImages.size} images.</p>
+              <p>You're about to process {totalSelected} images.</p>
               <p className="font-medium">
                 Current usage: {usage?.totalUsed}/{usage?.totalLimit}
               </p>
               <p>
-                After processing: {(usage?.totalUsed || 0) + selectedImages.size}/{usage?.totalLimit} ({selectedImages.size - pendingProcessCount} over limit)
+                After processing: {(usage?.totalUsed || 0) + totalSelected}/{usage?.totalLimit} ({totalSelected - pendingProcessCount} over limit)
               </p>
               <p className="text-sm">
                 Only the first {pendingProcessCount} images will be processed.
