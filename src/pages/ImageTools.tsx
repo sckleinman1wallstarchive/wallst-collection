@@ -101,8 +101,6 @@ export default function ImageTools() {
     setResults([]);
 
     try {
-      const urlsToProcess = toProcess.map((img) => img.url);
-
       // Build background payload
       const backgroundPayload = backgroundOptions.type === 'transparent' 
         ? { type: 'transparent' as const }
@@ -111,28 +109,46 @@ export default function ImageTools() {
       // Choose endpoint based on processor type
       const functionName = processorType === 'removebg' ? 'remove-background' : 'ai-background-replace';
 
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        body: { 
-          imageUrls: urlsToProcess,
-          background: backgroundPayload,
-        },
-      });
-
-      if (error) {
-        throw error;
+      // For AI processor, batch in groups of 3 to avoid CPU timeout
+      const batchSize = processorType === 'lovable-ai' ? 3 : toProcess.length;
+      const batches: typeof toProcess[] = [];
+      for (let i = 0; i < toProcess.length; i += batchSize) {
+        batches.push(toProcess.slice(i, i + batchSize));
       }
 
-      const apiResults = data.results || [];
-      
-      // Map results back with item context
-      const enrichedResults: ProcessedImage[] = apiResults.map((result: ProcessedImage, idx: number) => ({
-        ...result,
-        itemId: toProcess[idx]?.itemId,
-        imageIndex: toProcess[idx]?.imageIndex,
-      }));
+      let allResults: ProcessedImage[] = [];
+      let processed = 0;
 
-      setResults(enrichedResults);
-      setProcessedCount(toProcess.length);
+      for (const batch of batches) {
+        const urlsToProcess = batch.map((img) => img.url);
+
+        const { data, error } = await supabase.functions.invoke(functionName, {
+          body: { 
+            imageUrls: urlsToProcess,
+            background: backgroundPayload,
+          },
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        const apiResults = data.results || [];
+        
+        // Map results back with item context
+        const enrichedResults: ProcessedImage[] = apiResults.map((result: ProcessedImage, idx: number) => ({
+          ...result,
+          itemId: batch[idx]?.itemId,
+          imageIndex: batch[idx]?.imageIndex,
+        }));
+
+        allResults = [...allResults, ...enrichedResults];
+        processed += batch.length;
+        setProcessedCount(processed);
+        setResults([...allResults]);
+      }
+
+      const enrichedResults = allResults;
 
       // Auto-save processed images back to inventory
       const successfulResults = enrichedResults.filter((r) => r.processedUrl);
@@ -173,11 +189,6 @@ export default function ImageTools() {
         }
 
         toast.success(`Updated ${itemUpdates.size} item(s) with ${successfulResults.length} processed image(s)`);
-      }
-      
-      // Show skipped message if any (only for remove.bg)
-      if (data.skipped) {
-        toast.warning(data.skipped);
       }
       
       // Refresh usage data only for remove.bg
