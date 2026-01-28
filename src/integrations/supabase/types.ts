@@ -343,6 +343,77 @@ export type Database = {
           },
         ]
       }
+      item_authentication_history: {
+        Row: {
+          ai_analyzed_details: Json | null
+          ai_reasoning: Json | null
+          ai_score: number | null
+          ai_verdict: string | null
+          brand: string
+          created_at: string | null
+          id: string
+          image_urls: string[] | null
+          inventory_item_id: string | null
+          item_name: string
+          manual_notes: string | null
+          manual_verdict: string | null
+          manually_verified_at: string | null
+          reference_sources: Json | null
+          size: string | null
+          updated_at: string | null
+          verification_source: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          ai_analyzed_details?: Json | null
+          ai_reasoning?: Json | null
+          ai_score?: number | null
+          ai_verdict?: string | null
+          brand: string
+          created_at?: string | null
+          id?: string
+          image_urls?: string[] | null
+          inventory_item_id?: string | null
+          item_name: string
+          manual_notes?: string | null
+          manual_verdict?: string | null
+          manually_verified_at?: string | null
+          reference_sources?: Json | null
+          size?: string | null
+          updated_at?: string | null
+          verification_source?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          ai_analyzed_details?: Json | null
+          ai_reasoning?: Json | null
+          ai_score?: number | null
+          ai_verdict?: string | null
+          brand?: string
+          created_at?: string | null
+          id?: string
+          image_urls?: string[] | null
+          inventory_item_id?: string | null
+          item_name?: string
+          manual_notes?: string | null
+          manual_verdict?: string | null
+          manually_verified_at?: string | null
+          reference_sources?: Json | null
+          size?: string | null
+          updated_at?: string | null
+          verification_source?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_authentication_history_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       removebg_api_keys: {
         Row: {
           api_key: string
