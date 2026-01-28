@@ -1,4 +1,5 @@
-import { ShoppingCart, Pencil, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Pencil, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ShopCart } from '@/components/shop/ShopCart';
 
@@ -26,6 +27,8 @@ export function StorefrontTopNav({
   onEditModeToggle,
   showEditButton,
 }: StorefrontTopNavProps) {
+  const navigate = useNavigate();
+
   return (
     <header className="sticky top-0 z-40 bg-black border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -51,8 +54,19 @@ export function StorefrontTopNav({
             ))}
           </nav>
 
-          {/* Right side: Edit + Cart */}
+          {/* Right side: Dashboard + Edit + Cart */}
           <div className="flex items-center gap-3">
+            {showEditButton && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/')}
+                className="gap-1 text-white hover:text-white hover:bg-white/10"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Dashboard
+              </Button>
+            )}
             {showEditButton && (
               <Button
                 variant={isEditMode ? 'secondary' : 'ghost'}
