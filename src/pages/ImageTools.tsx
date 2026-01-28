@@ -11,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Eraser, Download, RefreshCw, CheckCircle2, XCircle, Upload, ImageOff, AlertTriangle } from 'lucide-react';
-import { BackgroundSelector, BackgroundOptions } from '@/components/imagetools/BackgroundSelector';
+import { BackgroundSelector, BackgroundOptions, ProcessorType } from '@/components/imagetools/BackgroundSelector';
 import { UsageDisplay } from '@/components/imagetools/UsageDisplay';
 import { ApiKeyManager } from '@/components/imagetools/ApiKeyManager';
 import {
@@ -41,6 +41,7 @@ export default function ImageTools() {
   const [results, setResults] = useState<ProcessedImage[]>([]);
   const [uploadedImages, setUploadedImages] = useState<{ url: string; file: File }[]>([]);
   const [backgroundOptions, setBackgroundOptions] = useState<BackgroundOptions>({ type: 'transparent' });
+  const [processorType, setProcessorType] = useState<ProcessorType>('removebg');
   const [showLimitWarning, setShowLimitWarning] = useState(false);
   const [pendingProcessCount, setPendingProcessCount] = useState(0);
 
@@ -91,8 +92,8 @@ export default function ImageTools() {
       return;
     }
 
-    // Check if we'll exceed the limit
-    if (usage && !limitToRemaining) {
+    // Only check remove.bg limits when using remove.bg processor
+    if (processorType === 'removebg' && usage && !limitToRemaining) {
       const wouldExceed = usage.totalUsed + urlsToProcess.length > usage.totalLimit;
       if (wouldExceed && usage.totalRemaining > 0) {
         setPendingProcessCount(usage.totalRemaining);
@@ -144,7 +145,10 @@ export default function ImageTools() {
         ? { type: 'transparent' as const }
         : { type: 'solid' as const, color: backgroundOptions.color };
 
-      const { data, error } = await supabase.functions.invoke('remove-background', {
+      // Choose endpoint based on processor type
+      const functionName = processorType === 'removebg' ? 'remove-background' : 'ai-background-replace';
+
+      const { data, error } = await supabase.functions.invoke(functionName, {
         body: { 
           imageUrls: processableUrls,
           background: backgroundPayload,
@@ -160,15 +164,17 @@ export default function ImageTools() {
 
       const successCount = (data.results || []).filter((r: ProcessedImage) => r.processedUrl).length;
       
-      // Show skipped message if any
+      // Show skipped message if any (only for remove.bg)
       if (data.skipped) {
         toast.warning(data.skipped);
       }
       
       toast.success(`Processed ${successCount} of ${processableUrls.length} images`);
       
-      // Refresh usage data
-      invalidateUsage();
+      // Refresh usage data only for remove.bg
+      if (processorType === 'removebg') {
+        invalidateUsage();
+      }
     } catch (error: any) {
       console.error('Processing error:', error);
       if (error.message?.includes('Monthly limit reached')) {
@@ -211,12 +217,15 @@ export default function ImageTools() {
   };
 
   const getProcessButtonText = () => {
+    const processorName = processorType === 'removebg' ? 'remove.bg' : 'Lovable AI';
     if (backgroundOptions.type === 'transparent') {
-      return 'Remove Backgrounds';
+      return `Remove Backgrounds (${processorName})`;
     } else {
-      return `Apply ${backgroundOptions.color || 'Color'} Background`;
+      return `Apply ${backgroundOptions.color || 'Color'} (${processorName})`;
     }
   };
+
+  const isAtLimit = processorType === 'removebg' && usage?.warning === 'at_limit';
 
   const getResultBackground = () => {
     if (backgroundOptions.type === 'solid' && backgroundOptions.color) {
@@ -232,8 +241,6 @@ export default function ImageTools() {
 
   const allImages = [...images.map(i => ({ url: i.url, name: i.name })), ...uploadedImages.map(i => ({ url: i.url, name: i.file.name }))];
 
-  const isAtLimit = usage?.warning === 'at_limit';
-
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -248,9 +255,11 @@ export default function ImageTools() {
               Swap or remove backgrounds from your product photos in batch
             </p>
           </div>
-          <div className="w-80">
-            <UsageDisplay usage={usage} isLoading={usageLoading} />
-          </div>
+          {processorType === 'removebg' && (
+            <div className="w-80">
+              <UsageDisplay usage={usage} isLoading={usageLoading} />
+            </div>
+          )}
         </div>
 
         {/* Main Content */}
@@ -356,7 +365,9 @@ export default function ImageTools() {
               <CardContent>
                 <BackgroundSelector 
                   value={backgroundOptions} 
-                  onChange={setBackgroundOptions} 
+                  onChange={setBackgroundOptions}
+                  processorType={processorType}
+                  onProcessorChange={setProcessorType}
                 />
               </CardContent>
             </Card>

@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.check-removebg-usage]
 verify_jwt = false
+
+[functions.ai-background-replace]
+verify_jwt = false
