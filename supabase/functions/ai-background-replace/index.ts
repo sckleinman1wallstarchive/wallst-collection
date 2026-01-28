@@ -15,6 +15,61 @@ interface AIBackgroundRequest {
   background?: BackgroundOptions;
 }
 
+const MAX_IMAGES_PER_REQUEST = 3;
+
+async function processImage(
+  imageUrl: string,
+  prompt: string,
+  apiKey: string
+): Promise<{ originalUrl: string; processedUrl: string | null; error?: string }> {
+  try {
+    console.log(`Processing image with Lovable AI:`, imageUrl.substring(0, 50) + '...');
+
+    // Pass URL directly to AI gateway - no base64 conversion needed
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [{
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            { type: "image_url", image_url: { url: imageUrl } }
+          ]
+        }],
+        modalities: ["image", "text"]
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Lovable AI error:', response.status, errorText);
+      
+      if (response.status === 429) {
+        return { originalUrl: imageUrl, processedUrl: null, error: 'Rate limit exceeded. Please try again later.' };
+      } else if (response.status === 402) {
+        return { originalUrl: imageUrl, processedUrl: null, error: 'Insufficient credits. Please add credits to continue.' };
+      }
+      return { originalUrl: imageUrl, processedUrl: null, error: `AI gateway error: ${response.status}` };
+    }
+
+    const data = await response.json();
+    const processedImageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+
+    if (processedImageUrl) {
+      return { originalUrl: imageUrl, processedUrl: processedImageUrl };
+    }
+    return { originalUrl: imageUrl, processedUrl: null, error: 'No image returned from AI' };
+  } catch (error) {
+    console.error('Error processing image:', imageUrl, error);
+    return { originalUrl: imageUrl, processedUrl: null, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -38,7 +93,13 @@ serve(async (req) => {
       );
     }
 
-    const results: { originalUrl: string; processedUrl: string | null; error?: string }[] = [];
+    // Limit batch size to prevent CPU timeout
+    if (imageUrls.length > MAX_IMAGES_PER_REQUEST) {
+      return new Response(
+        JSON.stringify({ error: `Maximum ${MAX_IMAGES_PER_REQUEST} images per request. Please process in smaller batches.` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Build prompt based on background options
     let prompt: string;
@@ -48,100 +109,10 @@ serve(async (req) => {
       prompt = `Remove the background from this product photo completely. Make the background fully transparent. Keep the product/subject exactly as-is with no modifications to its appearance, colors, or details.`;
     }
 
-    for (const imageUrl of imageUrls) {
-      try {
-        console.log(`Processing image with Lovable AI:`, imageUrl.substring(0, 50) + '...');
-
-        // Fetch the image and convert to base64 if it's a URL
-        let imageData = imageUrl;
-        if (imageUrl.startsWith('http')) {
-          const imageResponse = await fetch(imageUrl);
-          if (!imageResponse.ok) {
-            results.push({
-              originalUrl: imageUrl,
-              processedUrl: null,
-              error: 'Failed to fetch image',
-            });
-            continue;
-          }
-          const arrayBuffer = await imageResponse.arrayBuffer();
-          const base64 = btoa(
-            new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-          );
-          const contentType = imageResponse.headers.get('content-type') || 'image/png';
-          imageData = `data:${contentType};base64,${base64}`;
-        }
-
-        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash-image",
-            messages: [{
-              role: "user",
-              content: [
-                { type: "text", text: prompt },
-                { type: "image_url", image_url: { url: imageData } }
-              ]
-            }],
-            modalities: ["image", "text"]
-          })
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Lovable AI error:', response.status, errorText);
-          
-          if (response.status === 429) {
-            results.push({
-              originalUrl: imageUrl,
-              processedUrl: null,
-              error: 'Rate limit exceeded. Please try again later.',
-            });
-          } else if (response.status === 402) {
-            results.push({
-              originalUrl: imageUrl,
-              processedUrl: null,
-              error: 'Insufficient credits. Please add credits to continue.',
-            });
-          } else {
-            results.push({
-              originalUrl: imageUrl,
-              processedUrl: null,
-              error: `AI gateway error: ${response.status}`,
-            });
-          }
-          continue;
-        }
-
-        const data = await response.json();
-        const processedImageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-        if (processedImageUrl) {
-          results.push({
-            originalUrl: imageUrl,
-            processedUrl: processedImageUrl,
-          });
-        } else {
-          results.push({
-            originalUrl: imageUrl,
-            processedUrl: null,
-            error: 'No image returned from AI',
-          });
-        }
-
-      } catch (error) {
-        console.error('Error processing image:', imageUrl, error);
-        results.push({
-          originalUrl: imageUrl,
-          processedUrl: null,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
-    }
+    // Process images in parallel
+    const results = await Promise.all(
+      imageUrls.map(url => processImage(url, prompt, LOVABLE_API_KEY))
+    );
 
     const successCount = results.filter(r => r.processedUrl).length;
 
