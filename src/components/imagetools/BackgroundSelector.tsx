@@ -3,10 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { Check, Sparkles, Eraser } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 export type BackgroundType = 'transparent' | 'solid';
-export type ProcessorType = 'removebg' | 'lovable-ai';
 
 export interface BackgroundOptions {
   type: BackgroundType;
@@ -16,8 +15,6 @@ export interface BackgroundOptions {
 interface BackgroundSelectorProps {
   value: BackgroundOptions;
   onChange: (options: BackgroundOptions) => void;
-  processorType: ProcessorType;
-  onProcessorChange: (processor: ProcessorType) => void;
 }
 
 const PRESET_COLORS = [
@@ -40,7 +37,7 @@ const PRESET_COLORS = [
   { name: 'Deep Orange', hex: '#FF5722' },
 ];
 
-export function BackgroundSelector({ value, onChange, processorType, onProcessorChange }: BackgroundSelectorProps) {
+export function BackgroundSelector({ value, onChange }: BackgroundSelectorProps) {
   const [customColor, setCustomColor] = useState(value.color || '#FFFFFF');
 
   const handleTypeChange = (type: BackgroundType) => {
@@ -61,50 +58,6 @@ export function BackgroundSelector({ value, onChange, processorType, onProcessor
 
   return (
     <div className="space-y-6">
-      {/* Processor Selector */}
-      <div className="space-y-3">
-        <Label className="text-sm font-medium">Processor</Label>
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => onProcessorChange('removebg')}
-            className={cn(
-              'flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all',
-              processorType === 'removebg'
-                ? 'border-primary bg-primary/5'
-                : 'border-border hover:border-muted-foreground/50'
-            )}
-          >
-            <Eraser className={cn('h-6 w-6', processorType === 'removebg' ? 'text-primary' : 'text-muted-foreground')} />
-            <span className="font-medium text-sm">remove.bg</span>
-            <span className="text-xs text-muted-foreground text-center">
-              Background removal & color fill
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onProcessorChange('lovable-ai')}
-            className={cn(
-              'flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all',
-              processorType === 'lovable-ai'
-                ? 'border-primary bg-primary/5'
-                : 'border-border hover:border-muted-foreground/50'
-            )}
-          >
-            <Sparkles className={cn('h-6 w-6', processorType === 'lovable-ai' ? 'text-primary' : 'text-muted-foreground')} />
-            <span className="font-medium text-sm">Color Switcher</span>
-            <span className="text-xs text-muted-foreground text-center">
-              Swap colors on processed images
-            </span>
-          </button>
-        </div>
-        {processorType === 'lovable-ai' && (
-          <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2 rounded-md">
-            ⚠️ Use on images that already have backgrounds removed. For new extractions, use remove.bg first.
-          </p>
-        )}
-      </div>
-
       {/* Background Options */}
       <Label className="text-sm font-medium">Background Options</Label>
       

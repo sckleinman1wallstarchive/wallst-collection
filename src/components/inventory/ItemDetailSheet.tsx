@@ -622,8 +622,10 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
             )}
 
             {isLostItem && (
-              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                <p className="text-sm text-destructive font-medium">Lost ${item.acquisitionCost} - {item.status}</p>
+              <div className={`p-4 rounded-lg ${item.status === 'refunded' ? 'bg-chart-2/10 border border-chart-2/20' : 'bg-destructive/10 border border-destructive/20'}`}>
+                <p className={`text-sm font-medium ${item.status === 'refunded' ? 'text-chart-2' : 'text-destructive'}`}>
+                  {item.status === 'refunded' ? `Recovered $${item.acquisitionCost} - Refunded` : `Lost $${item.acquisitionCost} - Scammed`}
+                </p>
               </div>
             )}
 

@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
-import { Eraser, Download, RefreshCw, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
-import { BackgroundSelector, BackgroundOptions, ProcessorType } from '@/components/imagetools/BackgroundSelector';
+import { Eraser, Download, RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
+import { BackgroundSelector, BackgroundOptions } from '@/components/imagetools/BackgroundSelector';
 import { UsageDisplay } from '@/components/imagetools/UsageDisplay';
 import { ApiKeyManager } from '@/components/imagetools/ApiKeyManager';
 import { InventoryImageSelector } from '@/components/imagetools/InventoryImageSelector';
@@ -43,7 +43,6 @@ export default function ImageTools() {
   const [totalToProcess, setTotalToProcess] = useState(0);
   const [results, setResults] = useState<ProcessedImage[]>([]);
   const [backgroundOptions, setBackgroundOptions] = useState<BackgroundOptions>({ type: 'transparent' });
-  const [processorType, setProcessorType] = useState<ProcessorType>('removebg');
   const [showLimitWarning, setShowLimitWarning] = useState(false);
   const [pendingProcessCount, setPendingProcessCount] = useState(0);
 
@@ -81,8 +80,8 @@ export default function ImageTools() {
       return;
     }
 
-    // Only check remove.bg limits when using remove.bg processor
-    if (processorType === 'removebg' && usage && !limitToRemaining) {
+    // Check remove.bg limits
+    if (usage && !limitToRemaining) {
       const wouldExceed = usage.totalUsed + toProcess.length > usage.totalLimit;
       if (wouldExceed && usage.totalRemaining > 0) {
         setPendingProcessCount(usage.totalRemaining);
@@ -106,49 +105,30 @@ export default function ImageTools() {
         ? { type: 'transparent' as const }
         : { type: 'solid' as const, color: backgroundOptions.color };
 
-      // Choose endpoint based on processor type
-      const functionName = processorType === 'removebg' ? 'remove-background' : 'ai-background-replace';
+      const urlsToProcess = toProcess.map((img) => img.url);
 
-      // For AI processor, batch in groups of 3 to avoid CPU timeout
-      const batchSize = processorType === 'lovable-ai' ? 3 : toProcess.length;
-      const batches: typeof toProcess[] = [];
-      for (let i = 0; i < toProcess.length; i += batchSize) {
-        batches.push(toProcess.slice(i, i + batchSize));
+      const { data, error } = await supabase.functions.invoke('remove-background', {
+        body: { 
+          imageUrls: urlsToProcess,
+          background: backgroundPayload,
+        },
+      });
+
+      if (error) {
+        throw error;
       }
 
-      let allResults: ProcessedImage[] = [];
-      let processed = 0;
+      const apiResults = data.results || [];
+      
+      // Map results back with item context
+      const enrichedResults: ProcessedImage[] = apiResults.map((result: ProcessedImage, idx: number) => ({
+        ...result,
+        itemId: toProcess[idx]?.itemId,
+        imageIndex: toProcess[idx]?.imageIndex,
+      }));
 
-      for (const batch of batches) {
-        const urlsToProcess = batch.map((img) => img.url);
-
-        const { data, error } = await supabase.functions.invoke(functionName, {
-          body: { 
-            imageUrls: urlsToProcess,
-            background: backgroundPayload,
-          },
-        });
-
-        if (error) {
-          throw error;
-        }
-
-        const apiResults = data.results || [];
-        
-        // Map results back with item context
-        const enrichedResults: ProcessedImage[] = apiResults.map((result: ProcessedImage, idx: number) => ({
-          ...result,
-          itemId: batch[idx]?.itemId,
-          imageIndex: batch[idx]?.imageIndex,
-        }));
-
-        allResults = [...allResults, ...enrichedResults];
-        processed += batch.length;
-        setProcessedCount(processed);
-        setResults([...allResults]);
-      }
-
-      const enrichedResults = allResults;
+      setProcessedCount(toProcess.length);
+      setResults(enrichedResults);
 
       // Auto-save processed images back to inventory
       const successfulResults = enrichedResults.filter((r) => r.processedUrl);
@@ -191,10 +171,8 @@ export default function ImageTools() {
         toast.success(`Updated ${itemUpdates.size} item(s) with ${successfulResults.length} processed image(s)`);
       }
       
-      // Refresh usage data only for remove.bg
-      if (processorType === 'removebg') {
-        invalidateUsage();
-      }
+      // Refresh usage data
+      invalidateUsage();
 
       // Clear selection after successful processing
       setSelectedImages(new Map());
@@ -241,15 +219,14 @@ export default function ImageTools() {
   };
 
   const getProcessButtonText = () => {
-    const processorName = processorType === 'removebg' ? 'remove.bg' : 'Color Switcher';
     if (backgroundOptions.type === 'transparent') {
-      return `Remove Backgrounds (${processorName})`;
+      return `Remove Backgrounds`;
     } else {
-      return `Apply ${backgroundOptions.color || 'Color'} (${processorName})`;
+      return `Apply ${backgroundOptions.color || 'Color'}`;
     }
   };
 
-  const isAtLimit = processorType === 'removebg' && usage?.warning === 'at_limit';
+  const isAtLimit = usage?.warning === 'at_limit';
 
   const getResultBackground = () => {
     if (backgroundOptions.type === 'solid' && backgroundOptions.color) {
@@ -279,11 +256,9 @@ export default function ImageTools() {
               Swap or remove backgrounds from your product photos — changes save automatically
             </p>
           </div>
-          {processorType === 'removebg' && (
-            <div className="w-80">
-              <UsageDisplay usage={usage} isLoading={usageLoading} />
-            </div>
-          )}
+          <div className="w-80">
+            <UsageDisplay usage={usage} isLoading={usageLoading} />
+          </div>
         </div>
 
         {/* Main Content */}
@@ -320,8 +295,6 @@ export default function ImageTools() {
                 <BackgroundSelector 
                   value={backgroundOptions} 
                   onChange={setBackgroundOptions}
-                  processorType={processorType}
-                  onProcessorChange={setProcessorType}
                 />
               </CardContent>
             </Card>
@@ -478,25 +451,14 @@ export default function ImageTools() {
         </div>
       </div>
 
-      {/* Credit Warning Dialog */}
+      {/* Limit Warning Dialog */}
       <AlertDialog open={showLimitWarning} onOpenChange={setShowLimitWarning}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-500" />
-              Credit Warning
-            </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>You're about to process {totalSelected} images.</p>
-              <p className="font-medium">
-                Current usage: {usage?.totalUsed}/{usage?.totalLimit}
-              </p>
-              <p>
-                After processing: {(usage?.totalUsed || 0) + totalSelected}/{usage?.totalLimit} ({totalSelected - pendingProcessCount} over limit)
-              </p>
-              <p className="text-sm">
-                Only the first {pendingProcessCount} images will be processed.
-              </p>
+            <AlertDialogTitle>Monthly Limit Warning</AlertDialogTitle>
+            <AlertDialogDescription>
+              You've selected more images than your remaining credits ({usage?.totalRemaining || 0} left).
+              Would you like to process only the first {pendingProcessCount} images now?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

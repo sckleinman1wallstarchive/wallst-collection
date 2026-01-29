@@ -7,7 +7,6 @@ import { AccessGate } from "@/components/auth/AccessGate";
 import Index from "./pages/Index";
 import Inventory from "./pages/Inventory";
 import ImageTools from "./pages/ImageTools";
-import CrossPosting from "./pages/CrossPosting";
 import Authenticate from "./pages/Authenticate";
 import PopUps from "./pages/PopUps";
 import Contacts from "./pages/Contacts";
@@ -27,7 +26,6 @@ function ProtectedRoutes() {
       <Route path="/" element={<Index />} />
       <Route path="/inventory" element={<Inventory />} />
       <Route path="/image-tools" element={<ImageTools />} />
-      <Route path="/cross-posting" element={<CrossPosting />} />
       <Route path="/authenticate" element={<Authenticate />} />
       <Route path="/pop-ups" element={<PopUps />} />
       <Route path="/contacts" element={<Contacts />} />

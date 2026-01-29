@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useGoals, Goal, UpdateGoalInput } from '@/hooks/useGoals';
 import { GoalCard } from '@/components/goals/GoalCard';
@@ -15,15 +15,31 @@ const Goals = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const { goals, isLoading, createGoal, deleteGoal, toggleComplete, updateGoal } = useGoals();
-  const { getFinancialSummary } = useSupabaseInventory();
-  const summary = getFinancialSummary();
+  const { inventory } = useSupabaseInventory();
+  
+  // Calculate monthly revenue (current calendar month only)
+  const currentMonthRevenue = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    return inventory
+      .filter(item => {
+        if (item.status !== 'sold' || !item.dateSold) return false;
+        const saleDate = new Date(item.dateSold);
+        return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, item) => sum + (item.salePrice || 0), 0);
+  }, [inventory]);
 
   // Revenue goals
   const revenueGoal = 8333;
   const stretchGoal = 10000;
-  const currentRevenue = summary.totalRevenue;
-  const revenuePercentage = Math.min(100, (currentRevenue / revenueGoal) * 100);
-  const stretchPercentage = Math.min(100, (currentRevenue / stretchGoal) * 100);
+  const revenuePercentage = Math.min(100, (currentMonthRevenue / revenueGoal) * 100);
+  const stretchPercentage = Math.min(100, (currentMonthRevenue / stretchGoal) * 100);
+  
+  // Get current month name
+  const currentMonthName = new Date().toLocaleString('default', { month: 'long' });
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -73,7 +89,7 @@ const Goals = () => {
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-medium text-white flex items-center gap-2">
                 <DollarSign className="h-4 w-4 text-[#c9b99a]" />
-                Monthly Revenue Target
+                {currentMonthName} Revenue Target
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -81,7 +97,7 @@ const Goals = () => {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-white/60">Goal</span>
                   <span className="text-sm font-medium text-white">
-                    {formatCurrency(currentRevenue)} / {formatCurrency(revenueGoal)}
+                    {formatCurrency(currentMonthRevenue)} / {formatCurrency(revenueGoal)}
                   </span>
                 </div>
                 <Progress 
@@ -94,7 +110,7 @@ const Goals = () => {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-white/60">Stretch Goal</span>
                   <span className="text-sm font-medium text-white">
-                    {formatCurrency(currentRevenue)} / {formatCurrency(stretchGoal)}
+                    {formatCurrency(currentMonthRevenue)} / {formatCurrency(stretchGoal)}
                   </span>
                 </div>
                 <Progress 

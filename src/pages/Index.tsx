@@ -5,7 +5,7 @@ import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, DollarSign, TrendingUp, Clock, AlertTriangle, Ruler, Image, Tag, ChevronDown, ChevronUp, ShoppingBag, Flame, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,27 @@ const Index = () => {
     ? Math.round(activeItems.reduce((sum, i) => sum + (i.daysHeld || 0), 0) / activeItems.length)
     : 0;
   const stagnantItems = activeItems.filter(i => (i.daysHeld || 0) > 30);
+
+  // Calculate monthly revenue (current calendar month only)
+  const currentMonthData = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    const soldThisMonth = inventory.filter(item => {
+      if (item.status !== 'sold' || !item.dateSold) return false;
+      const saleDate = new Date(item.dateSold);
+      return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
+    });
+    
+    const revenue = soldThisMonth.reduce((sum, item) => sum + (item.salePrice || 0), 0);
+    const profit = soldThisMonth.reduce((sum, item) => sum + ((item.salePrice || 0) - item.acquisitionCost), 0);
+    
+    return { revenue, profit, itemsSold: soldThisMonth.length };
+  }, [inventory]);
+  
+  // Get current month name
+  const currentMonthName = new Date().toLocaleString('default', { month: 'long' });
 
   // Recent cops - last 10 items sorted by date_added (or created_at as fallback)
   const recentCops = [...(inventory || [])]
@@ -69,7 +90,7 @@ const Index = () => {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
             <p className="text-muted-foreground text-sm mt-1">
-              January 2025 · Week 2
+              {currentMonthName} · Week {Math.ceil(new Date().getDate() / 7)}
             </p>
           </div>
         </div>
@@ -107,18 +128,18 @@ const Index = () => {
           {/* Progress Section */}
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle className="text-base font-medium">Monthly Goals</CardTitle>
+              <CardTitle className="text-base font-medium">{currentMonthName} Goals</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground">Revenue Target</span>
                   <span className="text-sm font-medium">
-                    {formatCurrency(summary.totalRevenue)} / {formatCurrency(monthlyTarget)}
+                    {formatCurrency(currentMonthData.revenue)} / {formatCurrency(monthlyTarget)}
                   </span>
                 </div>
                 <ProgressBar
-                  value={summary.totalRevenue}
+                  value={currentMonthData.revenue}
                   max={monthlyTarget}
                   showPercentage={false}
                 />
@@ -127,11 +148,11 @@ const Index = () => {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground">Stretch Target</span>
                   <span className="text-sm font-medium">
-                    {formatCurrency(summary.totalRevenue)} / {formatCurrency(stretchTarget)}
+                    {formatCurrency(currentMonthData.revenue)} / {formatCurrency(stretchTarget)}
                   </span>
                 </div>
                 <ProgressBar
-                  value={summary.totalRevenue}
+                  value={currentMonthData.revenue}
                   max={stretchTarget}
                   showPercentage={false}
                 />
@@ -142,12 +163,12 @@ const Index = () => {
                   <p className="text-lg font-semibold">{summary.avgMargin}%</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Total Profit</p>
-                  <p className="text-lg font-semibold">{formatCurrency(summary.totalProfit)}</p>
+                  <p className="text-xs text-muted-foreground">{currentMonthName} Profit</p>
+                  <p className="text-lg font-semibold">{formatCurrency(currentMonthData.profit)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Items Sold</p>
-                  <p className="text-lg font-semibold">{summary.itemsSold}</p>
+                  <p className="text-xs text-muted-foreground">{currentMonthName} Sales</p>
+                  <p className="text-lg font-semibold">{currentMonthData.itemsSold}</p>
                 </div>
               </div>
             </CardContent>
