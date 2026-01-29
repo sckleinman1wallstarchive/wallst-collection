@@ -479,6 +479,45 @@ export type Database = {
           },
         ]
       }
+      storefront_brand_items: {
+        Row: {
+          brand_id: string
+          created_at: string
+          display_order: number | null
+          id: string
+          inventory_item_id: string
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          inventory_item_id: string
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          inventory_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "storefront_brand_items_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "storefront_brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "storefront_brand_items_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       storefront_brands: {
         Row: {
           art_image_url: string | null
@@ -628,6 +667,9 @@ export type Database = {
         | "accessories"
         | "bags"
         | "other"
+        | "belt"
+        | "sweater"
+        | "jacket"
       item_owner: "Parker Kleinman" | "Spencer Kleinman" | "Shared"
       item_status:
         | "in-closet"
@@ -796,6 +838,9 @@ export const Constants = {
         "accessories",
         "bags",
         "other",
+        "belt",
+        "sweater",
+        "jacket",
       ],
       item_owner: ["Parker Kleinman", "Spencer Kleinman", "Shared"],
       item_status: [

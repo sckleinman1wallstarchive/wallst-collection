@@ -27,12 +27,15 @@ interface StorefrontFiltersProps {
 }
 
 const CATEGORY_OPTIONS = [
-  { value: 'pants', label: 'Pants' },
-  { value: 'shoes', label: 'Shoes' },
+  { value: 'tops', label: 'Tops' },
+  { value: 'bottoms', label: 'Bottoms' },
+  { value: 'outerwear', label: 'Outerwear' },
+  { value: 'footwear', label: 'Footwear' },
+  { value: 'accessories', label: 'Accessories' },
+  { value: 'bags', label: 'Bags' },
   { value: 'belt', label: 'Belts' },
-  { value: 'hoodie', label: 'Hoodies' },
+  { value: 'sweater', label: 'Sweaters' },
   { value: 'jacket', label: 'Jackets' },
-  { value: 'top', label: 'Tops' },
   { value: 'other', label: 'Other' },
 ];
 

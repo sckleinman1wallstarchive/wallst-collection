@@ -150,6 +150,18 @@ export function useStorefrontBrands() {
     return publicUrl;
   };
 
+  // Fetch assigned item IDs for a brand
+  const fetchBrandItemIds = async (brandId: string): Promise<string[]> => {
+    const { data, error } = await supabase
+      .from('storefront_brand_items')
+      .select('inventory_item_id')
+      .eq('brand_id', brandId)
+      .order('display_order');
+    
+    if (error) return [];
+    return (data || []).map(row => row.inventory_item_id);
+  };
+
   return {
     brands: brandsQuery.data || [],
     isLoading: brandsQuery.isLoading,
@@ -158,5 +170,6 @@ export function useStorefrontBrands() {
     deleteBrand: deleteBrandMutation.mutate,
     reorderBrands: reorderBrandsMutation.mutate,
     uploadArtImage,
+    fetchBrandItemIds,
   };
 }

@@ -26,7 +26,7 @@ interface StorefrontProductCardProps {
   isEditMode?: boolean;
 }
 
-const CATEGORIES = ['footwear', 'tops', 'bottoms', 'outerwear', 'accessories', 'bags', 'other'];
+const CATEGORIES = ['footwear', 'tops', 'bottoms', 'outerwear', 'accessories', 'bags', 'belt', 'sweater', 'jacket', 'other'];
 
 export function StorefrontProductCard({ item, onClick, isEditMode = false }: StorefrontProductCardProps) {
   const addItem = useShopCartStore(state => state.addItem);
