@@ -1,67 +1,59 @@
 
 
-# Implementation Plan: Storefront Item Assignment and Fixes
+# Fix: Automatic API Key Rotation + Manual Priority Control
 
-## Summary of Issues Found
+## The Problem
 
-### Issue 1: ERD CY Twomblee Hoodie Not on Storefront
-The item "Enfants Riches Deprimes x CY Twomblee" has status **`listed`**, not **`for-sale`**. The storefront's "Shop All" only shows items with `for-sale` status. This is working as designed - you need to change the item's status to `for-sale` in the Inventory page if you want it to appear on the storefront.
+Your backend currently:
+1. Picks the first key based on priority
+2. If remove.bg returns `402 Insufficient credits`, it records an error but **doesn't try the next key**
+3. Usage tracking is local (hardcoded 50/key), not real remove.bg balances
 
-### Issue 2: Assign Items to Brands in Edit Mode
-Currently, when you click a brand card, it filters by matching the item's `brand` field. There's no way to manually curate which items appear under which brand showcase. We'll add an item assignment feature.
+## Solution
 
-### Issue 3: Category Filtering
-The current categories in the database are: `tops`, `bottoms`, `outerwear`, `footwear`, `accessories`, `bags`, `other`. We'll add the specific categories you requested (belt, sweater, jacket) to make filtering more granular.
+### Part 1: Automatic Key Rotation on 402/403 Errors
 
----
+**File: `supabase/functions/remove-background/index.ts`**
 
-## Implementation Details
-
-### Part 1: Add "Assign Items" Feature to Shop by Brand
-
-**Database Changes:**
-- Create a new junction table `storefront_brand_items` to link inventory items to storefront brands (many-to-many relationship)
-- This allows one item to be featured under multiple brands if needed
+Update the image processing loop to retry with the next available key when the current key fails:
 
 ```text
-New Table: storefront_brand_items
-- id (uuid, primary key)
-- brand_id (uuid, references storefront_brands)
-- inventory_item_id (uuid, references inventory_items)
-- display_order (integer)
-- created_at (timestamp)
+Current behavior:
+  Try key 1 → 402 Error → Record failure → Move to next image
+
+New behavior:
+  Try key 1 → 402 Error → Mark key as exhausted → Try key 2 → Success!
 ```
 
-**UI Changes (ShopByBrandView.tsx):**
-- Add "Assign Items" button on each brand card in edit mode
-- Open a dialog showing available inventory items (for-sale status)
-- Allow selecting/deselecting items to assign to that brand
-- Save selections to the new junction table
+Changes:
+- Add a `failedKeyIds` set to track keys that returned 402/403 during this request
+- When a key fails with 402 (insufficient credits) or 403 (invalid key):
+  - Add key to `failedKeyIds`
+  - Retry the same image with the next available key
+  - Only record failure if ALL keys are exhausted
+- Continue using keys in priority order, skipping failed ones
 
-**Filtering Logic Update:**
-- When clicking a brand to view its items:
-  - First, show items explicitly assigned via `storefront_brand_items`
-  - Optionally, also include items where the `brand` field matches (existing behavior)
-  - Or make it exclusive (only show assigned items)
+### Part 2: Manual Priority Control (Already Exists!)
 
----
+You can already manually control which key is used first via **priority order**:
 
-### Part 2: Add New Category Options
+**How to manually switch keys:**
+1. Go to Image Tools page
+2. In the API Keys section, you'll see keys numbered 1, 2, 3, etc.
+3. The drag handles (`⋮⋮`) let you reorder them
+4. The **top key (priority 0)** is tried first
 
-**Database Changes:**
-- Update the `item_category` enum to add: `belt`, `sweater`, `jacket`
-- These are more specific than the current options
+But the reorder functionality needs to actually work - let me check if it's connected...
 
-**UI Changes:**
-- Update `StorefrontFilters.tsx` category options
-- Update `StorefrontProductCard.tsx` category dropdown
-- Update any other places that list categories
+### Part 3: Add "Set as Primary" Quick Action
 
----
+Add a button on each key card to quickly move it to the top (priority 0) without dragging:
+- Shows on non-primary keys only
+- One click to make that key the first one tried
 
-### Part 3: Quick Fix for ERD Hoodie
+### Part 4: Fetch Real Balances from remove.bg (Optional but Recommended)
 
-No code changes needed - in the Inventory page, change the item's status from `listed` to `for-sale` and it will appear on the storefront.
+Update `check-removebg-usage` to call remove.bg's `/account` endpoint for each key to get real balances instead of the hardcoded 50/key estimate.
 
 ---
 
@@ -69,59 +61,62 @@ No code changes needed - in the Inventory page, change the item's status from `l
 
 | File | Changes |
 |------|---------|
-| **Database Migration** | Create `storefront_brand_items` table with RLS policies |
-| **Database Migration** | Add `belt`, `sweater`, `jacket` to `item_category` enum |
-| `src/hooks/useStorefrontBrands.ts` | Add functions to manage item assignments |
-| `src/components/storefront/ShopByBrandView.tsx` | Add "Assign Items" button and dialog |
-| `src/components/storefront/StorefrontFilters.tsx` | Add new category options |
-| `src/components/storefront/StorefrontProductCard.tsx` | Update category dropdown options |
-| `src/pages/Storefront.tsx` | Update brand click handler to use assigned items |
+| `supabase/functions/remove-background/index.ts` | Add retry logic for 402/403 errors |
+| `src/components/imagetools/ApiKeyManager.tsx` | Add "Set as Primary" button, verify drag-to-reorder works |
+| `src/hooks/useRemoveBgKeys.ts` | Add `setPrimaryKey` mutation |
+| `supabase/functions/check-removebg-usage/index.ts` | Fetch real balances from remove.bg API |
+| `src/hooks/useRemoveBgUsage.ts` | Update types to handle real balance data |
+| `src/components/imagetools/UsageDisplay.tsx` | Show real remaining credits |
 
 ---
 
-## New Feature: Item Assignment Dialog
+## Implementation Details
 
-When you click "Assign Items" on a brand card in edit mode:
+### Backend Retry Logic
 
-1. A dialog opens showing all for-sale inventory items
-2. Items already assigned to this brand are pre-selected (checkmarked)
-3. You can search/filter the list
-4. Select items to add, deselect to remove
-5. Click "Save" to update the assignments
-6. The brand card can optionally show a count like "5 items assigned"
+```typescript
+// For each image
+let imageProcessed = false;
+const failedKeysForThisImage: Set<string> = new Set();
 
----
-
-## Technical Flow
-
-```text
-Shop by Brand (Edit Mode)
-     |
-     v
-+------------------+
-| Brand Card       |
-| [Assign Items]   |  <-- New button
-| [Upload Art]     |
-+------------------+
-     |
-     v (click Assign Items)
-+------------------------------------------+
-| Assign Items to "Chrome Hearts"          |
-|------------------------------------------|
-| [Search items...]                        |
-|                                          |
-| [ ] Chrome Hearts Ring - $450            |
-| [x] Chrome Hearts Hoodie - $800          |
-| [x] Chrome Hearts Dagger - $350          |
-| [ ] Other Brand Jacket - $600            |
-|                                          |
-| [Cancel]              [Save Assignments] |
-+------------------------------------------+
+while (!imageProcessed) {
+  // Find next available key (not failed, not exhausted)
+  const selectedKey = keysWithUsage.find(k => 
+    !failedKeysForThisImage.has(k.id) && 
+    k.currentUsage < LIMIT_PER_KEY
+  );
+  
+  if (!selectedKey) {
+    // All keys exhausted for this image
+    results.push({ error: 'All API keys exhausted' });
+    break;
+  }
+  
+  const response = await fetch(...);
+  
+  if (response.status === 402 || response.status === 403) {
+    // Mark this key as failed and retry with next key
+    failedKeysForThisImage.add(selectedKey.id);
+    continue; // <-- This is the key change!
+  }
+  
+  // Success or other error - stop retrying
+  imageProcessed = true;
+}
 ```
+
+### Manual "Set as Primary" Button
+
+Each key card will have a star/arrow button that:
+1. Calls `reorderKeys` with that key moved to position 0
+2. Shifts all other keys down by 1
 
 ---
 
 ## Summary
 
-This plan adds the ability to manually curate which items appear under each brand in the storefront, adds more specific clothing categories for filtering, and explains why the ERD hoodie isn't showing (status issue, not a bug).
+After this fix:
+- **Automatic**: If key 1 is out of credits, the system automatically tries key 2, then key 3, etc.
+- **Manual**: Click "Set as Primary" on any key to make it the first one tried
+- **Visibility**: Real credit balances from remove.bg instead of estimated counts
 
