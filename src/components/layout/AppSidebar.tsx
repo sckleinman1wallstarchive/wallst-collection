@@ -12,7 +12,6 @@ import {
   Store,
   Eraser,
   ShieldCheck,
-  Share2,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -34,15 +33,14 @@ import { toast } from 'sonner';
 const navigation = [
   { title: 'Overview', url: '/', icon: LayoutDashboard },
   { title: 'Inventory', url: '/inventory', icon: Package },
-  { title: 'Image Tools', url: '/image-tools', icon: Eraser },
-  { title: 'Cross-Posting', url: '/cross-posting', icon: Share2 },
-  { title: 'Authenticate', url: '/authenticate', icon: ShieldCheck },
   { title: 'Storefront', url: '/storefront', icon: Store },
+  { title: 'Accounting', url: '/accounting', icon: Calculator },
+  { title: 'Analytics', url: '/analytics', icon: BarChart3 },
+  { title: 'Image Tools', url: '/image-tools', icon: Eraser },
+  { title: 'Authenticate', url: '/authenticate', icon: ShieldCheck },
   { title: 'Pop Ups', url: '/pop-ups', icon: Ticket },
   { title: 'Contacts', url: '/contacts', icon: Users },
-  { title: 'Accounting', url: '/accounting', icon: Calculator },
   { title: 'Goals', url: '/goals', icon: Target },
-  { title: 'Analytics', url: '/analytics', icon: BarChart3 },
 ];
 
 export function AppSidebar() {

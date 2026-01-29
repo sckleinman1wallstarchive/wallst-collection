@@ -81,7 +81,8 @@ export function InventoryTable({
       if (statusFilter === 'active') matchesStatus = !['sold', 'scammed', 'refunded', 'traded'].includes(item.status);
       else if (statusFilter === 'sold') matchesStatus = item.status === 'sold';
       else if (statusFilter === 'issues') matchesStatus = ['scammed', 'refunded', 'traded'].includes(item.status);
-      else if (statusFilter !== 'all') matchesStatus = item.status === statusFilter;
+      else if (statusFilter === 'all') matchesStatus = !['scammed', 'refunded'].includes(item.status); // Exclude scammed/refunded from "All"
+      else matchesStatus = item.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
