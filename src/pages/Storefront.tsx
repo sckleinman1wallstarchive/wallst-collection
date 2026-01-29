@@ -11,6 +11,7 @@ import { StorefrontTopNav, LandingNavView } from '@/components/storefront/Storef
 import { StorefrontSearchBar } from '@/components/storefront/StorefrontSearchBar';
 import { StorefrontFilters, FilterState } from '@/components/storefront/StorefrontFilters';
 import { ShopByBrandView } from '@/components/storefront/ShopByBrandView';
+import { useStorefrontBrands } from '@/hooks/useStorefrontBrands';
 import { CollectionGrailsView } from '@/components/storefront/CollectionGrailsView';
 import { AboutUsGallery } from '@/components/storefront/AboutUsGallery';
 import { ClosetSelection } from '@/components/storefront/ClosetSelection';
@@ -42,6 +43,9 @@ export default function Storefront() {
   const [filters, setFilters] = useState<FilterState>({ sizes: [], brands: [], categories: [] });
   const [isEditMode, setIsEditMode] = useState(false);
   const [localShopItems, setLocalShopItems] = useState<PublicInventoryItem[]>([]);
+  const [brandItemFilter, setBrandItemFilter] = useState<string[] | null>(null);
+  
+  const { fetchBrandItemIds } = useStorefrontBrands();
   
   const queryClient = useQueryClient();
   
@@ -116,9 +120,14 @@ export default function Storefront() {
   }, [shopItems, parkerItems, spencerItems]);
 
   // Filter function
-  const filterItems = (items: PublicInventoryItem[] | undefined) => {
+  const filterItems = (items: PublicInventoryItem[] | undefined, useBrandItemFilter = false) => {
     if (!items) return [];
     return items.filter((item) => {
+      // If brand item filter is active, only show those specific items
+      if (useBrandItemFilter && brandItemFilter && brandItemFilter.length > 0) {
+        if (!brandItemFilter.includes(item.id)) return false;
+      }
+      
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesSearch = 
@@ -144,7 +153,7 @@ export default function Storefront() {
     });
   };
 
-  const filteredShopItems = useMemo(() => filterItems(shopItems), [shopItems, searchQuery, filters]);
+  const filteredShopItems = useMemo(() => filterItems(shopItems, true), [shopItems, searchQuery, filters, brandItemFilter]);
   const filteredParkerItems = useMemo(() => filterItems(parkerItems), [parkerItems, searchQuery, filters]);
   const filteredSpencerItems = useMemo(() => filterItems(spencerItems), [spencerItems, searchQuery, filters]);
 
@@ -185,14 +194,37 @@ export default function Storefront() {
     }
     setSearchQuery('');
     setFilters({ sizes: [], brands: [], categories: [] });
+    setBrandItemFilter(null); // Clear brand item filter when navigating
   };
 
   const handleSelectCloset = (closet: 'parker' | 'spencer') => {
     setCurrentView(closet === 'parker' ? 'parker-closet' : 'spencer-closet');
   };
 
-  const handleBrandClick = (brandName: string) => {
-    setFilters({ ...filters, brands: [brandName] });
+  const handleBrandClick = async (brandName: string) => {
+    // Find the brand to get its ID
+    const { data: brand } = await supabase
+      .from('storefront_brands')
+      .select('id')
+      .eq('brand_name', brandName)
+      .maybeSingle();
+    
+    if (brand) {
+      const assignedIds = await fetchBrandItemIds(brand.id);
+      if (assignedIds.length > 0) {
+        // Filter by assigned items
+        setBrandItemFilter(assignedIds);
+        setFilters({ sizes: [], brands: [], categories: [] });
+      } else {
+        // Fallback: filter by brand name
+        setBrandItemFilter(null);
+        setFilters({ ...filters, brands: [brandName] });
+      }
+    } else {
+      // Fallback: filter by brand name
+      setBrandItemFilter(null);
+      setFilters({ ...filters, brands: [brandName] });
+    }
     setCurrentView('shop-all');
   };
 

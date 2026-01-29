@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Trash2, ListChecks } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,6 +24,7 @@ import {
 } from '@dnd-kit/sortable';
 import { useStorefrontBrands, StorefrontBrand } from '@/hooks/useStorefrontBrands';
 import { SortableBrandCard } from './SortableBrandCard';
+import { AssignBrandItemsDialog } from './AssignBrandItemsDialog';
 import { toast } from 'sonner';
 
 interface ShopByBrandViewProps {
@@ -37,6 +38,7 @@ export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewPro
   const { brands, isLoading, addBrand, deleteBrand, uploadArtImage, updateBrand, reorderBrands } = useStorefrontBrands();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showArtDialog, setShowArtDialog] = useState(false);
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<StorefrontBrand | null>(null);
   const [newBrandName, setNewBrandName] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -144,17 +146,31 @@ export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewPro
                     onSizeChange={(size) => handleSizeChange(brand.id, size)}
                     onClick={() => onBrandClick(brand.brand_name)}
                   />
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteBrand(brand.id);
-                    }}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  <div className="absolute bottom-2 left-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedBrand(brand);
+                        setShowAssignDialog(true);
+                      }}
+                    >
+                      <ListChecks className="h-3 w-3 mr-1" />
+                      Items
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteBrand(brand.id);
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -243,6 +259,19 @@ export function ShopByBrandView({ isEditMode, onBrandClick }: ShopByBrandViewPro
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Assign Items Dialog */}
+      {selectedBrand && (
+        <AssignBrandItemsDialog
+          open={showAssignDialog}
+          onOpenChange={(open) => {
+            setShowAssignDialog(open);
+            if (!open) setSelectedBrand(null);
+          }}
+          brandId={selectedBrand.id}
+          brandName={selectedBrand.brand_name}
+        />
+      )}
     </div>
   );
 }
