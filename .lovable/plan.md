@@ -1,150 +1,127 @@
 
-# Multi-Change Implementation Plan
 
-## Overview
-This plan addresses several connected changes to streamline the application:
+# Implementation Plan: Storefront Item Assignment and Fixes
 
-1. **Remove Lovable AI from Image Tools** - Eliminate the "Color Switcher" processor option that uses the Lovable AI gateway
-2. **Remove Cross-Posting feature** - Delete the page, route, and sidebar link
-3. **Reorder sidebar navigation**
-4. **Fix monthly goals to track by calendar month** (current month only)
-5. **Display which item is "listed"** (currently: "Enfants Riches Deprimes x CY Twomblee")
-6. **Fix refunds language** - Refunds are "recovered funds", not "lost" money
-7. **Hide scammed/refunded items from "All Items"** - Only show them in their specific status tab
+## Summary of Issues Found
 
----
+### Issue 1: ERD CY Twomblee Hoodie Not on Storefront
+The item "Enfants Riches Deprimes x CY Twomblee" has status **`listed`**, not **`for-sale`**. The storefront's "Shop All" only shows items with `for-sale` status. This is working as designed - you need to change the item's status to `for-sale` in the Inventory page if you want it to appear on the storefront.
 
-## 1. Remove Lovable AI from Image Tools
+### Issue 2: Assign Items to Brands in Edit Mode
+Currently, when you click a brand card, it filters by matching the item's `brand` field. There's no way to manually curate which items appear under which brand showcase. We'll add an item assignment feature.
 
-### Files to Modify:
-
-**`src/components/imagetools/BackgroundSelector.tsx`**
-- Remove the `ProcessorType` export (only keep `'removebg'`)
-- Remove the processor selector UI (lines 67-106)
-- Remove the warning message for Lovable AI
-
-**`src/pages/ImageTools.tsx`**
-- Remove `processorType` state (default to `'removebg'` only)
-- Remove AI batching logic (simplify processing since only remove.bg will be used)
-- Remove processor toggle in button text
-- Always show remove.bg usage display
-
-**Edge functions** (`supabase/functions/ai-background-replace/index.ts`)
-- Keep the function file but it will no longer be called from the frontend
+### Issue 3: Category Filtering
+The current categories in the database are: `tops`, `bottoms`, `outerwear`, `footwear`, `accessories`, `bags`, `other`. We'll add the specific categories you requested (belt, sweater, jacket) to make filtering more granular.
 
 ---
 
-## 2. Remove Cross-Posting
+## Implementation Details
 
-### Files to Delete:
-- `src/pages/CrossPosting.tsx`
-- `src/components/crossposting/ItemSelector.tsx`
-- `src/components/crossposting/ListingGenerator.tsx`
-- `src/components/crossposting/PlatformListingCard.tsx`
+### Part 1: Add "Assign Items" Feature to Shop by Brand
 
-### Files to Modify:
+**Database Changes:**
+- Create a new junction table `storefront_brand_items` to link inventory items to storefront brands (many-to-many relationship)
+- This allows one item to be featured under multiple brands if needed
 
-**`src/App.tsx`**
-- Remove import of `CrossPosting`
-- Remove route: `<Route path="/cross-posting" element={<CrossPosting />} />`
-
-**`src/components/layout/AppSidebar.tsx`**
-- Remove Cross-Posting from navigation array
-- Remove `Share2` icon import
-
----
-
-## 3. Reorder Sidebar Navigation
-
-**`src/components/layout/AppSidebar.tsx`**
-
-New order (as requested):
 ```text
-1. Overview          (/)
-2. Inventory         (/inventory)
-3. Storefront        (/storefront)
-4. Accounting        (/accounting)
-5. Analytics         (/analytics)
-6. Image Tools       (/image-tools)
-7. Authenticate      (/authenticate)
-8. Pop Ups           (/pop-ups)
-9. Contacts          (/contacts)
-10. Goals            (/goals)
+New Table: storefront_brand_items
+- id (uuid, primary key)
+- brand_id (uuid, references storefront_brands)
+- inventory_item_id (uuid, references inventory_items)
+- display_order (integer)
+- created_at (timestamp)
+```
+
+**UI Changes (ShopByBrandView.tsx):**
+- Add "Assign Items" button on each brand card in edit mode
+- Open a dialog showing available inventory items (for-sale status)
+- Allow selecting/deselecting items to assign to that brand
+- Save selections to the new junction table
+
+**Filtering Logic Update:**
+- When clicking a brand to view its items:
+  - First, show items explicitly assigned via `storefront_brand_items`
+  - Optionally, also include items where the `brand` field matches (existing behavior)
+  - Or make it exclusive (only show assigned items)
+
+---
+
+### Part 2: Add New Category Options
+
+**Database Changes:**
+- Update the `item_category` enum to add: `belt`, `sweater`, `jacket`
+- These are more specific than the current options
+
+**UI Changes:**
+- Update `StorefrontFilters.tsx` category options
+- Update `StorefrontProductCard.tsx` category dropdown
+- Update any other places that list categories
+
+---
+
+### Part 3: Quick Fix for ERD Hoodie
+
+No code changes needed - in the Inventory page, change the item's status from `listed` to `for-sale` and it will appear on the storefront.
+
+---
+
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| **Database Migration** | Create `storefront_brand_items` table with RLS policies |
+| **Database Migration** | Add `belt`, `sweater`, `jacket` to `item_category` enum |
+| `src/hooks/useStorefrontBrands.ts` | Add functions to manage item assignments |
+| `src/components/storefront/ShopByBrandView.tsx` | Add "Assign Items" button and dialog |
+| `src/components/storefront/StorefrontFilters.tsx` | Add new category options |
+| `src/components/storefront/StorefrontProductCard.tsx` | Update category dropdown options |
+| `src/pages/Storefront.tsx` | Update brand click handler to use assigned items |
+
+---
+
+## New Feature: Item Assignment Dialog
+
+When you click "Assign Items" on a brand card in edit mode:
+
+1. A dialog opens showing all for-sale inventory items
+2. Items already assigned to this brand are pre-selected (checkmarked)
+3. You can search/filter the list
+4. Select items to add, deselect to remove
+5. Click "Save" to update the assignments
+6. The brand card can optionally show a count like "5 items assigned"
+
+---
+
+## Technical Flow
+
+```text
+Shop by Brand (Edit Mode)
+     |
+     v
++------------------+
+| Brand Card       |
+| [Assign Items]   |  <-- New button
+| [Upload Art]     |
++------------------+
+     |
+     v (click Assign Items)
++------------------------------------------+
+| Assign Items to "Chrome Hearts"          |
+|------------------------------------------|
+| [Search items...]                        |
+|                                          |
+| [ ] Chrome Hearts Ring - $450            |
+| [x] Chrome Hearts Hoodie - $800          |
+| [x] Chrome Hearts Dagger - $350          |
+| [ ] Other Brand Jacket - $600            |
+|                                          |
+| [Cancel]              [Save Assignments] |
++------------------------------------------+
 ```
 
 ---
 
-## 4. Monthly Goals - Track by Calendar Month
+## Summary
 
-**`src/pages/Goals.tsx`** and **`src/pages/Index.tsx`**
+This plan adds the ability to manually curate which items appear under each brand in the storefront, adds more specific clothing categories for filtering, and explains why the ERD hoodie isn't showing (status issue, not a bug).
 
-Currently, `getFinancialSummary().totalRevenue` returns ALL-TIME revenue. For monthly tracking:
-- Filter sold items by current calendar month
-- Calculate revenue only from items sold in the current month
-
-**Changes:**
-- In `Goals.tsx`: Replace `summary.totalRevenue` with a monthly calculation
-- Add helper to filter by current month
-- Display current month name in the UI
-
----
-
-## 5. Show Which Item is "Listed"
-
-The single "listed" item is **Enfants Riches Deprimes x CY Twomblee**.
-
-**`src/pages/Index.tsx`** (or Goals page - based on your answer, this seems more like a debugging question)
-
-Since you're curious which item is listed, I'll add a small indicator in the "Monthly Goals" section showing:
-- "1 item currently listed: [item name]" (clickable link to open item)
-
----
-
-## 6. Fix Refund Language
-
-Refunds are money recovered, not lost. Current problematic text is in:
-
-**`src/components/inventory/ItemDetailSheet.tsx`** (line 626)
-```jsx
-// Current:
-<p className="text-sm text-destructive font-medium">Lost ${item.acquisitionCost} - {item.status}</p>
-
-// Change to (for refunded status only):
-<p className="text-sm text-chart-2 font-medium">Recovered ${item.acquisitionCost} - Refunded</p>
-```
-
-**For scammed items:** Keep the red "Lost" styling since scammed money IS lost.
-
-The logic will differentiate:
-- `status === 'refunded'` → Green "Recovered $X - Refunded"
-- `status === 'scammed'` → Red "Lost $X - Scammed"
-
----
-
-## 7. Hide Scammed/Refunded from "All Items" Tab
-
-**`src/components/inventory/InventoryTable.tsx`**
-
-Currently, "All Items" filter (`statusFilter === 'all'`) shows everything.
-
-Change the filter logic:
-- `all` → Shows everything EXCEPT `scammed` and `refunded`
-- Rename `all` to something like "active" or keep as "all" but exclude these statuses
-- Users can still view scammed/refunded via the "Issues" filter
-
----
-
-## Technical Summary
-
-| File | Change |
-|------|--------|
-| `src/components/imagetools/BackgroundSelector.tsx` | Remove Lovable AI processor option |
-| `src/pages/ImageTools.tsx` | Simplify to remove.bg only |
-| `src/pages/CrossPosting.tsx` | DELETE |
-| `src/components/crossposting/*` | DELETE (3 files) |
-| `src/App.tsx` | Remove CrossPosting import and route |
-| `src/components/layout/AppSidebar.tsx` | Remove Cross-Posting, reorder navigation |
-| `src/pages/Goals.tsx` | Filter revenue by current calendar month |
-| `src/pages/Index.tsx` | Filter revenue by current month, add listed item indicator |
-| `src/components/inventory/ItemDetailSheet.tsx` | Change refund text to "Recovered" (green) |
-| `src/components/inventory/InventoryTable.tsx` | Exclude scammed/refunded from "All Items" filter |
