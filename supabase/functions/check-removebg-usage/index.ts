@@ -16,7 +16,49 @@ function getResetDate(): string {
   return nextMonth.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-const LIMIT_PER_KEY = 50;
+interface RemoveBgAccountResponse {
+  data?: {
+    attributes?: {
+      credits?: {
+        total?: number;
+        subscription?: number;
+        payg?: number;
+        enterprise?: number;
+      };
+      api?: {
+        free_calls?: number;
+      };
+    };
+  };
+}
+
+async function fetchRealBalance(apiKey: string): Promise<{ used: number; limit: number } | null> {
+  try {
+    const response = await fetch('https://api.remove.bg/v1.0/account', {
+      headers: {
+        'X-Api-Key': apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      console.log(`Failed to fetch balance for key: ${response.status}`);
+      return null;
+    }
+
+    const data: RemoveBgAccountResponse = await response.json();
+    const freeCalls = data?.data?.attributes?.api?.free_calls ?? 0;
+    
+    // Free accounts get 50 free calls per month
+    // The API returns remaining free calls, so used = 50 - remaining
+    const limit = 50;
+    const used = Math.max(0, limit - freeCalls);
+    
+    return { used, limit };
+  } catch (error) {
+    console.error('Error fetching remove.bg balance:', error);
+    return null;
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -33,7 +75,7 @@ serve(async (req) => {
     // Get all active API keys
     const { data: apiKeys, error: keysError } = await supabase
       .from('removebg_api_keys')
-      .select('id, key_name, priority, is_active')
+      .select('id, key_name, api_key, priority, is_active')
       .eq('is_active', true)
       .order('priority', { ascending: true });
 
@@ -45,34 +87,58 @@ serve(async (req) => {
       );
     }
 
-    // Get usage for all keys this month
-    const { data: usageData } = await supabase
-      .from('removebg_usage')
-      .select('api_key_id, count')
-      .eq('month_year', monthYear);
+    // Fetch real balances from remove.bg API for each key
+    const keys = await Promise.all((apiKeys || []).map(async (k) => {
+      const realBalance = await fetchRealBalance(k.api_key);
+      
+      if (realBalance) {
+        // Update our local tracking to match real balance
+        await supabase
+          .from('removebg_usage')
+          .upsert(
+            { 
+              api_key_id: k.id, 
+              month_year: monthYear, 
+              count: realBalance.used, 
+              updated_at: new Date().toISOString() 
+            },
+            { onConflict: 'api_key_id,month_year' }
+          );
 
-    const usageByKey: Record<string, number> = {};
-    if (usageData) {
-      for (const u of usageData) {
-        if (u.api_key_id) {
-          usageByKey[u.api_key_id] = u.count || 0;
-        }
+        return {
+          id: k.id,
+          name: k.key_name,
+          used: realBalance.used,
+          limit: realBalance.limit,
+          remaining: Math.max(0, realBalance.limit - realBalance.used),
+          exhausted: realBalance.used >= realBalance.limit
+        };
       }
-    }
-
-    // Build per-key stats
-    const keys = (apiKeys || []).map(k => ({
-      id: k.id,
-      name: k.key_name,
-      used: usageByKey[k.id] || 0,
-      limit: LIMIT_PER_KEY,
-      remaining: Math.max(0, LIMIT_PER_KEY - (usageByKey[k.id] || 0)),
-      exhausted: (usageByKey[k.id] || 0) >= LIMIT_PER_KEY
+      
+      // Fallback to local tracking if API call fails
+      const { data: usageData } = await supabase
+        .from('removebg_usage')
+        .select('count')
+        .eq('api_key_id', k.id)
+        .eq('month_year', monthYear)
+        .single();
+      
+      const used = usageData?.count || 0;
+      const limit = 50;
+      
+      return {
+        id: k.id,
+        name: k.key_name,
+        used,
+        limit,
+        remaining: Math.max(0, limit - used),
+        exhausted: used >= limit
+      };
     }));
 
     // Calculate totals
     const totalUsed = keys.reduce((sum, k) => sum + k.used, 0);
-    const totalLimit = keys.length * LIMIT_PER_KEY;
+    const totalLimit = keys.reduce((sum, k) => sum + k.limit, 0);
     const totalRemaining = totalLimit - totalUsed;
 
     // Find active key (first non-exhausted)

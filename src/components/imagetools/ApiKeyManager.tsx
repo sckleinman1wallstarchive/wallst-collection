@@ -26,11 +26,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Key, Plus, Trash2, GripVertical, CheckCircle2, AlertCircle, Circle } from 'lucide-react';
+import { Key, Plus, Trash2, GripVertical, CheckCircle2, AlertCircle, Circle, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function ApiKeyManager() {
-  const { keys, isLoading, addKey, deleteKey, isAdding } = useRemoveBgKeys();
+  const { keys, isLoading, addKey, deleteKey, setPrimaryKey, isAdding, isSettingPrimary } = useRemoveBgKeys();
   const { data: usage } = useRemoveBgUsage();
   const [newKeyName, setNewKeyName] = useState('');
   const [newApiKey, setNewApiKey] = useState('');
@@ -197,7 +197,7 @@ export function ApiKeyManager() {
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <div className="text-right">
                     <div className="text-sm font-medium">
                       {keyUsage?.used ?? 0}/{keyUsage?.limit ?? 50}
@@ -214,6 +214,19 @@ export function ApiKeyManager() {
                       />
                     </div>
                   </div>
+                  
+                  {index !== 0 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-yellow-500"
+                      onClick={() => setPrimaryKey(key.id)}
+                      disabled={isSettingPrimary}
+                      title="Set as primary key"
+                    >
+                      <Star className="h-4 w-4" />
+                    </Button>
+                  )}
                   
                   <AlertDialog>
                     <AlertDialogTrigger asChild>

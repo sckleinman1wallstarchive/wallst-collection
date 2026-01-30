@@ -111,10 +111,39 @@ export function useRemoveBgKeys() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['removebg-keys'] });
+      queryClient.invalidateQueries({ queryKey: ['removebg-usage'] });
     },
     onError: (error) => {
       console.error('Error reordering keys:', error);
       toast.error('Failed to reorder keys');
+    }
+  });
+
+  const setPrimaryKeyMutation = useMutation({
+    mutationFn: async (keyId: string) => {
+      if (!keys) return;
+      
+      // Move the selected key to the front
+      const orderedIds = [keyId, ...keys.filter(k => k.id !== keyId).map(k => k.id)];
+      
+      // Update all priorities
+      const updates = orderedIds.map((id, index) => 
+        supabase
+          .from('removebg_api_keys')
+          .update({ priority: index })
+          .eq('id', id)
+      );
+      
+      await Promise.all(updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['removebg-keys'] });
+      queryClient.invalidateQueries({ queryKey: ['removebg-usage'] });
+      toast.success('Primary key updated');
+    },
+    onError: (error) => {
+      console.error('Error setting primary key:', error);
+      toast.error('Failed to set primary key');
     }
   });
 
@@ -126,7 +155,9 @@ export function useRemoveBgKeys() {
     deleteKey: deleteKeyMutation.mutate,
     updateKey: updateKeyMutation.mutate,
     reorderKeys: reorderKeysMutation.mutate,
+    setPrimaryKey: setPrimaryKeyMutation.mutate,
     isAdding: addKeyMutation.isPending,
-    isDeleting: deleteKeyMutation.isPending
+    isDeleting: deleteKeyMutation.isPending,
+    isSettingPrimary: setPrimaryKeyMutation.isPending
   };
 }
