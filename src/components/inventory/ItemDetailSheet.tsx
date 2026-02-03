@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Trash2, DollarSign, Save, ArrowRightLeft, CalendarCheck, AlertTriangle, Check, Copy } from 'lucide-react';
+import { Trash2, DollarSign, Save, ArrowRightLeft, CalendarCheck, AlertTriangle, Check, Copy, FileText } from 'lucide-react';
+import { ListingDescriptionGenerator } from './ListingDescriptionGenerator';
 import { toast } from 'sonner';
 import { PlatformMultiSelect } from './PlatformMultiSelect';
 import { ImageUpload } from './ImageUpload';
@@ -495,7 +496,7 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
         ) : isEditing ? (
           <div className="mt-6 space-y-4">
             <div>
-              <Label>Photos</Label>
+              <Label>Photos <span className="text-xs text-muted-foreground ml-1">(drag to paste into listings)</span></Label>
               <div className="mt-1">
                 <ImageUpload
                   imageUrls={currentImages}
@@ -503,6 +504,12 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
                 />
               </div>
             </div>
+
+            {/* Listing Description Generator */}
+            <ListingDescriptionGenerator 
+              itemName={editData.name || item.name} 
+              size={editData.size || item.size} 
+            />
 
             <div>
               <Label>Item Name</Label>
