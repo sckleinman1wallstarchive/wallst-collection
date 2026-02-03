@@ -37,6 +37,7 @@ const statusColors: Partial<Record<ItemStatus, string>> = {
   'in-closet': 'bg-muted text-muted-foreground',
   'in-closet-parker': 'bg-chart-1/20 text-chart-1',
   'in-closet-spencer': 'bg-chart-3/20 text-chart-3',
+  'for-sale': 'bg-primary/10 text-primary',
   'listed': 'bg-primary/10 text-primary',
   'sold': 'bg-chart-2/20 text-chart-2',
   'otw': 'bg-chart-5/20 text-chart-5',
@@ -50,7 +51,8 @@ const statusLabels: Partial<Record<ItemStatus, string>> = {
   'in-closet': 'In Closet',
   'in-closet-parker': 'In Closet (Parker)',
   'in-closet-spencer': 'In Closet (Spencer)',
-  'listed': 'For Sale',
+  'for-sale': 'FOR SALE',
+  'listed': 'LISTED',
   'sold': 'Sold',
   'otw': 'OTW',
   'archive-hold': 'Archive',
@@ -170,7 +172,8 @@ export function InventoryTable({
             <SelectItem value="issues">Issues (Scammed/Refunded)</SelectItem>
             <SelectItem value="in-closet-parker">In Closet (Parker)</SelectItem>
             <SelectItem value="in-closet-spencer">In Closet (Spencer)</SelectItem>
-            <SelectItem value="listed">For Sale</SelectItem>
+            <SelectItem value="for-sale">FOR SALE</SelectItem>
+            <SelectItem value="listed">LISTED</SelectItem>
             <SelectItem value="otw">OTW</SelectItem>
           </SelectContent>
         </Select>
