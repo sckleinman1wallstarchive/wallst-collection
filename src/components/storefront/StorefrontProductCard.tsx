@@ -28,6 +28,28 @@ interface StorefrontProductCardProps {
 
 const CATEGORIES = ['footwear', 'tops', 'bottoms', 'outerwear', 'accessories', 'bags', 'belt', 'sweater', 'jacket', 'other'];
 
+// Generate default description if notes are empty
+const getItemDescription = (item: PublicInventoryItem): string => {
+  if (item.notes) return item.notes;
+  
+  return [
+    item.name,
+    '',
+    item.size ? `Size: ${item.size}` : 'Size: One Size',
+    '',
+    'Send Offers/Trades',
+    '',
+    'Hit Me Up For A Better Price On IG At Wall Street Archive'
+  ].join('\n');
+};
+
+// Get truncated preview for card display
+const getDescriptionPreview = (desc: string): string => {
+  const lines = desc.split('\n').filter(l => l.trim());
+  const firstLine = lines[0] || '';
+  return firstLine.length > 50 ? firstLine.slice(0, 50) + '...' : firstLine;
+};
+
 export function StorefrontProductCard({ item, onClick, isEditMode = false }: StorefrontProductCardProps) {
   const addItem = useShopCartStore(state => state.addItem);
   const queryClient = useQueryClient();
@@ -56,6 +78,8 @@ export function StorefrontProductCard({ item, onClick, isEditMode = false }: Sto
   const firstImage = item.imageUrls?.[0] || item.imageUrl;
   const price = item.askingPrice;
   const isSold = item.status === 'sold';
+  const description = getItemDescription(item);
+  const descriptionPreview = getDescriptionPreview(description);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -158,6 +182,10 @@ export function StorefrontProductCard({ item, onClick, isEditMode = false }: Sto
                 {item.brand || 'Unknown Brand'}
               </p>
               <h3 className="font-medium truncate">{item.name}</h3>
+              {/* Description preview */}
+              <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                {descriptionPreview}
+              </p>
             </div>
             <p className="text-lg font-semibold shrink-0">
               {price ? `$${price.toFixed(0)}` : 'TBD'}
