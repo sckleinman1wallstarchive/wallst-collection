@@ -1,122 +1,156 @@
 
+# Direct Item Links + Descriptions on Storefront
 
-# Fix: Automatic API Key Rotation + Manual Priority Control
-
-## The Problem
-
-Your backend currently:
-1. Picks the first key based on priority
-2. If remove.bg returns `402 Insufficient credits`, it records an error but **doesn't try the next key**
-3. Usage tracking is local (hardcoded 50/key), not real remove.bg balances
-
-## Solution
-
-### Part 1: Automatic Key Rotation on 402/403 Errors
-
-**File: `supabase/functions/remove-background/index.ts`**
-
-Update the image processing loop to retry with the next available key when the current key fails:
-
-```text
-Current behavior:
-  Try key 1 → 402 Error → Record failure → Move to next image
-
-New behavior:
-  Try key 1 → 402 Error → Mark key as exhausted → Try key 2 → Success!
-```
-
-Changes:
-- Add a `failedKeyIds` set to track keys that returned 402/403 during this request
-- When a key fails with 402 (insufficient credits) or 403 (invalid key):
-  - Add key to `failedKeyIds`
-  - Retry the same image with the next available key
-  - Only record failure if ALL keys are exhausted
-- Continue using keys in priority order, skipping failed ones
-
-### Part 2: Manual Priority Control (Already Exists!)
-
-You can already manually control which key is used first via **priority order**:
-
-**How to manually switch keys:**
-1. Go to Image Tools page
-2. In the API Keys section, you'll see keys numbered 1, 2, 3, etc.
-3. The drag handles (`⋮⋮`) let you reorder them
-4. The **top key (priority 0)** is tried first
-
-But the reorder functionality needs to actually work - let me check if it's connected...
-
-### Part 3: Add "Set as Primary" Quick Action
-
-Add a button on each key card to quickly move it to the top (priority 0) without dragging:
-- Shows on non-primary keys only
-- One click to make that key the first one tried
-
-### Part 4: Fetch Real Balances from remove.bg (Optional but Recommended)
-
-Update `check-removebg-usage` to call remove.bg's `/account` endpoint for each key to get real balances instead of the hardcoded 50/key estimate.
+## Overview
+This plan addresses four related requests:
+1. **Direct item links** - Bypass the welcome page when sharing an item link on Instagram
+2. **Descriptions on storefront** - Show the listing description (notes) on Shop All cards and detail views
+3. **AI brand categorization** - Ensure items like "Enfants Riches Deprimes x CY Twombly" get properly tagged
+4. **Automatic description generation** - Populate descriptions on the shop page automatically
 
 ---
 
-## Files to Modify
+## Part 1: Bypass Welcome Page for Direct Item Links
+
+Currently when someone clicks a link like `/shop?item=abc123`, they still see the Welcome page and must click "Take a Tour" before the item opens.
+
+### Changes
+
+**File: `src/pages/Storefront.tsx`**
+
+Update the URL parameter handling to bypass the welcome screen when an item ID is present:
+
+```text
+Current flow:
+  URL has ?item=123 → Show welcome → Click "Take a Tour" → Then open item
+
+New flow:
+  URL has ?item=123 → Skip welcome → Jump directly to "home" view with item open
+```
+
+Logic change:
+- On initial mount, check if `?item=` parameter exists
+- If yes, skip `'welcome'` state and go directly to `'home'`
+- Open the product detail immediately
+
+---
+
+## Part 2: Show Descriptions on Storefront
+
+The `notes` field in `inventory_items` stores the listing description. Currently this field is fetched but not displayed prominently.
+
+### Changes
+
+**File: `src/components/storefront/StorefrontProductCard.tsx`**
+
+Add the description (notes) below the item name:
+- Show first 50-80 characters with "..." truncation
+- Use muted text styling to keep the card clean
+- Description appears between name and price
+
+**File: `src/components/storefront/StorefrontProductDetail.tsx`**
+
+Add a dedicated "Description" section:
+- Display the full description/notes prominently
+- Position it after the size/category badges
+- Use proper typography for readability
+
+---
+
+## Part 3: Automatic Description Generation
+
+When an item doesn't have a description yet, auto-generate one using the listing format from the inventory system.
+
+### Changes
+
+**File: `src/components/storefront/StorefrontProductCard.tsx` and `StorefrontProductDetail.tsx`**
+
+If `notes` is empty/null, generate a default description using the same format:
+- Item Name
+- Size: [size]
+- Send Offers/Trades
+- Hit Me Up For A Better Price On IG At Wall Street Archive
+
+This matches what you create in the inventory listing generator.
+
+---
+
+## Part 4: AI Brand Categorization Improvements
+
+The CY Twombly x ERD item currently has no brand set. The AI extraction already handles this, but needs a trigger.
+
+### Changes
+
+**1. Update brand extraction prompt (`supabase/functions/extract-brands/index.ts`)**
+
+Add explicit handling for collaborations:
+- "ERD x CY Twombly" should map to brand "Enfants Riches Deprimes" 
+- "Supreme x [Artist]" should map to "Supreme"
+- First brand in collaboration takes precedence
+
+**2. Trigger brand extraction for items missing brand data**
+
+The existing "Auto-tag" button on Analytics already does this. No code change needed - just run it to backfill the CY Twombly item.
+
+---
+
+## Summary of File Changes
 
 | File | Changes |
 |------|---------|
-| `supabase/functions/remove-background/index.ts` | Add retry logic for 402/403 errors |
-| `src/components/imagetools/ApiKeyManager.tsx` | Add "Set as Primary" button, verify drag-to-reorder works |
-| `src/hooks/useRemoveBgKeys.ts` | Add `setPrimaryKey` mutation |
-| `supabase/functions/check-removebg-usage/index.ts` | Fetch real balances from remove.bg API |
-| `src/hooks/useRemoveBgUsage.ts` | Update types to handle real balance data |
-| `src/components/imagetools/UsageDisplay.tsx` | Show real remaining credits |
+| `src/pages/Storefront.tsx` | Check for `?item=` on mount, skip welcome page if present |
+| `src/components/storefront/StorefrontProductCard.tsx` | Add description display (truncated) below item name |
+| `src/components/storefront/StorefrontProductDetail.tsx` | Add full description section, auto-generate if empty |
+| `supabase/functions/extract-brands/index.ts` | Improve collaboration handling in AI prompt |
 
 ---
 
-## Implementation Details
+## Technical Details
 
-### Backend Retry Logic
-
-```typescript
-// For each image
-let imageProcessed = false;
-const failedKeysForThisImage: Set<string> = new Set();
-
-while (!imageProcessed) {
-  // Find next available key (not failed, not exhausted)
-  const selectedKey = keysWithUsage.find(k => 
-    !failedKeysForThisImage.has(k.id) && 
-    k.currentUsage < LIMIT_PER_KEY
-  );
-  
-  if (!selectedKey) {
-    // All keys exhausted for this image
-    results.push({ error: 'All API keys exhausted' });
-    break;
-  }
-  
-  const response = await fetch(...);
-  
-  if (response.status === 402 || response.status === 403) {
-    // Mark this key as failed and retry with next key
-    failedKeysForThisImage.add(selectedKey.id);
-    continue; // <-- This is the key change!
-  }
-  
-  // Success or other error - stop retrying
-  imageProcessed = true;
-}
+### Direct Link URL Format
+Your Instagram links will use this format:
+```
+https://wallst-collection.lovable.app/shop?item=7437bd01-5a0f-4d94-8abe-b846a58a1e31
 ```
 
-### Manual "Set as Primary" Button
+When someone taps this link:
+1. Page loads directly to the storefront (no welcome gate)
+2. Product detail popup opens automatically
+3. User can add to cart immediately
 
-Each key card will have a star/arrow button that:
-1. Calls `reorderKeys` with that key moved to position 0
-2. Shifts all other keys down by 1
+### Description Display Logic
+
+```typescript
+// Generate default if no notes exist
+const getDescription = (item: PublicInventoryItem): string => {
+  if (item.notes) return item.notes;
+  
+  // Auto-generate default listing format
+  return [
+    item.name,
+    '',
+    item.size ? `Size: ${item.size}` : 'Size: One Size',
+    '',
+    'Send Offers/Trades',
+    '',
+    'Hit Me Up For A Better Price On IG At Wall Street Archive'
+  ].join('\n');
+};
+```
+
+### Card Preview (truncated)
+On the Shop All grid, show only first line or two:
+```typescript
+const previewDescription = (desc: string) => {
+  const firstLine = desc.split('\n').filter(l => l.trim())[0] || '';
+  return firstLine.length > 60 ? firstLine.slice(0, 60) + '...' : firstLine;
+};
+```
 
 ---
 
-## Summary
+## After Implementation
 
-After this fix:
-- **Automatic**: If key 1 is out of credits, the system automatically tries key 2, then key 3, etc.
-- **Manual**: Click "Set as Primary" on any key to make it the first one tried
-- **Visibility**: Real credit balances from remove.bg instead of estimated counts
-
+1. **Test direct links**: Copy an item URL and open in incognito - should bypass welcome
+2. **Run Auto-tag**: Go to Analytics page, click "Auto-tag" to fix CY Twombly item
+3. **Verify descriptions**: Check Shop All page shows descriptions under each item
