@@ -1,156 +1,189 @@
 
-# Direct Item Links + Descriptions on Storefront
+# Budget System + UI Improvements for Accounting & Analytics
 
 ## Overview
-This plan addresses four related requests:
-1. **Direct item links** - Bypass the welcome page when sharing an item link on Instagram
-2. **Descriptions on storefront** - Show the listing description (notes) on Shop All cards and detail views
-3. **AI brand categorization** - Ensure items like "Enfants Riches Deprimes x CY Twombly" get properly tagged
-4. **Automatic description generation** - Populate descriptions on the shop page automatically
+This plan addresses five requests:
+1. **Budget system** with a big UI button in Accounting
+2. **Bigger buttons** for all action cards in Accounting
+3. **De-emphasize Recent Expenses** (make it less prominent)
+4. **Monthly History button** in Analytics
+5. **Analytics button in Accounting** that opens the same Analytics UI inline
+
+Additionally, I noticed you uploaded a "High Velocity Dealer Operating System" PDF - this appears to be a capital management framework. I can integrate these principles into the budget system if you'd like.
 
 ---
 
-## Part 1: Bypass Welcome Page for Direct Item Links
+## Part 1: Budget System
 
-Currently when someone clicks a link like `/shop?item=abc123`, they still see the Welcome page and must click "Take a Tour" before the item opens.
+Create a new Budget management feature accessible via a prominent button in Accounting.
 
-### Changes
+### What the Budget System Will Track
+Based on the Dealer Operating System document you uploaded:
+- **Liquid Cash** - available capital for immediate deployment
+- **In Transit Inventory** - cost basis of items on the way (capped at 45%)
+- **Deployed Capital** - items purchased awaiting arrival
+- **Weekly Deployment Governor** - cap spending at 45-55% of operating capital
 
-**File: `src/pages/Storefront.tsx`**
+### New Files
+| File | Purpose |
+|------|---------|
+| `src/components/accounting/BudgetDialog.tsx` | Main budget management interface |
+| `src/hooks/useBudgetMetrics.ts` | Calculate capital buckets from inventory data |
 
-Update the URL parameter handling to bypass the welcome screen when an item ID is present:
+### Budget UI Features
+- Capital bucket visualization (Engine/Buffer/Long Holds)
+- Weekly deployment tracker with governor limit
+- In-transit inventory percentage gauge
+- Red flag alerts when limits exceeded
 
+---
+
+## Part 2: Bigger Action Buttons
+
+Transform the current small action cards into larger, more prominent buttons.
+
+### Current State
 ```text
-Current flow:
-  URL has ?item=123 → Show welcome → Click "Take a Tour" → Then open item
-
-New flow:
-  URL has ?item=123 → Skip welcome → Jump directly to "home" view with item open
+Small cards (p-4) with compact layout
 ```
 
-Logic change:
-- On initial mount, check if `?item=` parameter exists
-- If yes, skip `'welcome'` state and go directly to `'home'`
-- Open the product detail immediately
+### New State
+```text
+Larger cards (p-6) with bigger icons, larger text
+Grid: 5 columns on desktop (adding Budget + Analytics)
+```
+
+### Visual Changes
+- Icon size: `h-6 w-6` → `h-8 w-8`
+- Icon container: `p-3` → `p-4`
+- Text size: base → `text-lg` for titles
+- Card padding: `p-4` → `p-6`
+- Add visual emphasis with subtle gradients
 
 ---
 
-## Part 2: Show Descriptions on Storefront
+## Part 3: De-emphasize Recent Expenses
 
-The `notes` field in `inventory_items` stores the listing description. Currently this field is fetched but not displayed prominently.
+Move the ExpenseList component lower in the page hierarchy and make it collapsible.
 
 ### Changes
-
-**File: `src/components/storefront/StorefrontProductCard.tsx`**
-
-Add the description (notes) below the item name:
-- Show first 50-80 characters with "..." truncation
-- Use muted text styling to keep the card clean
-- Description appears between name and price
-
-**File: `src/components/storefront/StorefrontProductDetail.tsx`**
-
-Add a dedicated "Description" section:
-- Display the full description/notes prominently
-- Position it after the size/category badges
-- Use proper typography for readability
+- Wrap ExpenseList in a Collapsible (default closed)
+- Move it below the Sales Ledger
+- Smaller header text
 
 ---
 
-## Part 3: Automatic Description Generation
+## Part 4: Analytics Button in Accounting
 
-When an item doesn't have a description yet, auto-generate one using the listing format from the inventory system.
+Add an "Analytics" action card that opens the Analytics view inline (same as the Analytics page but embedded in Accounting).
 
-### Changes
-
-**File: `src/components/storefront/StorefrontProductCard.tsx` and `StorefrontProductDetail.tsx`**
-
-If `notes` is empty/null, generate a default description using the same format:
-- Item Name
-- Size: [size]
-- Send Offers/Trades
-- Hit Me Up For A Better Price On IG At Wall Street Archive
-
-This matches what you create in the inventory listing generator.
+### Implementation Approach
+- Add a new view type: `'analytics'` to the existing `View` type
+- When clicked, render the Analytics page content inline (similar to how Cash Flow Statement works)
+- Add a "Back" button to return to the dashboard
 
 ---
 
-## Part 4: AI Brand Categorization Improvements
+## Part 5: Monthly History Button in Analytics
 
-The CY Twombly x ERD item currently has no brand set. The AI extraction already handles this, but needs a trigger.
+Add a button in Analytics that shows month-by-month historical breakdown.
 
-### Changes
-
-**1. Update brand extraction prompt (`supabase/functions/extract-brands/index.ts`)**
-
-Add explicit handling for collaborations:
-- "ERD x CY Twombly" should map to brand "Enfants Riches Deprimes" 
-- "Supreme x [Artist]" should map to "Supreme"
-- First brand in collaboration takes precedence
-
-**2. Trigger brand extraction for items missing brand data**
-
-The existing "Auto-tag" button on Analytics already does this. No code change needed - just run it to backfill the CY Twombly item.
+### Features
+- Monthly totals table (Revenue, COGS, Profit per month)
+- Month-over-month comparison
+- Expandable to show individual sales per month
 
 ---
 
-## Summary of File Changes
+## File Changes Summary
 
 | File | Changes |
 |------|---------|
-| `src/pages/Storefront.tsx` | Check for `?item=` on mount, skip welcome page if present |
-| `src/components/storefront/StorefrontProductCard.tsx` | Add description display (truncated) below item name |
-| `src/components/storefront/StorefrontProductDetail.tsx` | Add full description section, auto-generate if empty |
-| `supabase/functions/extract-brands/index.ts` | Improve collaboration handling in AI prompt |
+| `src/pages/Accounting.tsx` | Bigger buttons, add Budget + Analytics views, de-emphasize expenses |
+| `src/pages/Analytics.tsx` | Add Monthly History section/button |
+| `src/components/accounting/BudgetDialog.tsx` | **NEW** - Budget management UI |
+| `src/hooks/useBudgetMetrics.ts` | **NEW** - Capital calculations |
+| `src/components/accounting/MonthlyHistoryView.tsx` | **NEW** - Month-by-month breakdown |
 
 ---
 
 ## Technical Details
 
-### Direct Link URL Format
-Your Instagram links will use this format:
-```
-https://wallst-collection.lovable.app/shop?item=7437bd01-5a0f-4d94-8abe-b846a58a1e31
-```
-
-When someone taps this link:
-1. Page loads directly to the storefront (no welcome gate)
-2. Product detail popup opens automatically
-3. User can add to cart immediately
-
-### Description Display Logic
-
+### New View States (Accounting.tsx)
 ```typescript
-// Generate default if no notes exist
-const getDescription = (item: PublicInventoryItem): string => {
-  if (item.notes) return item.notes;
-  
-  // Auto-generate default listing format
-  return [
-    item.name,
-    '',
-    item.size ? `Size: ${item.size}` : 'Size: One Size',
-    '',
-    'Send Offers/Trades',
-    '',
-    'Hit Me Up For A Better Price On IG At Wall Street Archive'
-  ].join('\n');
-};
+type View = 'dashboard' | 'cash-flow' | 'analytics' | 'budget';
 ```
 
-### Card Preview (truncated)
-On the Shop All grid, show only first line or two:
+### Button Grid Layout
 ```typescript
-const previewDescription = (desc: string) => {
-  const firstLine = desc.split('\n').filter(l => l.trim())[0] || '';
-  return firstLine.length > 60 ? firstLine.slice(0, 60) + '...' : firstLine;
-};
+// 5 columns on desktop, 2 on mobile
+<div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+  <BigActionCard icon={Wallet} title="Budget" subtitle="Capital governance" />
+  <BigActionCard icon={PlusCircle} title="Contribution" subtitle="Add partner capital" />
+  <BigActionCard icon={FileText} title="Cash Flow" subtitle="Statement" />
+  <BigActionCard icon={Receipt} title="Expenses" subtitle="Track costs" />
+  <BigActionCard icon={BarChart3} title="Analytics" subtitle="View insights" />
+</div>
+```
+
+### Budget Metrics Hook
+```typescript
+interface BudgetMetrics {
+  liquidCash: number;           // From capital_accounts
+  inTransitCost: number;        // Sum of OTW items
+  deployedThisWeek: number;     // Purchases in last 7 days
+  inTransitPercent: number;     // inTransitCost / totalOperatingCapital * 100
+  deploymentGovernor: number;   // Weekly cap (45-55%)
+  isOverDeployed: boolean;      // Red flag
+  isInTransitHigh: boolean;     // Over 45%
+}
+```
+
+### Expense Section (Collapsible)
+```typescript
+<Collapsible>
+  <CollapsibleTrigger asChild>
+    <Button variant="ghost" size="sm">
+      View Recent Expenses
+    </Button>
+  </CollapsibleTrigger>
+  <CollapsibleContent>
+    <ExpenseList />
+  </CollapsibleContent>
+</Collapsible>
+```
+
+---
+
+## UI Mockup - Big Action Buttons
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                         ACCOUNTING                               │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐│
+│  │    💰   │  │    📄   │  │    🧾   │  │    📊   │  │    👥   ││
+│  │ BUDGET  │  │  CASH   │  │ EXPENSE │  │ANALYTICS│  │ ASSIGN  ││
+│  │ Capital │  │  FLOW   │  │  Track  │  │ Insights│  │PURCHASES││
+│  │Governance│  │Statement│  │  costs  │  │         │  │         ││
+│  └─────────┘  └─────────┘  └─────────┘  └─────────┘  └─────────┘│
+│                                                                  │
+│  [Monthly Goal Progress Bar]                                     │
+│                                                                  │
+│  [Key Financial Metrics - 4 cards]                              │
+│                                                                  │
+│  [Sales Ledger Table]                                           │
+│                                                                  │
+│  ▸ View Recent Expenses (collapsed)                             │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## After Implementation
 
-1. **Test direct links**: Copy an item URL and open in incognito - should bypass welcome
-2. **Run Auto-tag**: Go to Analytics page, click "Auto-tag" to fix CY Twombly item
-3. **Verify descriptions**: Check Shop All page shows descriptions under each item
+1. **Test the Budget button** - verify the capital metrics calculate correctly
+2. **Test Analytics in Accounting** - ensure it shows the same data as the Analytics page
+3. **Verify Monthly History** - check month-by-month breakdown is accurate
