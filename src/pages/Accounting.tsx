@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -30,16 +29,18 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, Tooltip } from 'recharts';
-import { DollarSign, TrendingUp, Package, FileText, PlusCircle, Receipt, ChevronDown, ChevronUp, BarChart3, Users, ArrowUpDown, Pencil, Check, X, CalendarIcon } from 'lucide-react';
+import { DollarSign, TrendingUp, Package, FileText, PlusCircle, Receipt, ChevronDown, ChevronUp, BarChart3, Users, ArrowUpDown, Pencil, Check, CalendarIcon, Wallet } from 'lucide-react';
 import { CashFlowStatement } from '@/components/accounting/CashFlowStatement';
 import { RecordContributionDialog } from '@/components/accounting/RecordContributionDialog';
 import { ExpenseTrackerDialog } from '@/components/accounting/ExpenseTrackerDialog';
 import { ExpenseList } from '@/components/accounting/ExpenseList';
 import { AssignPurchasesDialog } from '@/components/accounting/AssignPurchasesDialog';
+import { BudgetDialog } from '@/components/accounting/BudgetDialog';
+import { AnalyticsInlineView } from '@/components/accounting/AnalyticsInlineView';
 import { format, parse } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-type View = 'dashboard' | 'cash-flow';
+type View = 'dashboard' | 'cash-flow' | 'budget' | 'analytics';
 type SortOption = 'date' | 'price' | 'brand';
 
 const Accounting = () => {
@@ -48,6 +49,7 @@ const Accounting = () => {
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [assignPurchasesOpen, setAssignPurchasesOpen] = useState(false);
   const [chartsExpanded, setChartsExpanded] = useState(false);
+  const [expensesExpanded, setExpensesExpanded] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -192,6 +194,28 @@ const Accounting = () => {
     );
   }
 
+  // Render Budget view
+  if (currentView === 'budget') {
+    return (
+      <DashboardLayout>
+        <div className="max-w-4xl mx-auto">
+          <BudgetDialog onBack={() => setCurrentView('dashboard')} />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Render Analytics view
+  if (currentView === 'analytics') {
+    return (
+      <DashboardLayout>
+        <div className="max-w-7xl mx-auto">
+          <AnalyticsInlineView onBack={() => setCurrentView('dashboard')} />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   // Render Cash Flow Statement view
   if (currentView === 'cash-flow') {
     return (
@@ -214,64 +238,79 @@ const Accounting = () => {
           </p>
         </div>
 
-        {/* Quick Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Quick Action Cards - BIGGER */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card 
-            className="cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => setContributionDialogOpen(true)}
+            className="cursor-pointer hover:border-primary/50 transition-colors hover:shadow-md"
+            onClick={() => setCurrentView('budget')}
           >
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-3 bg-chart-1/20 rounded-lg">
-                <PlusCircle className="h-6 w-6 text-chart-1" />
+            <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+              <div className="p-4 bg-chart-2/20 rounded-xl">
+                <Wallet className="h-8 w-8 text-chart-2" />
               </div>
               <div>
-                <p className="font-medium">Record Contribution</p>
+                <p className="font-semibold text-lg">Budget</p>
+                <p className="text-xs text-muted-foreground">Capital governance</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:border-primary/50 transition-colors hover:shadow-md"
+            onClick={() => setContributionDialogOpen(true)}
+          >
+            <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+              <div className="p-4 bg-chart-1/20 rounded-xl">
+                <PlusCircle className="h-8 w-8 text-chart-1" />
+              </div>
+              <div>
+                <p className="font-semibold text-lg">Contribution</p>
                 <p className="text-xs text-muted-foreground">Add partner capital</p>
               </div>
             </CardContent>
           </Card>
 
           <Card 
-            className="cursor-pointer hover:border-primary/50 transition-colors"
+            className="cursor-pointer hover:border-primary/50 transition-colors hover:shadow-md"
             onClick={() => setCurrentView('cash-flow')}
           >
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-3 bg-chart-2/20 rounded-lg">
-                <FileText className="h-6 w-6 text-chart-2" />
+            <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+              <div className="p-4 bg-chart-3/20 rounded-xl">
+                <FileText className="h-8 w-8 text-chart-3" />
               </div>
               <div>
-                <p className="font-medium">Cash Flow Statement</p>
-                <p className="text-xs text-muted-foreground">View detailed flows</p>
+                <p className="font-semibold text-lg">Cash Flow</p>
+                <p className="text-xs text-muted-foreground">Statement</p>
               </div>
             </CardContent>
           </Card>
 
           <Card 
-            className="cursor-pointer hover:border-primary/50 transition-colors"
+            className="cursor-pointer hover:border-primary/50 transition-colors hover:shadow-md"
             onClick={() => setExpenseDialogOpen(true)}
           >
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-3 bg-destructive/20 rounded-lg">
-                <Receipt className="h-6 w-6 text-destructive" />
+            <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+              <div className="p-4 bg-destructive/20 rounded-xl">
+                <Receipt className="h-8 w-8 text-destructive" />
               </div>
               <div>
-                <p className="font-medium">Record Expense</p>
-                <p className="text-xs text-muted-foreground">Track business costs</p>
+                <p className="font-semibold text-lg">Expense</p>
+                <p className="text-xs text-muted-foreground">Track costs</p>
               </div>
             </CardContent>
           </Card>
 
           <Card 
-            className="cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => setAssignPurchasesOpen(true)}
+            className="cursor-pointer hover:border-primary/50 transition-colors hover:shadow-md"
+            onClick={() => setCurrentView('analytics')}
           >
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-3 bg-primary/20 rounded-lg">
-                <Users className="h-6 w-6 text-primary" />
+            <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+              <div className="p-4 bg-primary/20 rounded-xl">
+                <BarChart3 className="h-8 w-8 text-primary" />
               </div>
               <div>
-                <p className="font-medium">Assign Purchases</p>
-                <p className="text-xs text-muted-foreground">Tag who paid</p>
+                <p className="font-semibold text-lg">Analytics</p>
+                <p className="text-xs text-muted-foreground">View insights</p>
               </div>
             </CardContent>
           </Card>
@@ -452,8 +491,19 @@ const Accounting = () => {
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Expenses List */}
-        <ExpenseList />
+        {/* Collapsible Expenses List - De-emphasized */}
+        <Collapsible open={expensesExpanded} onOpenChange={setExpensesExpanded}>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
+              <Receipt className="h-4 w-4" />
+              View Recent Expenses
+              {expensesExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-4">
+            <ExpenseList />
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Sales Ledger */}
         <Card>
