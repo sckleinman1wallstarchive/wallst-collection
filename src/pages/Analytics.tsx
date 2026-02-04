@@ -4,10 +4,11 @@ import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, Treemap } from 'recharts';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import { MonthlyHistoryView } from '@/components/accounting/MonthlyHistoryView';
 
 const CATEGORY_LABELS: Record<string, string> = {
   jewelry: "Jewelry",
@@ -21,10 +22,13 @@ const CATEGORY_LABELS: Record<string, string> = {
   other: "Other",
 };
 
+type AnalyticsView = 'dashboard' | 'monthly-history';
+
 const Analytics = () => {
   const { inventory, getActiveItems, getFinancialSummary } = useSupabaseInventory();
   const [isExtracting, setIsExtracting] = useState(false);
   const [viewMode, setViewMode] = useState<'brand' | 'category'>('category');
+  const [currentView, setCurrentView] = useState<AnalyticsView>('dashboard');
   const queryClient = useQueryClient();
   
   const activeItems = getActiveItems();
@@ -172,6 +176,17 @@ const Analytics = () => {
     ? Math.round(activeItems.reduce((sum, i) => sum + (i.daysHeld || 0), 0) / activeItems.length)
     : 0;
 
+  // Show Monthly History view
+  if (currentView === 'monthly-history') {
+    return (
+      <DashboardLayout>
+        <div className="max-w-7xl mx-auto">
+          <MonthlyHistoryView onBack={() => setCurrentView('dashboard')} />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-6">
@@ -182,21 +197,31 @@ const Analytics = () => {
               Quick insights for decision-making
             </p>
           </div>
-          {itemsWithoutBrand > 0 && (
+          <div className="flex items-center gap-2">
             <Button 
-              onClick={handleExtractBrands} 
-              disabled={isExtracting}
+              onClick={() => setCurrentView('monthly-history')}
               variant="outline"
               size="sm"
             >
-              {isExtracting ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4 mr-2" />
-              )}
-              {isExtracting ? 'Extracting...' : `Auto-tag ${itemsWithoutBrand} items`}
+              <Calendar className="h-4 w-4 mr-2" />
+              Monthly History
             </Button>
-          )}
+            {itemsWithoutBrand > 0 && (
+              <Button 
+                onClick={handleExtractBrands} 
+                disabled={isExtracting}
+                variant="outline"
+                size="sm"
+              >
+                {isExtracting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-2" />
+                )}
+                {isExtracting ? 'Extracting...' : `Auto-tag ${itemsWithoutBrand} items`}
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* All-Time Totals */}
