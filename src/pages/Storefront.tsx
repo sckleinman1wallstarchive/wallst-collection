@@ -36,7 +36,9 @@ type StorefrontView = 'welcome' | 'home' | 'shop-all' | 'shop-by-brand' | 'colle
 
 export default function Storefront() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [currentView, setCurrentView] = useState<StorefrontView>('welcome');
+  // Check for direct item link - skip welcome if ?item= is present
+  const initialItemId = searchParams.get('item');
+  const [currentView, setCurrentView] = useState<StorefrontView>(initialItemId ? 'home' : 'welcome');
   const [selectedProduct, setSelectedProduct] = useState<PublicInventoryItem | null>(null);
   const [selectedClosetItem, setSelectedClosetItem] = useState<PublicInventoryItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');

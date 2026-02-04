@@ -32,6 +32,21 @@ interface StorefrontProductDetailProps {
 
 const CATEGORIES = ['footwear', 'tops', 'bottoms', 'outerwear', 'accessories', 'bags', 'other'];
 
+// Generate default description if notes are empty
+const getItemDescription = (item: PublicInventoryItem): string => {
+  if (item.notes) return item.notes;
+  
+  return [
+    item.name,
+    '',
+    item.size ? `Size: ${item.size}` : 'Size: One Size',
+    '',
+    'Send Offers/Trades',
+    '',
+    'Hit Me Up For A Better Price On IG At Wall Street Archive'
+  ].join('\n');
+};
+
 export function StorefrontProductDetail({ item, open, onOpenChange, isEditMode = false }: StorefrontProductDetailProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
@@ -208,6 +223,14 @@ export function StorefrontProductDetail({ item, open, onOpenChange, isEditMode =
                   {item.brandCategory && (
                     <Badge variant="outline">{item.brandCategory}</Badge>
                   )}
+                </div>
+
+                {/* Description Section */}
+                <div className="pt-2 border-t border-border/50">
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Description</p>
+                  <p className="text-sm whitespace-pre-line">
+                    {getItemDescription(item)}
+                  </p>
                 </div>
 
                 {/* Edit Mode Fields */}

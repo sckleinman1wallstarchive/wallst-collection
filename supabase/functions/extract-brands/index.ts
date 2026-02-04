@@ -73,6 +73,13 @@ serve(async (req) => {
 1. The BRAND NAME (properly formatted, e.g., "Chrome Hearts", "Comme des Garcons", "Rick Owens")
 2. The BRAND CATEGORY from these options: jewelry, japanese-designers, european-luxury, avant-garde, streetwear, contemporary, footwear, vintage, other
 
+IMPORTANT - Collaboration Handling:
+- For collaboration items (containing "x" or "×"), the PRIMARY brand is the FASHION LABEL, not the artist/designer being collaborated with.
+- "ERD x CY Twombly" → Brand: "Enfants Riches Deprimes", Category: "streetwear" (ERD is the fashion label)
+- "Supreme x Damien Hirst" → Brand: "Supreme", Category: "streetwear" (Supreme is the fashion label)
+- "Louis Vuitton x Takashi Murakami" → Brand: "Louis Vuitton", Category: "european-luxury"
+- Artists like CY Twombly, Damien Hirst, Takashi Murakami are NOT fashion brands - use the fashion label they collaborated with.
+
 Examples:
 - "Chrome Hearts Large Filligree Pendant" → Brand: "Chrome Hearts", Category: "jewelry"
 - "Maison Margiela Black Laceless Gats" → Brand: "Maison Margiela", Category: "european-luxury"  
@@ -80,6 +87,7 @@ Examples:
 - "CDG Homme Patchwork Sweater" → Brand: "Comme des Garcons Homme", Category: "japanese-designers"
 - "Jordan 4 Retro Black Cat" → Brand: "Jordan", Category: "footwear"
 - "ERD Logo Tee" → Brand: "Enfants Riches Deprimes", Category: "streetwear"
+- "Enfants Riches Deprimes x CY Twombly Hoodie" → Brand: "Enfants Riches Deprimes", Category: "streetwear"
 
 Items to process:
 ${batch.map((item, idx) => `${idx + 1}. [ID: ${item.id}] "${item.name}"`).join("\n")}
