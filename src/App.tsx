@@ -8,7 +8,6 @@ import Index from "./pages/Index";
 import Inventory from "./pages/Inventory";
 import ImageTools from "./pages/ImageTools";
 import Authenticate from "./pages/Authenticate";
-import PopUps from "./pages/PopUps";
 import Contacts from "./pages/Contacts";
 import Accounting from "./pages/Accounting";
 import Goals from "./pages/Goals";
@@ -27,7 +26,6 @@ function ProtectedRoutes() {
       <Route path="/inventory" element={<Inventory />} />
       <Route path="/image-tools" element={<ImageTools />} />
       <Route path="/authenticate" element={<Authenticate />} />
-      <Route path="/pop-ups" element={<PopUps />} />
       <Route path="/contacts" element={<Contacts />} />
       <Route path="/accounting" element={<Accounting />} />
       <Route path="/goals" element={<Goals />} />
