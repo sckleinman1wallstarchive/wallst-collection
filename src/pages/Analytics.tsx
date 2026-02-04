@@ -4,11 +4,13 @@ import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, Treemap } from 'recharts';
-import { Sparkles, Loader2, Calendar } from 'lucide-react';
+import { Sparkles, Loader2, Calendar, Ticket } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { MonthlyHistoryView } from '@/components/accounting/MonthlyHistoryView';
+import { MonthlyPerformanceView } from '@/components/analytics/MonthlyPerformanceView';
+import { PopUpsInlineView } from '@/components/analytics/PopUpsInlineView';
 
 const CATEGORY_LABELS: Record<string, string> = {
   jewelry: "Jewelry",
@@ -22,7 +24,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-type AnalyticsView = 'dashboard' | 'monthly-history';
+type AnalyticsView = 'dashboard' | 'monthly-history' | 'monthly-performance' | 'pop-ups';
 
 const Analytics = () => {
   const { inventory, getActiveItems, getFinancialSummary } = useSupabaseInventory();
@@ -187,6 +189,28 @@ const Analytics = () => {
     );
   }
 
+  // Show Monthly Performance view
+  if (currentView === 'monthly-performance') {
+    return (
+      <DashboardLayout>
+        <div className="max-w-7xl mx-auto">
+          <MonthlyPerformanceView onBack={() => setCurrentView('dashboard')} />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show Pop Ups view
+  if (currentView === 'pop-ups') {
+    return (
+      <DashboardLayout>
+        <div className="max-w-7xl mx-auto">
+          <PopUpsInlineView onBack={() => setCurrentView('dashboard')} />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-6">
@@ -198,6 +222,22 @@ const Analytics = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button 
+              onClick={() => setCurrentView('monthly-performance')}
+              variant="outline"
+              size="sm"
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Monthly Performance
+            </Button>
+            <Button 
+              onClick={() => setCurrentView('pop-ups')}
+              variant="outline"
+              size="sm"
+            >
+              <Ticket className="h-4 w-4 mr-2" />
+              Pop Ups
+            </Button>
             <Button 
               onClick={() => setCurrentView('monthly-history')}
               variant="outline"
