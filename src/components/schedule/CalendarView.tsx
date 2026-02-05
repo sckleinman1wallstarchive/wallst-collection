@@ -29,6 +29,7 @@
  const ownerColors: Record<TaskOwner, string> = {
    spencer: 'bg-blue-500',
    parker: 'bg-green-500',
+  both: 'bg-purple-500',
  };
  
  export function CalendarView({

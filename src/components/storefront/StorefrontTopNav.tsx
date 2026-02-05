@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
- import { LayoutDashboard, Pencil, Check } from 'lucide-react';
+import { LayoutDashboard, Pencil, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ShopCart } from '@/components/shop/ShopCart';
 
@@ -39,23 +39,19 @@ export function StorefrontTopNav({
           <div className="flex-1" />
           
           {/* Centered Navigation Links */}
-          <nav className="flex items-center gap-0 justify-center">
-            {NAV_ITEMS.map((item, index) => (
-              <div key={item.view} className="flex items-center">
-                {index > 0 && (
-                  <span className="text-white/40 mx-3 select-none">|</span>
-                )}
-                <button
-                  onClick={() => onNavigate(item.view)}
-                  className={`text-sm tracking-wide transition-colors ${
-                    currentView === item.view
-                      ? 'text-white font-medium'
-                      : 'text-white/60 hover:text-white'
-                  }`}
-                >
-                  {item.label}
-                </button>
-              </div>
+          <nav className="flex items-center gap-1 bg-white/5 rounded-full px-1.5 py-1">
+            {NAV_ITEMS.map((item) => (
+              <button
+                key={item.view}
+                onClick={() => onNavigate(item.view)}
+                className={`px-3 py-1.5 rounded-full text-sm transition-all ${
+                  currentView === item.view
+                    ? 'bg-white text-black font-medium'
+                    : 'text-white/60 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                {item.label}
+              </button>
             ))}
           </nav>
 

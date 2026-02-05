@@ -2,6 +2,7 @@
  import { DashboardLayout } from '@/components/layout/DashboardLayout';
  import { CalendarView } from '@/components/schedule/CalendarView';
  import { AddTaskDialog } from '@/components/schedule/AddTaskDialog';
+import { QuickNotesParser } from '@/components/schedule/QuickNotesParser';
  import { useTasks, TaskOwner } from '@/hooks/useTasks';
  import { Button } from '@/components/ui/button';
  import { Skeleton } from '@/components/ui/skeleton';
@@ -30,6 +31,7 @@
    const pendingCount = tasks.filter((t) => t.status !== 'done').length;
    const spencerCount = tasks.filter((t) => t.owner === 'spencer' && t.status !== 'done').length;
    const parkerCount = tasks.filter((t) => t.owner === 'parker' && t.status !== 'done').length;
+  const bothCount = tasks.filter((t) => t.owner === 'both' && t.status !== 'done').length;
  
    if (isLoading) {
      return (
@@ -83,8 +85,20 @@
              <div className="w-2 h-2 rounded-full bg-green-500" />
              Parker
            </Button>
+            <Button
+              variant={filter === 'both' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('both')}
+              className="gap-2"
+            >
+              <div className="w-2 h-2 rounded-full bg-purple-500" />
+              Both
+            </Button>
          </div>
  
+          {/* Quick Notes Parser */}
+          <QuickNotesParser onAddTask={handleAddTask} />
+
          {/* Calendar */}
          <CalendarView
            tasks={tasks}

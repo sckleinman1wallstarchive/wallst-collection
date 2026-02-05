@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.ai-background-replace]
 verify_jwt = false
+
+[functions.parse-tasks]
+verify_jwt = false

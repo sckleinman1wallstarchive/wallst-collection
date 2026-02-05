@@ -227,6 +227,7 @@ export type Database = {
           days_held: number | null
           ever_in_convention: boolean | null
           goal_price: number | null
+          hide_from_sold_archive: boolean | null
           id: string
           image_url: string | null
           image_urls: string[] | null
@@ -268,6 +269,7 @@ export type Database = {
           days_held?: number | null
           ever_in_convention?: boolean | null
           goal_price?: number | null
+          hide_from_sold_archive?: boolean | null
           id?: string
           image_url?: string | null
           image_urls?: string[] | null
@@ -309,6 +311,7 @@ export type Database = {
           days_held?: number | null
           ever_in_convention?: boolean | null
           goal_price?: number | null
+          hide_from_sold_archive?: boolean | null
           id?: string
           image_url?: string | null
           image_urls?: string[] | null
@@ -735,7 +738,7 @@ export type Database = {
         | "mercari"
         | "trade"
         | "none"
-      task_owner: "spencer" | "parker"
+      task_owner: "spencer" | "parker" | "both"
       task_priority: "low" | "medium" | "high"
       task_status: "todo" | "in-progress" | "done"
     }
@@ -912,7 +915,7 @@ export const Constants = {
         "trade",
         "none",
       ],
-      task_owner: ["spencer", "parker"],
+      task_owner: ["spencer", "parker", "both"],
       task_priority: ["low", "medium", "high"],
       task_status: ["todo", "in-progress", "done"],
     },
