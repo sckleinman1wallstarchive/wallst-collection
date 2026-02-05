@@ -1,104 +1,154 @@
 
 
-# Schedule Calendar, Analytics Tabs, Description Spacing, Status Cleanup & Navigation Updates
+# Implementation Plan: Schedule Enhancements, Analytics Tabs, Storefront Polish & Sold Archive Control
 
-## Overview
+## Summary
+
 This plan addresses all your requests:
-1. **Add Schedule navigation with monthly calendar UI** - Wall calendar style with tasks appearing like Apple Calendar
-2. **Fix Monthly Numbers in Analytics** - Make it a clear tab so it doesn't get lost
-3. **Add Pop Ups tab inside Analytics** - Already exists, but making it clearer with tabs
-4. **Only one space between descriptions** - Fix the double line breaks in auto-generated descriptions
-5. **Remove "listed" as an inventory status** - Clean up the status options
-6. **Add Personal Collection to storefront top nav** - Already exists as closet-selection, just needs to be added
-7. **Center the storefront top navigation bar** - Balance the nav layout
+
+1. **Schedule - Add "Both" option** for assigning tasks to both Spencer and Parker
+2. **Schedule - Quick Notes parser** with AI to auto-create tasks from free-form text
+3. **Sold section - Delete/Hide button** to remove items from the sold archive in edit mode
+4. **Sold section - Hover artwork effect** like Grails cards
+5. **Analytics tabs in Accounting** - Add the same tab navigation (Dashboard, Monthly Numbers, Pop Ups) to the inline Analytics view
+6. **Accounting - Remove misleading monthly goal section** showing all-time revenue at 607%
+7. **Storefront navigation polish** - Upgrade from cheap pipe separators to sleek pill-style tabs
 
 ---
 
-## Part 1: Schedule Page with Monthly Calendar
+## Part 1: Schedule - Add "Both" Owner Option
 
-Create a new "Schedule" navigation item with a wall calendar-style monthly view.
+### Database Migration
+Add 'both' to the task_owner enum:
 
-### UI Design (Like Apple Calendar)
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                         FEBRUARY 2026                            │
-│  ◀ Prev                                              Next ▶     │
-├─────────────────────────────────────────────────────────────────┤
-│  Sun    Mon    Tue    Wed    Thu    Fri    Sat                  │
-├────┬────┬────┬────┬────┬────┬────┬────────────────────────────────┤
-│    │  1 │  2 │  3 │  4 │  5 │  6 │                              │
-│    │    │ ■S │    │    │    │    │  ← Small colored dot for task│
-├────┼────┼────┼────┼────┼────┼────┤                              │
-│  7 │  8 │  9 │ 10 │ 11 │ 12 │ 13 │                              │
-│    │ ■P │    │ ■S │    │    │    │  ■S = Spencer, ■P = Parker   │
-├────┼────┼────┼────┼────┼────┼────┤                              │
-│ 14 │ 15 │ 16 │ 17 │ 18 │ 19 │ 20 │                              │
-│    │    │    │    │    │    │    │                              │
-└────┴────┴────┴────┴────┴────┴────┴──────────────────────────────┘
-
-Click on a date with a task to see details in a popover/dialog
-```
-
-### Database Table
 ```sql
-CREATE TYPE task_owner AS ENUM ('spencer', 'parker');
-CREATE TYPE task_status AS ENUM ('todo', 'in-progress', 'done');
-CREATE TYPE task_priority AS ENUM ('low', 'medium', 'high');
-
-CREATE TABLE public.tasks (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  title text NOT NULL,
-  description text,
-  owner task_owner NOT NULL,
-  status task_status NOT NULL DEFAULT 'todo',
-  due_date date NOT NULL,
-  priority task_priority DEFAULT 'medium',
-  category text,
-  created_at timestamp with time zone DEFAULT now(),
-  completed_at timestamp with time zone,
-  updated_at timestamp with time zone DEFAULT now()
-);
-
-ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allowed users can manage tasks"
-  ON tasks FOR ALL
-  USING (is_allowed_user())
-  WITH CHECK (is_allowed_user());
+ALTER TYPE task_owner ADD VALUE 'both';
 ```
 
-### New Files
-| File | Purpose |
-|------|---------|
-| `src/pages/Schedule.tsx` | Monthly calendar view with task dots |
-| `src/hooks/useTasks.ts` | CRUD operations for tasks |
-| `src/components/schedule/CalendarView.tsx` | Monthly calendar grid component |
-| `src/components/schedule/TaskPopover.tsx` | Popover showing task details when clicking a date |
-| `src/components/schedule/AddTaskDialog.tsx` | Dialog to create/edit tasks |
+### File Changes
 
-### Calendar Features
-- Monthly grid layout (7 columns, 5-6 rows)
-- Colored dots on dates with tasks (blue for Spencer, green for Parker)
-- Click on a date to see task details in a popover
-- Navigate between months
-- Add task button at top
-- Filter by owner (Spencer/Parker/All)
-- Task popover shows: title, description, priority, status, owner
-- Mark done directly from popover
+| File | Changes |
+|------|---------|
+| `src/hooks/useTasks.ts` | Update `TaskOwner` type to include `'both'` |
+| `src/components/schedule/AddTaskDialog.tsx` | Add "Both" option to the owner dropdown |
+| `src/components/schedule/CalendarView.tsx` | Add purple color for "both" tasks |
+| `src/components/schedule/TaskPopover.tsx` | Add purple badge color for "both" owner |
+| `src/pages/Schedule.tsx` | Add "Both" filter button |
+
+### Color Scheme
+- Spencer: Blue (`bg-blue-500`)
+- Parker: Green (`bg-green-500`)
+- Both: Purple (`bg-purple-500`)
 
 ---
 
-## Part 2: Analytics with Proper Tabs
+## Part 2: Quick Notes Parser (AI Task Creation)
 
-Currently the Monthly Numbers and Pop Ups buttons are easy to miss. Convert to a proper tab-based navigation at the top of Analytics.
+Add a text area where you can paste notes and have AI automatically extract and create tasks.
 
-### Changes
+### New Components
 
-**File: `src/pages/Analytics.tsx`**
+**File: `src/components/schedule/QuickNotesParser.tsx`**
 
-Replace the button-based navigation with Tabs component:
+A collapsible text area with:
+- Large textarea for pasting/typing notes
+- "Parse & Create Tasks" button
+- Uses AI to extract:
+  - Task title
+  - Description
+  - Due date (inferred from "by Friday", "next week", etc.)
+  - Owner (inferred from "Spencer should...", "Parker needs to...")
+  - Priority (inferred from "urgent", "ASAP", etc.)
+
+### New Edge Function
+
+**File: `supabase/functions/parse-tasks/index.ts`**
+
+Uses Lovable AI Gateway (`google/gemini-2.5-flash`) to parse free-form notes:
+
 ```typescript
-<Tabs value={currentView} onValueChange={(v) => setCurrentView(v as AnalyticsView)}>
+// Input: "Parker needs to list the Balenciaga by Friday. Spencer should source more jewelry before next week."
+// Output: [
+//   { title: "List the Balenciaga", owner: "parker", dueDate: "2026-02-07", priority: "medium" },
+//   { title: "Source more jewelry", owner: "spencer", dueDate: "2026-02-12", priority: "medium" }
+// ]
+```
+
+### UI Integration
+Add a collapsible "Quick Notes" section above the calendar in `Schedule.tsx`.
+
+---
+
+## Part 3: Sold Section - Delete/Hide Button
+
+Allow hiding items from the sold archive in edit mode.
+
+### Database Migration
+
+```sql
+ALTER TABLE inventory_items 
+ADD COLUMN IF NOT EXISTS hide_from_sold_archive boolean DEFAULT false;
+```
+
+### File Changes
+
+| File | Changes |
+|------|---------|
+| `src/hooks/useSoldInventory.ts` | Add `hide_from_sold_archive` to interface, filter hidden items |
+| `src/components/storefront/SoldItemsView.tsx` | Accept `isEditMode` prop, add `onRemoveItem` handler |
+| `src/components/storefront/SoldProductCard.tsx` | Add remove button (X) in edit mode |
+| `src/pages/Storefront.tsx` | Pass `isEditMode` to SoldItemsView, add mutation for hiding items |
+
+### How It Works
+- In edit mode, each sold card shows an X button
+- Clicking it sets `hide_from_sold_archive = true`
+- Item is filtered from the query but kept in database for accounting
+
+---
+
+## Part 4: Sold Section - Hover Artwork Effect
+
+Make sold cards behave like GrailCards - on hover, reveal clean artwork.
+
+### File Changes
+
+**File: `src/components/storefront/SoldProductCard.tsx`**
+
+Refactor to match GrailCard pattern:
+- Add `isHovered` state
+- Base image shows product with SOLD badge and text overlay
+- On hover: fade overlay, show clean image (or art if uploaded)
+- Optional: support `closet_art_url` or similar field for custom hover art
+
+### Visual Behavior
+```
+Normal State: Product image with SOLD badge + price overlay
+Hover State: Clean product image fades in, text fades out
+```
+
+---
+
+## Part 5: Analytics Tabs in Accounting
+
+The Analytics inline view (in Accounting) currently only shows the Dashboard. Add the same tab navigation as the main Analytics page.
+
+### File Changes
+
+**File: `src/components/accounting/AnalyticsInlineView.tsx`**
+
+Add imports and state:
+```typescript
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MonthlyPerformanceView } from '@/components/analytics/MonthlyPerformanceView';
+import { PopUpsInlineView } from '@/components/analytics/PopUpsInlineView';
+
+type AnalyticsSubView = 'dashboard' | 'monthly-numbers' | 'pop-ups';
+const [currentSubView, setCurrentSubView] = useState<AnalyticsSubView>('dashboard');
+```
+
+Add tab navigation below the header:
+```typescript
+<Tabs value={currentSubView} onValueChange={(v) => setCurrentSubView(v as AnalyticsSubView)}>
   <TabsList>
     <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
     <TabsTrigger value="monthly-numbers">Monthly Numbers</TabsTrigger>
@@ -107,148 +157,96 @@ Replace the button-based navigation with Tabs component:
 </Tabs>
 ```
 
-This makes it immediately clear that there are 3 views available.
-
----
-
-## Part 3: Pop Ups in Accounting Analytics
-
-The Analytics view embedded in Accounting also needs the same tab structure.
-
-**File: `src/components/accounting/AnalyticsInlineView.tsx`**
-
-Add the same tab-based navigation:
-- Dashboard (current analytics)
-- Monthly Numbers
-- Pop Ups
-
-Import the MonthlyPerformanceView and PopUpsInlineView components.
-
----
-
-## Part 4: Fix Description Spacing (Single Space)
-
-The auto-generated descriptions have double line breaks (`\n\n`). Change to single line breaks.
-
-### Files to Update
-
-**File: `src/components/storefront/StorefrontProductDetail.tsx`**
-
-Current:
+Conditionally render views:
 ```typescript
-return [
-  item.name,
-  '',  // empty line
-  item.size ? `Size: ${item.size}` : 'Size: One Size',
-  '',  // empty line
-  'Send Offers/Trades',
-  '',  // empty line
-  'Hit Me Up For A Better Price On IG At Wall Street Archive'
-].join('\n');
-```
-
-Change to:
-```typescript
-return [
-  item.name,
-  item.size ? `Size: ${item.size}` : 'Size: One Size',
-  'Send Offers/Trades',
-  'Hit Me Up For A Better Price On IG At Wall Street Archive'
-].join('\n');
-```
-
-**File: `src/components/storefront/SoldProductCard.tsx`**
-
-Current:
-```typescript
-const parts: string[] = [];
-parts.push(item.name);
-if (item.size) parts.push(`Size: ${item.size}`);
-parts.push('Send Offers/Trades');
-parts.push('IG: Wall Street Archive');
-return parts.join(' • ');
-```
-
-This one uses ` • ` which is fine - leave it as is.
-
-**File: `src/components/storefront/SoldProductDetail.tsx`**
-
-Same fix as StorefrontProductDetail - remove extra empty strings.
-
----
-
-## Part 5: Remove "listed" as Inventory Status
-
-The "listed" status is redundant with "for-sale". Remove it from the UI options.
-
-### Files to Update
-
-**File: `src/components/inventory/InventoryTable.tsx`**
-- Remove `'listed'` from STATUS_COLORS
-- Remove `'listed'` from STATUS_LABELS
-- Remove `<SelectItem value="listed">` from status filter
-
-**File: `src/pages/Inventory.tsx`**
-- Remove `'listed'` from STATUS_LABELS
-- Remove from the status order array
-
-**File: `src/components/inventory/ItemDetailSheet.tsx`**
-- Remove `{ value: 'listed', label: 'Listed' }` from STATUS_OPTIONS
-- Change the "Mark as Unsold" button to set status to `'for-sale'` instead of `'listed'`
-
-**File: `src/components/inventory/AddItemDialog.tsx`**
-- Remove `{ value: 'listed', label: 'For Sale' }` - use `for-sale` instead
-
-**File: `src/pages/Analytics.tsx`**
-- Change `i.status === 'listed'` to `i.status === 'for-sale'` in the status distribution
-
-**Note:** The database enum still contains 'listed' for backwards compatibility with existing data. We just won't show it in the UI going forward.
-
----
-
-## Part 6: Add Personal Collection to Storefront Top Nav
-
-**File: `src/components/storefront/StorefrontTopNav.tsx`**
-
-Add to NAV_ITEMS array:
-```typescript
-const NAV_ITEMS: { view: LandingNavView; label: string }[] = [
-  { view: 'home', label: 'Home' },
-  { view: 'shop-all', label: 'Shop All' },
-  { view: 'sold', label: 'Sold' },
-  { view: 'shop-by-brand', label: 'Shop By Brand' },
-  { view: 'collection-grails', label: 'Grails' },
-  { view: 'closet-selection', label: 'Personal Collection' },  // NEW
-];
-```
-
-Update type:
-```typescript
-export type LandingNavView = 'home' | 'shop-all' | 'sold' | 'shop-by-brand' | 'collection-grails' | 'closet-selection';
+if (currentSubView === 'monthly-numbers') {
+  return <MonthlyPerformanceView onBack={() => setCurrentSubView('dashboard')} />;
+}
+if (currentSubView === 'pop-ups') {
+  return <PopUpsInlineView onBack={() => setCurrentSubView('dashboard')} />;
+}
 ```
 
 ---
 
-## Part 7: Center Top Navigation Bar
+## Part 6: Accounting - Remove Misleading Monthly Goal Section
 
-**File: `src/components/storefront/StorefrontTopNav.tsx`**
+The section at lines 319-359 in `Accounting.tsx` shows:
+- "Monthly Goal: $5,000" at 607%
+- But it's actually using **all-time revenue** ($30,352), not monthly
 
-Change the flex layout to center the nav:
+This is misleading and wastes space.
+
+### File Changes
+
+**File: `src/pages/Accounting.tsx`**
+
+Delete lines 319-359 (the "Compact Monthly Goal Progress" Card):
+
 ```typescript
-<div className="flex items-center h-14">
-  {/* Left spacer */}
-  <div className="flex-1" />
-  
-  {/* Centered navigation */}
-  <nav className="flex items-center gap-0">
-    {NAV_ITEMS.map(...)}
-  </nav>
-  
-  {/* Right side: Dashboard + Edit + Cart */}
-  <div className="flex-1 flex items-center justify-end gap-3">
-    {/* buttons */}
+// DELETE THIS ENTIRE BLOCK:
+{/* Compact Monthly Goal Progress */}
+<Card className="p-4">
+  <div className="flex flex-col md:flex-row md:items-center gap-4">
+    ...
   </div>
-</div>
+</Card>
+```
+
+---
+
+## Part 7: Storefront Navigation - Premium Design
+
+The current nav uses plain text with `|` pipe separators which looks cheap.
+
+### Current Design
+```
+Home | Shop All | Sold | Shop By Brand | Grails | Personal Collection
+```
+
+### New Design
+Sleek pill-based navigation with:
+- Subtle dark background pill container
+- Active tab has white background with black text
+- Inactive tabs have transparent background with hover effect
+
+### File Changes
+
+**File: `src/components/storefront/StorefrontTopNav.tsx`**
+
+Replace the current nav structure:
+
+```typescript
+// Before
+<nav className="flex items-center gap-0 justify-center">
+  {NAV_ITEMS.map((item, index) => (
+    <div key={item.view} className="flex items-center">
+      {index > 0 && (
+        <span className="text-white/40 mx-3 select-none">|</span>
+      )}
+      <button ...>
+        {item.label}
+      </button>
+    </div>
+  ))}
+</nav>
+
+// After
+<nav className="flex items-center gap-1 bg-white/5 rounded-full px-1.5 py-1">
+  {NAV_ITEMS.map((item) => (
+    <button
+      key={item.view}
+      onClick={() => onNavigate(item.view)}
+      className={`px-4 py-1.5 rounded-full text-sm transition-all ${
+        currentView === item.view
+          ? 'bg-white text-black font-medium'
+          : 'text-white/60 hover:text-white hover:bg-white/10'
+      }`}
+    >
+      {item.label}
+    </button>
+  ))}
+</nav>
 ```
 
 ---
@@ -257,121 +255,80 @@ Change the flex layout to center the nav:
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `src/pages/Schedule.tsx` | Create | Monthly calendar page |
-| `src/hooks/useTasks.ts` | Create | Task CRUD operations |
-| `src/components/schedule/CalendarView.tsx` | Create | Calendar grid UI |
-| `src/components/schedule/TaskPopover.tsx` | Create | Task detail popover |
-| `src/components/schedule/AddTaskDialog.tsx` | Create | Add/edit task dialog |
-| `src/components/layout/AppSidebar.tsx` | Modify | Add Schedule nav item |
-| `src/App.tsx` | Modify | Add /schedule route |
-| `src/pages/Analytics.tsx` | Modify | Tab-based navigation, remove 'listed' |
-| `src/components/accounting/AnalyticsInlineView.tsx` | Modify | Add tabs for sub-views |
-| `src/components/storefront/StorefrontProductDetail.tsx` | Modify | Single space in description |
-| `src/components/storefront/SoldProductDetail.tsx` | Modify | Single space in description |
-| `src/components/inventory/InventoryTable.tsx` | Modify | Remove 'listed' status |
-| `src/components/inventory/ItemDetailSheet.tsx` | Modify | Remove 'listed', use 'for-sale' |
-| `src/components/inventory/AddItemDialog.tsx` | Modify | Remove 'listed' status option |
-| `src/pages/Inventory.tsx` | Modify | Remove 'listed' from labels |
-| `src/components/storefront/StorefrontTopNav.tsx` | Modify | Add Personal Collection, center nav |
+| `src/hooks/useTasks.ts` | Modify | Add 'both' to TaskOwner type |
+| `src/components/schedule/AddTaskDialog.tsx` | Modify | Add "Both" option to dropdown |
+| `src/components/schedule/CalendarView.tsx` | Modify | Purple dots for "both" tasks |
+| `src/components/schedule/TaskPopover.tsx` | Modify | Purple badge for "both" owner |
+| `src/pages/Schedule.tsx` | Modify | Add "Both" filter, integrate QuickNotesParser |
+| `src/components/schedule/QuickNotesParser.tsx` | Create | Notes-to-tasks AI parser UI |
+| `supabase/functions/parse-tasks/index.ts` | Create | AI parsing edge function |
+| `src/hooks/useSoldInventory.ts` | Modify | Filter hidden items, add field to interface |
+| `src/components/storefront/SoldItemsView.tsx` | Modify | Pass edit mode, handle removal |
+| `src/components/storefront/SoldProductCard.tsx` | Modify | Add remove button, hover effect |
+| `src/pages/Storefront.tsx` | Modify | Pass isEditMode to SoldItemsView |
+| `src/components/accounting/AnalyticsInlineView.tsx` | Modify | Add tabs for Monthly Numbers & Pop Ups |
+| `src/pages/Accounting.tsx` | Modify | Remove misleading monthly goal section |
+| `src/components/storefront/StorefrontTopNav.tsx` | Modify | Pill-style navigation design |
 
 ---
 
-## Database Migration
+## Database Migrations
 
 ```sql
--- Create task management tables
-CREATE TYPE task_owner AS ENUM ('spencer', 'parker');
-CREATE TYPE task_status AS ENUM ('todo', 'in-progress', 'done');
-CREATE TYPE task_priority AS ENUM ('low', 'medium', 'high');
+-- Add 'both' to task_owner enum
+ALTER TYPE task_owner ADD VALUE 'both';
 
-CREATE TABLE public.tasks (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  title text NOT NULL,
-  description text,
-  owner task_owner NOT NULL,
-  status task_status NOT NULL DEFAULT 'todo',
-  due_date date NOT NULL,
-  priority task_priority DEFAULT 'medium',
-  category text,
-  created_at timestamp with time zone DEFAULT now(),
-  completed_at timestamp with time zone,
-  updated_at timestamp with time zone DEFAULT now()
-);
-
--- Enable RLS
-ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
-
--- RLS policies for allowed users
-CREATE POLICY "Allowed users can read tasks"
-  ON tasks FOR SELECT
-  USING (is_allowed_user());
-
-CREATE POLICY "Allowed users can insert tasks"
-  ON tasks FOR INSERT
-  WITH CHECK (is_allowed_user());
-
-CREATE POLICY "Allowed users can update tasks"
-  ON tasks FOR UPDATE
-  USING (is_allowed_user());
-
-CREATE POLICY "Allowed users can delete tasks"
-  ON tasks FOR DELETE
-  USING (is_allowed_user());
-
--- Trigger for updated_at
-CREATE TRIGGER update_tasks_updated_at
-  BEFORE UPDATE ON tasks
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+-- Add hide column for sold archive control
+ALTER TABLE inventory_items 
+ADD COLUMN IF NOT EXISTS hide_from_sold_archive boolean DEFAULT false;
 ```
 
 ---
 
-## Calendar UI Technical Details
+## Technical Details
 
-### Calendar Grid Component
-```typescript
-// Generate days for a month
-const getDaysInMonth = (year: number, month: number) => {
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const daysInMonth = lastDay.getDate();
-  const startingDay = firstDay.getDay(); // 0 = Sunday
-  
-  // Create array with padding for days before month starts
-  const days = [];
-  for (let i = 0; i < startingDay; i++) {
-    days.push(null); // Empty cells
-  }
-  for (let i = 1; i <= daysInMonth; i++) {
-    days.push(i);
-  }
-  return days;
-};
+### AI Task Parsing
+
+Uses Lovable AI Gateway with `google/gemini-2.5-flash`:
+
+**System prompt:**
+```
+Extract tasks from the following notes. For each task, determine:
+- title: A concise task title
+- description: Optional additional details
+- owner: "spencer", "parker", or "both" (infer from context, default to "both")
+- dueDate: YYYY-MM-DD format (infer from phrases like "by Friday", "next week")
+- priority: "low", "medium", or "high" (infer from urgency words)
+
+Return as JSON array.
 ```
 
-### Task Colors
-- Spencer: `bg-blue-500` (blue dot)
-- Parker: `bg-green-500` (green dot)
-- High priority: Add ring/border
-- Overdue: Red dot
+### Hover Effect Pattern (from GrailCard)
 
-### Popover Content
-When clicking a date with tasks:
-- List all tasks for that date
-- Show: Title, Owner badge, Priority badge, Status checkbox
-- Click task to expand details
-- Quick actions: Mark done, Edit, Delete
+```typescript
+const [isHovered, setIsHovered] = useState(false);
+
+<div
+  onMouseEnter={() => setIsHovered(true)}
+  onMouseLeave={() => setIsHovered(false)}
+>
+  {/* Base image */}
+  <img className={`transition-opacity ${isHovered ? 'opacity-0' : 'opacity-100'}`} />
+  
+  {/* Hover overlay - clean image */}
+  <img className={`absolute inset-0 transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0'}`} />
+</div>
+```
 
 ---
 
 ## After Implementation
 
-1. **Test Schedule page** - Navigate to /schedule, add tasks, verify calendar displays correctly
-2. **Test task creation** - Add tasks for Spencer and Parker with different due dates
-3. **Test Analytics tabs** - Verify Dashboard, Monthly Numbers, and Pop Ups tabs work
-4. **Verify description spacing** - Check product detail pages have single-line descriptions
-5. **Verify "listed" status removed** - Check inventory forms and filters
-6. **Test Personal Collection nav** - Click it in storefront top nav
-7. **Verify centered navigation** - Check storefront nav is properly centered
+1. **Test Schedule "Both" option** - Create a task for both, verify purple dot appears
+2. **Test Quick Notes parser** - Paste sample notes, verify AI creates correct tasks
+3. **Test Analytics tabs in Accounting** - Go to Accounting > Analytics, verify all 3 tabs work
+4. **Verify monthly goal section removed** - Check Accounting dashboard no longer shows 607%
+5. **Test Sold remove button** - Enable edit mode, hide an item, verify it disappears
+6. **Test Sold hover effect** - Hover over sold cards, verify image transition
+7. **Test new navigation style** - Verify pill-style nav looks polished
 
