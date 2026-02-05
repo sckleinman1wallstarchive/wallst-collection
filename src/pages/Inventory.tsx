@@ -6,6 +6,7 @@ import { AddItemDialog } from '@/components/inventory/AddItemDialog';
 import { SellItemDialog } from '@/components/inventory/SellItemDialog';
 import { ItemDetailSheet } from '@/components/inventory/ItemDetailSheet';
 import { TradeItemDialog } from '@/components/inventory/TradeItemDialog';
+import { PostingTrackerDialog } from '@/components/inventory/PostingTrackerDialog';
 import { useSupabaseInventory, InventoryItem } from '@/hooks/useSupabaseInventory';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,7 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { Database } from '@/integrations/supabase/types';
-import { CalendarCheck, Package, AlertTriangle, Check, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
+import { CalendarCheck, Package, AlertTriangle, Check, Pencil, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
@@ -73,6 +74,7 @@ const Inventory = () => {
   const [attentionOpen, setAttentionOpen] = useState(true);
   const [editingAttentionId, setEditingAttentionId] = useState<string | null>(null);
   const [editingAttentionNote, setEditingAttentionNote] = useState('');
+  const [postingOpen, setPostingOpen] = useState(false);
 
   // Handle URL params to open item detail directly
   useEffect(() => {
@@ -254,6 +256,10 @@ const Inventory = () => {
               </Label>
             </div>
             <AddItemDialog onAdd={handleAddItem} />
+            <Button variant="outline" onClick={() => setPostingOpen(true)}>
+              <Send className="h-4 w-4 mr-1.5" />
+              Posting
+            </Button>
           </div>
         </div>
 
@@ -528,6 +534,12 @@ const Inventory = () => {
           onOpenChange={setTradeOpen}
           availableItems={inventory}
           onTrade={handleMarkAsTraded}
+        />
+
+        <PostingTrackerDialog
+          open={postingOpen}
+          onOpenChange={setPostingOpen}
+          inventory={inventory}
         />
       </div>
     </DashboardLayout>

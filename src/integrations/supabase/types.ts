@@ -417,6 +417,69 @@ export type Database = {
           },
         ]
       }
+      posting_tracker: {
+        Row: {
+          artwork_url: string | null
+          created_at: string
+          display_order: number | null
+          id: string
+          platform_name: string
+        }
+        Insert: {
+          artwork_url?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          platform_name: string
+        }
+        Update: {
+          artwork_url?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          platform_name?: string
+        }
+        Relationships: []
+      }
+      posting_tracker_items: {
+        Row: {
+          created_at: string
+          id: string
+          inventory_item_id: string
+          posted_at: string
+          tracker_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inventory_item_id: string
+          posted_at?: string
+          tracker_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inventory_item_id?: string
+          posted_at?: string
+          tracker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posting_tracker_items_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posting_tracker_items_tracker_id_fkey"
+            columns: ["tracker_id"]
+            isOneToOne: false
+            referencedRelation: "posting_tracker"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       removebg_api_keys: {
         Row: {
           api_key: string
