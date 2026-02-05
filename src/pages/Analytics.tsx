@@ -3,8 +3,9 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, Treemap } from 'recharts';
-import { Sparkles, Loader2, Calendar, Ticket } from 'lucide-react';
+import { Sparkles, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -100,7 +101,7 @@ const Analytics = () => {
 
   // Status distribution
   const statusData = [
-    { name: 'For Sale', value: inventory.filter(i => i.status === 'listed').length },
+    { name: 'For Sale', value: inventory.filter(i => i.status === 'for-sale').length },
     { name: 'In Closet (Parker)', value: inventory.filter(i => i.status === 'in-closet-parker').length },
     { name: 'In Closet (Spencer)', value: inventory.filter(i => i.status === 'in-closet-spencer').length },
     { name: 'OTW', value: inventory.filter(i => i.status === 'otw').length },
@@ -210,22 +211,6 @@ const Analytics = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button 
-             onClick={() => setCurrentView('monthly-numbers')}
-              variant="outline"
-              size="sm"
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-             Monthly Numbers
-            </Button>
-            <Button 
-              onClick={() => setCurrentView('pop-ups')}
-              variant="outline"
-              size="sm"
-            >
-              <Ticket className="h-4 w-4 mr-2" />
-              Pop Ups
-            </Button>
             {itemsWithoutBrand > 0 && (
               <Button 
                 onClick={handleExtractBrands} 
@@ -243,6 +228,15 @@ const Analytics = () => {
             )}
           </div>
         </div>
+
+        {/* Tab Navigation */}
+        <Tabs value={currentView} onValueChange={(v) => setCurrentView(v as AnalyticsView)}>
+          <TabsList>
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="monthly-numbers">Monthly Numbers</TabsTrigger>
+            <TabsTrigger value="pop-ups">Pop Ups</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {/* All-Time Totals */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">

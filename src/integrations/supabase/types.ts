@@ -609,6 +609,48 @@ export type Database = {
           },
         ]
       }
+      tasks: {
+        Row: {
+          category: string | null
+          completed_at: string | null
+          created_at: string | null
+          description: string | null
+          due_date: string
+          id: string
+          owner: Database["public"]["Enums"]["task_owner"]
+          priority: Database["public"]["Enums"]["task_priority"] | null
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date: string
+          id?: string
+          owner: Database["public"]["Enums"]["task_owner"]
+          priority?: Database["public"]["Enums"]["task_priority"] | null
+          status?: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date?: string
+          id?: string
+          owner?: Database["public"]["Enums"]["task_owner"]
+          priority?: Database["public"]["Enums"]["task_priority"] | null
+          status?: Database["public"]["Enums"]["task_status"]
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
@@ -693,6 +735,9 @@ export type Database = {
         | "mercari"
         | "trade"
         | "none"
+      task_owner: "spencer" | "parker"
+      task_priority: "low" | "medium" | "high"
+      task_status: "todo" | "in-progress" | "done"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -867,6 +912,9 @@ export const Constants = {
         "trade",
         "none",
       ],
+      task_owner: ["spencer", "parker"],
+      task_priority: ["low", "medium", "high"],
+      task_status: ["todo", "in-progress", "done"],
     },
   },
 } as const

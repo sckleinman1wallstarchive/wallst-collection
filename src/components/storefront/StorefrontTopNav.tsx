@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ShopCart } from '@/components/shop/ShopCart';
 
- export type LandingNavView = 'home' | 'shop-all' | 'sold' | 'shop-by-brand' | 'collection-grails';
+ export type LandingNavView = 'home' | 'shop-all' | 'sold' | 'shop-by-brand' | 'collection-grails' | 'closet-selection';
 
 interface StorefrontTopNavProps {
   currentView: LandingNavView;
@@ -19,6 +19,7 @@ const NAV_ITEMS: { view: LandingNavView; label: string }[] = [
    { view: 'sold', label: 'Sold' },
   { view: 'shop-by-brand', label: 'Shop By Brand' },
   { view: 'collection-grails', label: 'Grails' },
+  { view: 'closet-selection', label: 'Personal Collection' },
 ];
 
 export function StorefrontTopNav({
@@ -33,9 +34,12 @@ export function StorefrontTopNav({
   return (
     <header className="sticky top-0 z-40 bg-black border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14">
-          {/* Navigation Links */}
-          <nav className="flex items-center gap-0">
+        <div className="flex items-center h-14">
+          {/* Left spacer for centering */}
+          <div className="flex-1" />
+          
+          {/* Centered Navigation Links */}
+          <nav className="flex items-center gap-0 justify-center">
             {NAV_ITEMS.map((item, index) => (
               <div key={item.view} className="flex items-center">
                 {index > 0 && (
@@ -55,8 +59,8 @@ export function StorefrontTopNav({
             ))}
           </nav>
 
-          {/* Right side: Dashboard + Edit + Cart */}
-          <div className="flex items-center gap-3">
+          {/* Right side: Dashboard + Edit + Cart (with flex-1 for balance) */}
+          <div className="flex-1 flex items-center justify-end gap-3">
             {showEditButton && (
               <Button
                 variant="ghost"

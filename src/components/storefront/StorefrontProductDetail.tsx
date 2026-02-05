@@ -38,11 +38,8 @@ const getItemDescription = (item: PublicInventoryItem): string => {
   
   return [
     item.name,
-    '',
     item.size ? `Size: ${item.size}` : 'Size: One Size',
-    '',
     'Send Offers/Trades',
-    '',
     'Hit Me Up For A Better Price On IG At Wall Street Archive'
   ].join('\n');
 };

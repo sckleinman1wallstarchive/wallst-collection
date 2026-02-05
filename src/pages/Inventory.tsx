@@ -26,7 +26,6 @@ const statusLabels: Record<string, string> = {
   'in-closet-parker': 'In Closet (Parker)',
   'in-closet-spencer': 'In Closet (Spencer)',
   'for-sale': 'For Sale',
-  'listed': 'Listed',
   'sold': 'Sold',
   'otw': 'OTW',
   'refunded': 'Refunded',
@@ -127,7 +126,7 @@ const Inventory = () => {
     });
     
     // Simplified order: show the main statuses
-    const order = ['for-sale', 'listed', 'otw', 'in-closet-parker', 'in-closet-spencer', 'sold'];
+    const order = ['for-sale', 'otw', 'in-closet-parker', 'in-closet-spencer', 'sold'];
     return order
       .filter(s => summaryMap.has(s))
       .map(s => summaryMap.get(s)!);

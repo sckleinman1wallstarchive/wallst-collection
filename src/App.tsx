@@ -14,6 +14,7 @@ import Goals from "./pages/Goals";
 import Analytics from "./pages/Analytics";
 import Storefront from "./pages/Storefront";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
+import Schedule from "./pages/Schedule";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ function ProtectedRoutes() {
       <Route path="/goals" element={<Goals />} />
       <Route path="/analytics" element={<Analytics />} />
       <Route path="/storefront" element={<Storefront />} />
+      <Route path="/schedule" element={<Schedule />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

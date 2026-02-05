@@ -10,6 +10,7 @@ import {
   Store,
   Eraser,
   ShieldCheck,
+  CalendarDays,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -35,6 +36,7 @@ const navigation = [
   { title: 'Accounting', url: '/accounting', icon: Calculator },
   { title: 'Image Tools', url: '/image-tools', icon: Eraser },
   { title: 'Authenticate', url: '/authenticate', icon: ShieldCheck },
+  { title: 'Schedule', url: '/schedule', icon: CalendarDays },
   { title: 'Contacts', url: '/contacts', icon: Users },
   { title: 'Goals', url: '/goals', icon: Target },
 ];
