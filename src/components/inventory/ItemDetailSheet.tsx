@@ -221,7 +221,6 @@ const statuses: { value: ItemStatus; label: string }[] = [
   { value: 'in-closet-parker', label: 'In Closet (Parker)' },
   { value: 'in-closet-spencer', label: 'In Closet (Spencer)' },
   { value: 'for-sale', label: 'For Sale (Shop)' },
-  { value: 'listed', label: 'Listed' },
   { value: 'otw', label: 'OTW' },
   { value: 'refunded', label: 'Refunded' },
   { value: 'scammed', label: 'Scammed' },
@@ -435,7 +434,7 @@ export function ItemDetailSheet({ item, open, onOpenChange, onUpdate, onDelete, 
                 onClick={() => {
                   if (!window.confirm('Mark this item as unsold? This will clear sale price and date sold.')) return;
                   onUpdate(item.id, {
-                    status: 'listed',
+                    status: 'for-sale',
                     salePrice: null,
                     platformSold: null,
                     dateSold: null,

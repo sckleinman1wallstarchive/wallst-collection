@@ -23,7 +23,7 @@
    
    const parts: string[] = [];
    parts.push(item.name);
-   if (item.size) parts.push(`Size: ${item.size}`);
+  if (item.size) parts.push(`Size: ${item.size}`);
    parts.push('Send Offers/Trades');
    parts.push('IG: Wall Street Archive');
    return parts.join('\n');
