@@ -1,334 +1,118 @@
 
 
-# Implementation Plan: Schedule Enhancements, Analytics Tabs, Storefront Polish & Sold Archive Control
+# Meta Pixel Integration for Wall St Collection Storefront
 
-## Summary
+## What This Does
 
-This plan addresses all your requests:
+Adds Meta Pixel tracking to your storefront so you can run ads on Facebook and Instagram without manually syncing anything. The pixel automatically reports:
 
-1. **Schedule - Add "Both" option** for assigning tasks to both Spencer and Parker
-2. **Schedule - Quick Notes parser** with AI to auto-create tasks from free-form text
-3. **Sold section - Delete/Hide button** to remove items from the sold archive in edit mode
-4. **Sold section - Hover artwork effect** like Grails cards
-5. **Analytics tabs in Accounting** - Add the same tab navigation (Dashboard, Monthly Numbers, Pop Ups) to the inline Analytics view
-6. **Accounting - Remove misleading monthly goal section** showing all-time revenue at 607%
-7. **Storefront navigation polish** - Upgrade from cheap pipe separators to sleek pill-style tabs
+- **Every page visit** (PageView) -- so Meta knows who's browsing
+- **Every product viewed** (ViewContent) -- so Meta can build audiences of people interested in specific items
+- **Add to Cart actions** (AddToCart) -- for retargeting people who almost bought
+- **Checkout started** (InitiateCheckout) -- for retargeting cart abandoners
+- **Purchases completed** (Purchase) -- so Meta can optimize ads for conversions and find similar buyers
 
----
+Your Pixel ID: **33902034032743890**
 
-## Part 1: Schedule - Add "Both" Owner Option
-
-### Database Migration
-Add 'both' to the task_owner enum:
-
-```sql
-ALTER TYPE task_owner ADD VALUE 'both';
-```
-
-### File Changes
-
-| File | Changes |
-|------|---------|
-| `src/hooks/useTasks.ts` | Update `TaskOwner` type to include `'both'` |
-| `src/components/schedule/AddTaskDialog.tsx` | Add "Both" option to the owner dropdown |
-| `src/components/schedule/CalendarView.tsx` | Add purple color for "both" tasks |
-| `src/components/schedule/TaskPopover.tsx` | Add purple badge color for "both" owner |
-| `src/pages/Schedule.tsx` | Add "Both" filter button |
-
-### Color Scheme
-- Spencer: Blue (`bg-blue-500`)
-- Parker: Green (`bg-green-500`)
-- Both: Purple (`bg-purple-500`)
+Once this is live, you just create ads in Meta Ads Manager and the pixel handles the rest -- building audiences, tracking conversions, and optimizing delivery automatically.
 
 ---
 
-## Part 2: Quick Notes Parser (AI Task Creation)
+## Implementation
 
-Add a text area where you can paste notes and have AI automatically extract and create tasks.
+### 1. Create a Meta Pixel utility module
 
-### New Components
+**New file: `src/lib/metaPixel.ts`**
 
-**File: `src/components/schedule/QuickNotesParser.tsx`**
+A helper module that:
+- Initializes the Meta Pixel with your ID on first load
+- Provides typed functions: `trackPageView()`, `trackViewContent()`, `trackAddToCart()`, `trackInitiateCheckout()`, `trackPurchase()`
+- Each function passes product data (name, price, brand, category, item ID) so Meta can match products to audiences
 
-A collapsible text area with:
-- Large textarea for pasting/typing notes
-- "Parse & Create Tasks" button
-- Uses AI to extract:
-  - Task title
-  - Description
-  - Due date (inferred from "by Friday", "next week", etc.)
-  - Owner (inferred from "Spencer should...", "Parker needs to...")
-  - Priority (inferred from "urgent", "ASAP", etc.)
+### 2. Add the Pixel base script to index.html
 
-### New Edge Function
+Insert the standard Meta Pixel `<script>` tag in the `<head>` of `index.html` with your Pixel ID hardcoded. This loads the pixel on every page.
 
-**File: `supabase/functions/parse-tasks/index.ts`**
+### 3. Wire up tracking events across the storefront
 
-Uses Lovable AI Gateway (`google/gemini-2.5-flash`) to parse free-form notes:
+| File | Event Tracked | When |
+|------|--------------|------|
+| `src/pages/Storefront.tsx` | **PageView** | On every view change (shop-all, sold, brand, etc.) |
+| `src/pages/Storefront.tsx` | **ViewContent** | When a product detail opens |
+| `src/stores/shopCartStore.ts` | **AddToCart** | When `addItem()` is called |
+| `src/stores/shopCartStore.ts` | **InitiateCheckout** | When `checkout()` is called |
+| `src/pages/CheckoutSuccess.tsx` | **Purchase** | On successful checkout page load |
 
-```typescript
-// Input: "Parker needs to list the Balenciaga by Friday. Spencer should source more jewelry before next week."
-// Output: [
-//   { title: "List the Balenciaga", owner: "parker", dueDate: "2026-02-07", priority: "medium" },
-//   { title: "Source more jewelry", owner: "spencer", dueDate: "2026-02-12", priority: "medium" }
-// ]
-```
+### 4. No backend changes needed
 
-### UI Integration
-Add a collapsible "Quick Notes" section above the calendar in `Schedule.tsx`.
-
----
-
-## Part 3: Sold Section - Delete/Hide Button
-
-Allow hiding items from the sold archive in edit mode.
-
-### Database Migration
-
-```sql
-ALTER TABLE inventory_items 
-ADD COLUMN IF NOT EXISTS hide_from_sold_archive boolean DEFAULT false;
-```
-
-### File Changes
-
-| File | Changes |
-|------|---------|
-| `src/hooks/useSoldInventory.ts` | Add `hide_from_sold_archive` to interface, filter hidden items |
-| `src/components/storefront/SoldItemsView.tsx` | Accept `isEditMode` prop, add `onRemoveItem` handler |
-| `src/components/storefront/SoldProductCard.tsx` | Add remove button (X) in edit mode |
-| `src/pages/Storefront.tsx` | Pass `isEditMode` to SoldItemsView, add mutation for hiding items |
-
-### How It Works
-- In edit mode, each sold card shows an X button
-- Clicking it sets `hide_from_sold_archive = true`
-- Item is filtered from the query but kept in database for accounting
-
----
-
-## Part 4: Sold Section - Hover Artwork Effect
-
-Make sold cards behave like GrailCards - on hover, reveal clean artwork.
-
-### File Changes
-
-**File: `src/components/storefront/SoldProductCard.tsx`**
-
-Refactor to match GrailCard pattern:
-- Add `isHovered` state
-- Base image shows product with SOLD badge and text overlay
-- On hover: fade overlay, show clean image (or art if uploaded)
-- Optional: support `closet_art_url` or similar field for custom hover art
-
-### Visual Behavior
-```
-Normal State: Product image with SOLD badge + price overlay
-Hover State: Clean product image fades in, text fades out
-```
-
----
-
-## Part 5: Analytics Tabs in Accounting
-
-The Analytics inline view (in Accounting) currently only shows the Dashboard. Add the same tab navigation as the main Analytics page.
-
-### File Changes
-
-**File: `src/components/accounting/AnalyticsInlineView.tsx`**
-
-Add imports and state:
-```typescript
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MonthlyPerformanceView } from '@/components/analytics/MonthlyPerformanceView';
-import { PopUpsInlineView } from '@/components/analytics/PopUpsInlineView';
-
-type AnalyticsSubView = 'dashboard' | 'monthly-numbers' | 'pop-ups';
-const [currentSubView, setCurrentSubView] = useState<AnalyticsSubView>('dashboard');
-```
-
-Add tab navigation below the header:
-```typescript
-<Tabs value={currentSubView} onValueChange={(v) => setCurrentSubView(v as AnalyticsSubView)}>
-  <TabsList>
-    <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-    <TabsTrigger value="monthly-numbers">Monthly Numbers</TabsTrigger>
-    <TabsTrigger value="pop-ups">Pop Ups</TabsTrigger>
-  </TabsList>
-</Tabs>
-```
-
-Conditionally render views:
-```typescript
-if (currentSubView === 'monthly-numbers') {
-  return <MonthlyPerformanceView onBack={() => setCurrentSubView('dashboard')} />;
-}
-if (currentSubView === 'pop-ups') {
-  return <PopUpsInlineView onBack={() => setCurrentSubView('dashboard')} />;
-}
-```
-
----
-
-## Part 6: Accounting - Remove Misleading Monthly Goal Section
-
-The section at lines 319-359 in `Accounting.tsx` shows:
-- "Monthly Goal: $5,000" at 607%
-- But it's actually using **all-time revenue** ($30,352), not monthly
-
-This is misleading and wastes space.
-
-### File Changes
-
-**File: `src/pages/Accounting.tsx`**
-
-Delete lines 319-359 (the "Compact Monthly Goal Progress" Card):
-
-```typescript
-// DELETE THIS ENTIRE BLOCK:
-{/* Compact Monthly Goal Progress */}
-<Card className="p-4">
-  <div className="flex flex-col md:flex-row md:items-center gap-4">
-    ...
-  </div>
-</Card>
-```
-
----
-
-## Part 7: Storefront Navigation - Premium Design
-
-The current nav uses plain text with `|` pipe separators which looks cheap.
-
-### Current Design
-```
-Home | Shop All | Sold | Shop By Brand | Grails | Personal Collection
-```
-
-### New Design
-Sleek pill-based navigation with:
-- Subtle dark background pill container
-- Active tab has white background with black text
-- Inactive tabs have transparent background with hover effect
-
-### File Changes
-
-**File: `src/components/storefront/StorefrontTopNav.tsx`**
-
-Replace the current nav structure:
-
-```typescript
-// Before
-<nav className="flex items-center gap-0 justify-center">
-  {NAV_ITEMS.map((item, index) => (
-    <div key={item.view} className="flex items-center">
-      {index > 0 && (
-        <span className="text-white/40 mx-3 select-none">|</span>
-      )}
-      <button ...>
-        {item.label}
-      </button>
-    </div>
-  ))}
-</nav>
-
-// After
-<nav className="flex items-center gap-1 bg-white/5 rounded-full px-1.5 py-1">
-  {NAV_ITEMS.map((item) => (
-    <button
-      key={item.view}
-      onClick={() => onNavigate(item.view)}
-      className={`px-4 py-1.5 rounded-full text-sm transition-all ${
-        currentView === item.view
-          ? 'bg-white text-black font-medium'
-          : 'text-white/60 hover:text-white hover:bg-white/10'
-      }`}
-    >
-      {item.label}
-    </button>
-  ))}
-</nav>
-```
-
----
-
-## File Changes Summary
-
-| File | Action | Purpose |
-|------|--------|---------|
-| `src/hooks/useTasks.ts` | Modify | Add 'both' to TaskOwner type |
-| `src/components/schedule/AddTaskDialog.tsx` | Modify | Add "Both" option to dropdown |
-| `src/components/schedule/CalendarView.tsx` | Modify | Purple dots for "both" tasks |
-| `src/components/schedule/TaskPopover.tsx` | Modify | Purple badge for "both" owner |
-| `src/pages/Schedule.tsx` | Modify | Add "Both" filter, integrate QuickNotesParser |
-| `src/components/schedule/QuickNotesParser.tsx` | Create | Notes-to-tasks AI parser UI |
-| `supabase/functions/parse-tasks/index.ts` | Create | AI parsing edge function |
-| `src/hooks/useSoldInventory.ts` | Modify | Filter hidden items, add field to interface |
-| `src/components/storefront/SoldItemsView.tsx` | Modify | Pass edit mode, handle removal |
-| `src/components/storefront/SoldProductCard.tsx` | Modify | Add remove button, hover effect |
-| `src/pages/Storefront.tsx` | Modify | Pass isEditMode to SoldItemsView |
-| `src/components/accounting/AnalyticsInlineView.tsx` | Modify | Add tabs for Monthly Numbers & Pop Ups |
-| `src/pages/Accounting.tsx` | Modify | Remove misleading monthly goal section |
-| `src/components/storefront/StorefrontTopNav.tsx` | Modify | Pill-style navigation design |
-
----
-
-## Database Migrations
-
-```sql
--- Add 'both' to task_owner enum
-ALTER TYPE task_owner ADD VALUE 'both';
-
--- Add hide column for sold archive control
-ALTER TABLE inventory_items 
-ADD COLUMN IF NOT EXISTS hide_from_sold_archive boolean DEFAULT false;
-```
+Everything runs client-side. No database changes, no edge functions, no syncing.
 
 ---
 
 ## Technical Details
 
-### AI Task Parsing
-
-Uses Lovable AI Gateway with `google/gemini-2.5-flash`:
-
-**System prompt:**
-```
-Extract tasks from the following notes. For each task, determine:
-- title: A concise task title
-- description: Optional additional details
-- owner: "spencer", "parker", or "both" (infer from context, default to "both")
-- dueDate: YYYY-MM-DD format (infer from phrases like "by Friday", "next week")
-- priority: "low", "medium", or "high" (infer from urgency words)
-
-Return as JSON array.
-```
-
-### Hover Effect Pattern (from GrailCard)
+### Meta Pixel Helper (`src/lib/metaPixel.ts`)
 
 ```typescript
-const [isHovered, setIsHovered] = useState(false);
-
-<div
-  onMouseEnter={() => setIsHovered(true)}
-  onMouseLeave={() => setIsHovered(false)}
->
-  {/* Base image */}
-  <img className={`transition-opacity ${isHovered ? 'opacity-0' : 'opacity-100'}`} />
+// Wraps fbq() calls with type safety
+export const metaPixel = {
+  trackPageView: () => fbq('track', 'PageView'),
   
-  {/* Hover overlay - clean image */}
-  <img className={`absolute inset-0 transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0'}`} />
-</div>
+  trackViewContent: (item) => fbq('track', 'ViewContent', {
+    content_name: item.name,
+    content_ids: [item.id],
+    content_type: 'product',
+    value: item.askingPrice,
+    currency: 'USD',
+  }),
+  
+  trackAddToCart: (item) => fbq('track', 'AddToCart', {
+    content_name: item.name,
+    content_ids: [item.id],
+    content_type: 'product',
+    value: item.askingPrice,
+    currency: 'USD',
+  }),
+  
+  trackInitiateCheckout: (items, total) => fbq('track', 'InitiateCheckout', {
+    content_ids: items.map(i => i.id),
+    num_items: items.length,
+    value: total,
+    currency: 'USD',
+  }),
+  
+  trackPurchase: (value) => fbq('track', 'Purchase', {
+    value,
+    currency: 'USD',
+  }),
+};
 ```
+
+### index.html Script Addition
+
+Standard Meta Pixel base code snippet added to `<head>` with Pixel ID `33902034032743890`.
+
+### Event Integration Points
+
+- **Storefront.tsx**: Call `trackPageView()` in a `useEffect` on view changes. Call `trackViewContent()` inside `handleProductSelect()` when an item is selected.
+- **shopCartStore.ts**: Call `trackAddToCart()` at the end of `addItem()`. Call `trackInitiateCheckout()` at the start of `checkout()`.
+- **CheckoutSuccess.tsx**: Call `trackPurchase()` in the existing `useEffect`.
 
 ---
 
-## After Implementation
+## Files Changed
 
-1. **Test Schedule "Both" option** - Create a task for both, verify purple dot appears
-2. **Test Quick Notes parser** - Paste sample notes, verify AI creates correct tasks
-3. **Test Analytics tabs in Accounting** - Go to Accounting > Analytics, verify all 3 tabs work
-4. **Verify monthly goal section removed** - Check Accounting dashboard no longer shows 607%
-5. **Test Sold remove button** - Enable edit mode, hide an item, verify it disappears
-6. **Test Sold hover effect** - Hover over sold cards, verify image transition
-7. **Test new navigation style** - Verify pill-style nav looks polished
+| File | Action | Purpose |
+|------|--------|---------|
+| `src/lib/metaPixel.ts` | Create | Pixel helper with typed event functions |
+| `index.html` | Modify | Add Meta Pixel base script in head |
+| `src/pages/Storefront.tsx` | Modify | Add PageView + ViewContent tracking |
+| `src/stores/shopCartStore.ts` | Modify | Add AddToCart + InitiateCheckout tracking |
+| `src/pages/CheckoutSuccess.tsx` | Modify | Add Purchase tracking |
+
+---
+
+## After Setup
+
+Once deployed, go to **Meta Events Manager** and you should see events appearing in real time as you browse your storefront. Then in **Meta Ads Manager**, you can create campaigns that target people who viewed products, added to cart, or look like past buyers -- all automatic.
 
