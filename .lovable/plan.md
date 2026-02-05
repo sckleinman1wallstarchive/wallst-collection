@@ -1,207 +1,255 @@
 
-# Sold Section, Stripe Confirmation, Budget Categories & Monthly Analytics Consolidation
+
+# Schedule Calendar, Analytics Tabs, Description Spacing, Status Cleanup & Navigation Updates
 
 ## Overview
-This plan addresses multiple requests:
-1. **Consolidate Monthly Analytics** - Fix the confusion with multiple monthly views (Monthly Performance vs Monthly History)
-2. **Add "Sold" Section to Storefront Navigation** - Archive page showing previously sold items with prices and descriptions
-3. **Meta Commerce + Stripe Readiness** - Verify product page structure for Instagram tagging
-4. **Stripe Checkout Confirmation** - Improve success page visibility and messaging
-5. **Budget Categories** - Separate Operating Costs budget from Big Purchases budget
+This plan addresses all your requests:
+1. **Add Schedule navigation with monthly calendar UI** - Wall calendar style with tasks appearing like Apple Calendar
+2. **Fix Monthly Numbers in Analytics** - Make it a clear tab so it doesn't get lost
+3. **Add Pop Ups tab inside Analytics** - Already exists, but making it clearer with tabs
+4. **Only one space between descriptions** - Fix the double line breaks in auto-generated descriptions
+5. **Remove "listed" as an inventory status** - Clean up the status options
+6. **Add Personal Collection to storefront top nav** - Already exists as closet-selection, just needs to be added
+7. **Center the storefront top navigation bar** - Balance the nav layout
 
 ---
 
-## Part 1: Consolidate Monthly Analytics
+## Part 1: Schedule Page with Monthly Calendar
 
-Currently there are TWO separate monthly views that essentially do the same thing:
-- **Monthly Performance** - Shows month-by-month sales with MoM changes
-- **Monthly History** - Also shows month-by-month sales with expandable details
+Create a new "Schedule" navigation item with a wall calendar-style monthly view.
 
-This is confusing. The solution is to merge them into a single unified "Monthly Numbers" view.
+### UI Design (Like Apple Calendar)
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                         FEBRUARY 2026                            │
+│  ◀ Prev                                              Next ▶     │
+├─────────────────────────────────────────────────────────────────┤
+│  Sun    Mon    Tue    Wed    Thu    Fri    Sat                  │
+├────┬────┬────┬────┬────┬────┬────┬────────────────────────────────┤
+│    │  1 │  2 │  3 │  4 │  5 │  6 │                              │
+│    │    │ ■S │    │    │    │    │  ← Small colored dot for task│
+├────┼────┼────┼────┼────┼────┼────┤                              │
+│  7 │  8 │  9 │ 10 │ 11 │ 12 │ 13 │                              │
+│    │ ■P │    │ ■S │    │    │    │  ■S = Spencer, ■P = Parker   │
+├────┼────┼────┼────┼────┼────┼────┤                              │
+│ 14 │ 15 │ 16 │ 17 │ 18 │ 19 │ 20 │                              │
+│    │    │    │    │    │    │    │                              │
+└────┴────┴────┴────┴────┴────┴────┴──────────────────────────────┘
+
+Click on a date with a task to see details in a popover/dialog
+```
+
+### Database Table
+```sql
+CREATE TYPE task_owner AS ENUM ('spencer', 'parker');
+CREATE TYPE task_status AS ENUM ('todo', 'in-progress', 'done');
+CREATE TYPE task_priority AS ENUM ('low', 'medium', 'high');
+
+CREATE TABLE public.tasks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  owner task_owner NOT NULL,
+  status task_status NOT NULL DEFAULT 'todo',
+  due_date date NOT NULL,
+  priority task_priority DEFAULT 'medium',
+  category text,
+  created_at timestamp with time zone DEFAULT now(),
+  completed_at timestamp with time zone,
+  updated_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allowed users can manage tasks"
+  ON tasks FOR ALL
+  USING (is_allowed_user())
+  WITH CHECK (is_allowed_user());
+```
+
+### New Files
+| File | Purpose |
+|------|---------|
+| `src/pages/Schedule.tsx` | Monthly calendar view with task dots |
+| `src/hooks/useTasks.ts` | CRUD operations for tasks |
+| `src/components/schedule/CalendarView.tsx` | Monthly calendar grid component |
+| `src/components/schedule/TaskPopover.tsx` | Popover showing task details when clicking a date |
+| `src/components/schedule/AddTaskDialog.tsx` | Dialog to create/edit tasks |
+
+### Calendar Features
+- Monthly grid layout (7 columns, 5-6 rows)
+- Colored dots on dates with tasks (blue for Spencer, green for Parker)
+- Click on a date to see task details in a popover
+- Navigate between months
+- Add task button at top
+- Filter by owner (Spencer/Parker/All)
+- Task popover shows: title, description, priority, status, owner
+- Mark done directly from popover
+
+---
+
+## Part 2: Analytics with Proper Tabs
+
+Currently the Monthly Numbers and Pop Ups buttons are easy to miss. Convert to a proper tab-based navigation at the top of Analytics.
 
 ### Changes
 
 **File: `src/pages/Analytics.tsx`**
 
-Remove the duplicate buttons and consolidate into one "Monthly Numbers" button that leads to a single comprehensive view.
+Replace the button-based navigation with Tabs component:
+```typescript
+<Tabs value={currentView} onValueChange={(v) => setCurrentView(v as AnalyticsView)}>
+  <TabsList>
+    <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+    <TabsTrigger value="monthly-numbers">Monthly Numbers</TabsTrigger>
+    <TabsTrigger value="pop-ups">Pop Ups</TabsTrigger>
+  </TabsList>
+</Tabs>
+```
 
-**File: `src/components/analytics/MonthlyPerformanceView.tsx`**
-
-Rename to `MonthlyNumbersView.tsx` and enhance to include:
-- Summary stats at top (Total Revenue, COGS, Profit, Items Sold)
-- Best Month highlights
-- Expandable month cards with individual item details
-- MoM percentage changes
-
-**File to remove: `src/components/accounting/MonthlyHistoryView.tsx`**
-
-Delete this duplicate component and update Analytics.tsx to use the consolidated view.
+This makes it immediately clear that there are 3 views available.
 
 ---
 
-## Part 2: Add "Sold" Section to Storefront Navigation
+## Part 3: Pop Ups in Accounting Analytics
 
-Add a new nav item in the storefront top navigation to display previously sold items as social proof.
+The Analytics view embedded in Accounting also needs the same tab structure.
 
-### Changes
+**File: `src/components/accounting/AnalyticsInlineView.tsx`**
+
+Add the same tab-based navigation:
+- Dashboard (current analytics)
+- Monthly Numbers
+- Pop Ups
+
+Import the MonthlyPerformanceView and PopUpsInlineView components.
+
+---
+
+## Part 4: Fix Description Spacing (Single Space)
+
+The auto-generated descriptions have double line breaks (`\n\n`). Change to single line breaks.
+
+### Files to Update
+
+**File: `src/components/storefront/StorefrontProductDetail.tsx`**
+
+Current:
+```typescript
+return [
+  item.name,
+  '',  // empty line
+  item.size ? `Size: ${item.size}` : 'Size: One Size',
+  '',  // empty line
+  'Send Offers/Trades',
+  '',  // empty line
+  'Hit Me Up For A Better Price On IG At Wall Street Archive'
+].join('\n');
+```
+
+Change to:
+```typescript
+return [
+  item.name,
+  item.size ? `Size: ${item.size}` : 'Size: One Size',
+  'Send Offers/Trades',
+  'Hit Me Up For A Better Price On IG At Wall Street Archive'
+].join('\n');
+```
+
+**File: `src/components/storefront/SoldProductCard.tsx`**
+
+Current:
+```typescript
+const parts: string[] = [];
+parts.push(item.name);
+if (item.size) parts.push(`Size: ${item.size}`);
+parts.push('Send Offers/Trades');
+parts.push('IG: Wall Street Archive');
+return parts.join(' • ');
+```
+
+This one uses ` • ` which is fine - leave it as is.
+
+**File: `src/components/storefront/SoldProductDetail.tsx`**
+
+Same fix as StorefrontProductDetail - remove extra empty strings.
+
+---
+
+## Part 5: Remove "listed" as Inventory Status
+
+The "listed" status is redundant with "for-sale". Remove it from the UI options.
+
+### Files to Update
+
+**File: `src/components/inventory/InventoryTable.tsx`**
+- Remove `'listed'` from STATUS_COLORS
+- Remove `'listed'` from STATUS_LABELS
+- Remove `<SelectItem value="listed">` from status filter
+
+**File: `src/pages/Inventory.tsx`**
+- Remove `'listed'` from STATUS_LABELS
+- Remove from the status order array
+
+**File: `src/components/inventory/ItemDetailSheet.tsx`**
+- Remove `{ value: 'listed', label: 'Listed' }` from STATUS_OPTIONS
+- Change the "Mark as Unsold" button to set status to `'for-sale'` instead of `'listed'`
+
+**File: `src/components/inventory/AddItemDialog.tsx`**
+- Remove `{ value: 'listed', label: 'For Sale' }` - use `for-sale` instead
+
+**File: `src/pages/Analytics.tsx`**
+- Change `i.status === 'listed'` to `i.status === 'for-sale'` in the status distribution
+
+**Note:** The database enum still contains 'listed' for backwards compatibility with existing data. We just won't show it in the UI going forward.
+
+---
+
+## Part 6: Add Personal Collection to Storefront Top Nav
 
 **File: `src/components/storefront/StorefrontTopNav.tsx`**
 
-Add "Sold" to the NAV_ITEMS array:
+Add to NAV_ITEMS array:
 ```typescript
 const NAV_ITEMS: { view: LandingNavView; label: string }[] = [
   { view: 'home', label: 'Home' },
   { view: 'shop-all', label: 'Shop All' },
-  { view: 'sold', label: 'Sold' },  // NEW
+  { view: 'sold', label: 'Sold' },
   { view: 'shop-by-brand', label: 'Shop By Brand' },
   { view: 'collection-grails', label: 'Grails' },
+  { view: 'closet-selection', label: 'Personal Collection' },  // NEW
 ];
 ```
 
-Update the LandingNavView type to include 'sold'.
-
-**File: `src/pages/Storefront.tsx`**
-
-Add 'sold' to the StorefrontView type and handle the new view.
-
-**New File: `src/components/storefront/SoldItemsView.tsx`**
-
-Create a gallery component that:
-- Fetches items with status = 'sold' from inventory
-- Displays them in a grid similar to Shop All
-- Shows "SOLD" overlay badge on each card
-- Displays the sold price (strikethrough style optional)
-- Shows auto-generated description (same format as Shop All)
-- NO Add to Cart button - just view-only cards
-
-**New File: `src/hooks/useSoldInventory.ts`**
-
-Hook to fetch sold items for public display:
+Update type:
 ```typescript
-const { data } = await supabase
-  .from('inventory_items')
-  .select('id, name, brand, size, sale_price, asking_price, image_url, image_urls, notes, date_sold')
-  .eq('status', 'sold')
-  .order('date_sold', { ascending: false });
+export type LandingNavView = 'home' | 'shop-all' | 'sold' | 'shop-by-brand' | 'collection-grails' | 'closet-selection';
 ```
 
-**New File: `src/components/storefront/SoldProductCard.tsx`**
-
-A view-only product card that:
-- Displays the item image
-- Shows "SOLD" badge overlay
-- Shows the sold price prominently
-- Shows truncated description
-- Click opens a detail view (read-only, no cart button)
-
 ---
 
-## Part 3: Meta Commerce + Stripe Readiness Check
+## Part 7: Center Top Navigation Bar
 
-Current structure analysis:
+**File: `src/components/storefront/StorefrontTopNav.tsx`**
 
-| Requirement | Status | Notes |
-|-------------|--------|-------|
-| Stable Product URLs | READY | `/shop?item=<uuid>` deep links work |
-| Clear Price Display | READY | `askingPrice` shown prominently |
-| Availability | READY | Only 'for-sale' items appear in Shop All |
-| SKU-like Identifiers | READY | UUID serves as unique identifier |
-| External Checkout via Stripe | READY | Checkout session redirects to Stripe |
-| Product Images | READY | Images uploaded to Supabase Storage |
-
-**Instagram Product Tagging Compatibility:**
-- Product URLs are shareable: `https://wallst-collection.lovable.app/shop?item=<uuid>`
-- Direct links bypass welcome page (already implemented)
-- Meta Commerce requires a product catalog sync (external setup in Meta Business Suite - **PENDING EXTERNAL CONNECTION**)
-
-**No code changes needed** - the structure is already Meta Commerce compatible. You would need to:
-1. Create a Meta Business account
-2. Set up a Product Catalog in Meta Commerce Manager
-3. Manually add products or use a feed (CSV/JSON with product URLs)
-
----
-
-## Part 4: Stripe Deposit Confirmation
-
-Current checkout success page at `/shop/success` is functional but minimal.
-
-### Changes
-
-**File: `src/pages/CheckoutSuccess.tsx`**
-
-Enhance the success page to include:
-- Larger, more prominent success icon and message
-- Clear "Payment Confirmed" language
-- Note about funds depositing to connected account
-- Order reference number (Stripe session ID suffix)
-- Email confirmation note (Stripe sends receipt automatically)
-
-Updated content:
+Change the flex layout to center the nav:
 ```typescript
-<CardTitle className="text-2xl">Payment Confirmed!</CardTitle>
-<p className="text-muted-foreground">
-  Thank you for your purchase! Your payment has been processed successfully.
-  You'll receive an email confirmation shortly.
-</p>
-<p className="text-sm text-muted-foreground mt-4">
-  Funds will be deposited to the connected bank account within 2-7 business days.
-</p>
-```
-
-**File: `src/stores/shopCartStore.ts`**
-
-Add success redirect URL with session_id parameter (already implemented).
-
----
-
-## Part 5: Budget Categories - Operating vs Big Purchases
-
-Based on the "High Velocity Dealer Operating System" document, create a two-tier budget system:
-
-### Operating Budget (Small/Recurring Costs)
-- Supplies
-- Subscriptions  
-- Advertising
-- Pop-Up expenses
-- Small inventory purchases (under a threshold, e.g., $200)
-- Dividends (Parker/Spencer withdrawals)
-
-### Deployment Budget (Big Purchases)
-- Inventory purchases above threshold
-- Subject to Weekly Deployment Governor (45% cap)
-- Subject to In-Transit Inventory cap (45%)
-
-### Changes
-
-**File: `src/hooks/useBudgetMetrics.ts`**
-
-Add new calculated fields:
-```typescript
-interface BudgetMetrics {
-  // ... existing fields ...
+<div className="flex items-center h-14">
+  {/* Left spacer */}
+  <div className="flex-1" />
   
-  // Operating Budget
-  operatingBudget: number;           // Reserved for expenses/dividends
-  operatingSpentThisMonth: number;   // Expenses + dividends this month
-  operatingRemaining: number;        // What's left for small costs
+  {/* Centered navigation */}
+  <nav className="flex items-center gap-0">
+    {NAV_ITEMS.map(...)}
+  </nav>
   
-  // Deployment Budget  
-  deploymentBudget: number;          // For big inventory purchases
-  deploymentSpentThisWeek: number;   // Already deployed
-  deploymentRemaining: number;       // Available for more purchases
-}
+  {/* Right side: Dashboard + Edit + Cart */}
+  <div className="flex-1 flex items-center justify-end gap-3">
+    {/* buttons */}
+  </div>
+</div>
 ```
-
-**File: `src/components/accounting/BudgetDialog.tsx`**
-
-Add two-section layout:
-1. **Operating Costs Budget** - Shows monthly allocation for expenses
-2. **Deployment Budget** - Shows weekly allocation for inventory purchases
-
-Add red flag alerts:
-- Operating budget running low
-- Deployment budget exceeded (already exists)
-- In-transit too high (already exists)
 
 ---
 
@@ -209,100 +257,121 @@ Add red flag alerts:
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `src/pages/Analytics.tsx` | Modify | Consolidate monthly views into one button |
-| `src/components/analytics/MonthlyPerformanceView.tsx` | Modify | Rename and enhance to be the single monthly view |
-| `src/components/accounting/MonthlyHistoryView.tsx` | Delete | Remove duplicate component |
-| `src/components/storefront/StorefrontTopNav.tsx` | Modify | Add "Sold" nav item |
-| `src/pages/Storefront.tsx` | Modify | Handle 'sold' view |
-| `src/components/storefront/SoldItemsView.tsx` | Create | Display sold items gallery |
-| `src/components/storefront/SoldProductCard.tsx` | Create | Read-only sold item card |
-| `src/hooks/useSoldInventory.ts` | Create | Fetch sold items for public display |
-| `src/pages/CheckoutSuccess.tsx` | Modify | Improve confirmation messaging |
-| `src/hooks/useBudgetMetrics.ts` | Modify | Add operating vs deployment budgets |
-| `src/components/accounting/BudgetDialog.tsx` | Modify | Two-section budget display |
+| `src/pages/Schedule.tsx` | Create | Monthly calendar page |
+| `src/hooks/useTasks.ts` | Create | Task CRUD operations |
+| `src/components/schedule/CalendarView.tsx` | Create | Calendar grid UI |
+| `src/components/schedule/TaskPopover.tsx` | Create | Task detail popover |
+| `src/components/schedule/AddTaskDialog.tsx` | Create | Add/edit task dialog |
+| `src/components/layout/AppSidebar.tsx` | Modify | Add Schedule nav item |
+| `src/App.tsx` | Modify | Add /schedule route |
+| `src/pages/Analytics.tsx` | Modify | Tab-based navigation, remove 'listed' |
+| `src/components/accounting/AnalyticsInlineView.tsx` | Modify | Add tabs for sub-views |
+| `src/components/storefront/StorefrontProductDetail.tsx` | Modify | Single space in description |
+| `src/components/storefront/SoldProductDetail.tsx` | Modify | Single space in description |
+| `src/components/inventory/InventoryTable.tsx` | Modify | Remove 'listed' status |
+| `src/components/inventory/ItemDetailSheet.tsx` | Modify | Remove 'listed', use 'for-sale' |
+| `src/components/inventory/AddItemDialog.tsx` | Modify | Remove 'listed' status option |
+| `src/pages/Inventory.tsx` | Modify | Remove 'listed' from labels |
+| `src/components/storefront/StorefrontTopNav.tsx` | Modify | Add Personal Collection, center nav |
 
 ---
 
-## Technical Details
-
-### Sold Items Query
-```typescript
-// New hook: useSoldInventory.ts
-export function useSoldInventory() {
-  return useQuery({
-    queryKey: ['public-inventory', 'sold'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('inventory_items')
-        .select('id, name, brand, size, sale_price, image_url, image_urls, notes, date_sold')
-        .eq('status', 'sold')
-        .order('date_sold', { ascending: false })
-        .limit(50); // Show last 50 sold items
-      return data;
-    },
-  });
-}
-```
-
-### Budget Calculation Logic
-```typescript
-// Operating budget: 10-15% of operating capital for monthly expenses
-const operatingBudgetPercent = 0.12; // 12%
-const operatingBudget = totalOperatingCapital * operatingBudgetPercent;
-
-// Deployment budget: Remaining after operating reserve, capped at 45% weekly
-const deploymentBudget = weeklyDeploymentLimit; // Already calculated at 45%
-```
-
-### RLS Policy for Sold Items
-The existing RLS policy allows public read for `status = 'sold'` items - no database changes needed:
-```sql
--- Already exists (from memory context)
-Policy: "Public can view storefront items"
-Using: (status = ANY (ARRAY['for-sale', 'in-closet-parker', 'in-closet-spencer', 'listed']))
-```
-
-**Need to add 'sold' to this policy** for the Sold section to work publicly.
-
----
-
-## Database Migration Required
-
-Add 'sold' status to the public visibility RLS policy:
+## Database Migration
 
 ```sql
--- Update the RLS policy to include 'sold' status for public viewing
-DROP POLICY IF EXISTS "Public can view storefront items" ON public.inventory_items;
+-- Create task management tables
+CREATE TYPE task_owner AS ENUM ('spencer', 'parker');
+CREATE TYPE task_status AS ENUM ('todo', 'in-progress', 'done');
+CREATE TYPE task_priority AS ENUM ('low', 'medium', 'high');
 
-CREATE POLICY "Public can view storefront items" ON public.inventory_items
-  FOR SELECT
-  USING (status = ANY (ARRAY[
-    'for-sale'::item_status, 
-    'in-closet-parker'::item_status, 
-    'in-closet-spencer'::item_status, 
-    'listed'::item_status,
-    'sold'::item_status  -- NEW: Allow public to view sold items
-  ]));
+CREATE TABLE public.tasks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  owner task_owner NOT NULL,
+  status task_status NOT NULL DEFAULT 'todo',
+  due_date date NOT NULL,
+  priority task_priority DEFAULT 'medium',
+  category text,
+  created_at timestamp with time zone DEFAULT now(),
+  completed_at timestamp with time zone,
+  updated_at timestamp with time zone DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+
+-- RLS policies for allowed users
+CREATE POLICY "Allowed users can read tasks"
+  ON tasks FOR SELECT
+  USING (is_allowed_user());
+
+CREATE POLICY "Allowed users can insert tasks"
+  ON tasks FOR INSERT
+  WITH CHECK (is_allowed_user());
+
+CREATE POLICY "Allowed users can update tasks"
+  ON tasks FOR UPDATE
+  USING (is_allowed_user());
+
+CREATE POLICY "Allowed users can delete tasks"
+  ON tasks FOR DELETE
+  USING (is_allowed_user());
+
+-- Trigger for updated_at
+CREATE TRIGGER update_tasks_updated_at
+  BEFORE UPDATE ON tasks
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
 ```
 
 ---
 
-## Status Summary
+## Calendar UI Technical Details
 
-| Feature | Status |
-|---------|--------|
-| Monthly Numbers Consolidation | Implementation ready |
-| Sold Section in Storefront | Implementation ready (needs RLS update) |
-| Meta Commerce Structure | READY / PENDING EXTERNAL CONNECTION |
-| Stripe Checkout Confirmation | Implementation ready |
-| Budget Categories | Implementation ready |
+### Calendar Grid Component
+```typescript
+// Generate days for a month
+const getDaysInMonth = (year: number, month: number) => {
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const daysInMonth = lastDay.getDate();
+  const startingDay = firstDay.getDay(); // 0 = Sunday
+  
+  // Create array with padding for days before month starts
+  const days = [];
+  for (let i = 0; i < startingDay; i++) {
+    days.push(null); // Empty cells
+  }
+  for (let i = 1; i <= daysInMonth; i++) {
+    days.push(i);
+  }
+  return days;
+};
+```
+
+### Task Colors
+- Spencer: `bg-blue-500` (blue dot)
+- Parker: `bg-green-500` (green dot)
+- High priority: Add ring/border
+- Overdue: Red dot
+
+### Popover Content
+When clicking a date with tasks:
+- List all tasks for that date
+- Show: Title, Owner badge, Priority badge, Status checkbox
+- Click task to expand details
+- Quick actions: Mark done, Edit, Delete
 
 ---
 
 ## After Implementation
 
-1. **Test Sold Section** - Navigate to /shop and click "Sold" to view archive
-2. **Verify RLS** - Confirm sold items are visible to unauthenticated users
-3. **Test Checkout** - Complete a test purchase and verify enhanced success page
-4. **Verify Budget UI** - Check that Operating and Deployment budgets display correctly
-5. **Confirm Analytics** - Verify single "Monthly Numbers" button replaces the two previous buttons
+1. **Test Schedule page** - Navigate to /schedule, add tasks, verify calendar displays correctly
+2. **Test task creation** - Add tasks for Spencer and Parker with different due dates
+3. **Test Analytics tabs** - Verify Dashboard, Monthly Numbers, and Pop Ups tabs work
+4. **Verify description spacing** - Check product detail pages have single-line descriptions
+5. **Verify "listed" status removed** - Check inventory forms and filters
+6. **Test Personal Collection nav** - Click it in storefront top nav
+7. **Verify centered navigation** - Check storefront nav is properly centered
+
