@@ -120,6 +120,7 @@
                  <SelectContent>
                    <SelectItem value="spencer">Spencer</SelectItem>
                    <SelectItem value="parker">Parker</SelectItem>
+                    <SelectItem value="both">Both</SelectItem>
                  </SelectContent>
                </Select>
              </div>

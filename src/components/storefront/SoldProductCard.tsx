@@ -1,9 +1,14 @@
+import { useState } from 'react';
  import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
  import { SoldInventoryItem } from '@/hooks/useSoldInventory';
  
  interface SoldProductCardProps {
    item: SoldInventoryItem;
+  isEditMode?: boolean;
    onClick: () => void;
+  onRemove?: () => void;
  }
  
  const formatCurrency = (amount: number) => {
@@ -25,30 +30,55 @@
    return parts.join(' • ');
  };
  
- export function SoldProductCard({ item, onClick }: SoldProductCardProps) {
+export function SoldProductCard({ item, isEditMode = false, onClick, onRemove }: SoldProductCardProps) {
+  const [isHovered, setIsHovered] = useState(false);
    const imageUrl = item.imageUrls?.[0] || item.imageUrl;
-   const description = generateDescription(item);
  
    return (
      <div
        onClick={onClick}
-       className="group cursor-pointer bg-zinc-900 rounded-lg overflow-hidden border border-white/10 hover:border-white/20 transition-all relative"
+      className="group cursor-pointer rounded-lg overflow-hidden relative"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
      >
-       {/* SOLD Badge Overlay */}
-       <div className="absolute top-3 left-3 z-10">
-         <Badge variant="destructive" className="bg-red-600 text-white font-semibold">
-           SOLD
-         </Badge>
-       </div>
- 
-       {/* Image */}
-       <div className="aspect-square bg-zinc-800 relative overflow-hidden">
+      {/* Image with hover effect */}
+      <div className="aspect-square bg-zinc-800 relative overflow-hidden rounded-lg">
          {imageUrl ? (
-           <img
-             src={imageUrl}
-             alt={item.name}
-             className="w-full h-full object-cover opacity-70 grayscale-[30%]"
-           />
+          <>
+            {/* Base image with overlay */}
+            <img
+              src={imageUrl}
+              alt={item.name}
+              className={`w-full h-full object-cover transition-all duration-300 ${
+                isHovered ? 'opacity-100 grayscale-0' : 'opacity-70 grayscale-[30%]'
+              }`}
+            />
+            {/* Dark overlay with text - fades on hover */}
+            <div
+              className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent transition-opacity duration-300 ${
+                isHovered ? 'opacity-0' : 'opacity-100'
+              }`}
+            >
+              {/* SOLD Badge */}
+              <div className="absolute top-3 left-3">
+                <Badge variant="destructive" className="bg-red-600 text-white font-semibold">
+                  SOLD
+                </Badge>
+              </div>
+              {/* Bottom text */}
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                <h3 className="font-medium text-white text-sm truncate">{item.name}</h3>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-lg font-semibold text-white">
+                    {item.salePrice ? formatCurrency(item.salePrice) : 'N/A'}
+                  </span>
+                  {item.size && (
+                    <span className="text-xs text-white/60">Size: {item.size}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
          ) : (
            <div className="w-full h-full flex items-center justify-center text-white/30">
              No Image
@@ -56,21 +86,20 @@
          )}
        </div>
  
-       {/* Content */}
-       <div className="p-4 space-y-2">
-         <h3 className="font-medium text-white truncate">{item.name}</h3>
-         
-         <p className="text-white/60 text-sm line-clamp-2">{description}</p>
- 
-         <div className="flex items-center justify-between pt-2">
-           <span className="text-lg font-semibold text-white">
-             {item.salePrice ? formatCurrency(item.salePrice) : 'N/A'}
-           </span>
-           {item.size && (
-             <span className="text-sm text-white/60">Size: {item.size}</span>
-           )}
-         </div>
-       </div>
+      {/* Edit Mode: Remove button */}
+      {isEditMode && onRemove && (
+        <Button
+          size="icon"
+          variant="destructive"
+          className="absolute top-2 right-2 h-7 w-7 z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+        >
+          <X className="h-3 w-3" />
+        </Button>
+      )}
      </div>
    );
  }

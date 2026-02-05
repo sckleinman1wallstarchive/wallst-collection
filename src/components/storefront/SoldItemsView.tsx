@@ -1,13 +1,35 @@
  import { Loader2, Archive } from 'lucide-react';
  import { useSoldInventory, SoldInventoryItem } from '@/hooks/useSoldInventory';
  import { SoldProductCard } from './SoldProductCard';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
  
  interface SoldItemsViewProps {
    onItemClick: (item: SoldInventoryItem) => void;
+  isEditMode?: boolean;
  }
  
- export function SoldItemsView({ onItemClick }: SoldItemsViewProps) {
+export function SoldItemsView({ onItemClick, isEditMode = false }: SoldItemsViewProps) {
    const { data: soldItems, isLoading } = useSoldInventory();
+  const queryClient = useQueryClient();
+
+  const handleRemoveFromArchive = async (itemId: string) => {
+    try {
+      const { error } = await supabase
+        .from('inventory_items')
+        .update({ hide_from_sold_archive: true })
+        .eq('id', itemId);
+
+      if (error) throw error;
+
+      toast.success('Removed from sold archive');
+      queryClient.invalidateQueries({ queryKey: ['public-inventory', 'sold'] });
+    } catch (err) {
+      console.error('Error hiding item:', err);
+      toast.error('Failed to remove item');
+    }
+  };
  
    if (isLoading) {
      return (
@@ -39,7 +61,9 @@
            <SoldProductCard 
              key={item.id} 
              item={item}
+          isEditMode={isEditMode}
              onClick={() => onItemClick(item)}
+          onRemove={() => handleRemoveFromArchive(item.id)}
            />
          ))}
        </div>

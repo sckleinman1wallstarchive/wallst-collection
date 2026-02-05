@@ -1,7 +1,7 @@
  import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
  import { supabase } from '@/integrations/supabase/client';
  
- export type TaskOwner = 'spencer' | 'parker';
+export type TaskOwner = 'spencer' | 'parker' | 'both';
  export type TaskStatus = 'todo' | 'in-progress' | 'done';
  export type TaskPriority = 'low' | 'medium' | 'high';
  

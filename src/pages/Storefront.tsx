@@ -465,7 +465,10 @@ export default function Storefront() {
        {/* Sold Items View */}
        {currentView === 'sold' && (
          <div className="max-w-7xl mx-auto">
-           <SoldItemsView onItemClick={(item) => setSelectedSoldItem(item)} />
+           <SoldItemsView 
+             onItemClick={(item) => setSelectedSoldItem(item)} 
+             isEditMode={isEditMode}
+           />
          </div>
        )}
       </main>

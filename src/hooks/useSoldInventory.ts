@@ -12,6 +12,7 @@
    imageUrls: string[] | null;
    notes: string | null;
    dateSold: string | null;
+  hideFromSoldArchive: boolean | null;
  }
  
  export function useSoldInventory() {
@@ -20,8 +21,9 @@
      queryFn: async () => {
        const { data, error } = await supabase
          .from('inventory_items')
-         .select('id, name, brand, size, sale_price, asking_price, image_url, image_urls, notes, date_sold')
+        .select('id, name, brand, size, sale_price, asking_price, image_url, image_urls, notes, date_sold, hide_from_sold_archive')
          .eq('status', 'sold')
+        .neq('hide_from_sold_archive', true)
          .order('date_sold', { ascending: false })
          .limit(100);
  
@@ -38,6 +40,7 @@
          imageUrls: item.image_urls,
          notes: item.notes,
          dateSold: item.date_sold,
+        hideFromSoldArchive: item.hide_from_sold_archive,
        })) as SoldInventoryItem[];
      },
    });

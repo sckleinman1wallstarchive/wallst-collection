@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, Treemap } from 'recharts';
 import { ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import { MonthlyPerformanceView } from '@/components/analytics/MonthlyPerformanceView';
+import { PopUpsInlineView } from '@/components/analytics/PopUpsInlineView';
 
 const CATEGORY_LABELS: Record<string, string> = {
   jewelry: "Jewelry",
@@ -24,10 +27,13 @@ interface AnalyticsInlineViewProps {
   onBack: () => void;
 }
 
+type AnalyticsSubView = 'dashboard' | 'monthly-numbers' | 'pop-ups';
+
 export function AnalyticsInlineView({ onBack }: AnalyticsInlineViewProps) {
   const { inventory, getActiveItems, getFinancialSummary } = useSupabaseInventory();
   const [isExtracting, setIsExtracting] = useState(false);
   const [viewMode, setViewMode] = useState<'brand' | 'category'>('category');
+  const [currentSubView, setCurrentSubView] = useState<AnalyticsSubView>('dashboard');
   const queryClient = useQueryClient();
   
   const activeItems = getActiveItems();
@@ -147,6 +153,55 @@ export function AnalyticsInlineView({ onBack }: AnalyticsInlineViewProps) {
     ? Math.round(activeItems.reduce((sum, i) => sum + (i.daysHeld || 0), 0) / activeItems.length)
     : 0;
 
+  // Render sub-views
+  if (currentSubView === 'monthly-numbers') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
+            <p className="text-muted-foreground text-sm">Quick insights for decision-making</p>
+          </div>
+        </div>
+        <Tabs value={currentSubView} onValueChange={(v) => setCurrentSubView(v as AnalyticsSubView)}>
+          <TabsList>
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="monthly-numbers">Monthly Numbers</TabsTrigger>
+            <TabsTrigger value="pop-ups">Pop Ups</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <MonthlyPerformanceView onBack={() => setCurrentSubView('dashboard')} />
+      </div>
+    );
+  }
+
+  if (currentSubView === 'pop-ups') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
+            <p className="text-muted-foreground text-sm">Quick insights for decision-making</p>
+          </div>
+        </div>
+        <Tabs value={currentSubView} onValueChange={(v) => setCurrentSubView(v as AnalyticsSubView)}>
+          <TabsList>
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="monthly-numbers">Monthly Numbers</TabsTrigger>
+            <TabsTrigger value="pop-ups">Pop Ups</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <PopUpsInlineView onBack={() => setCurrentSubView('dashboard')} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -176,6 +231,15 @@ export function AnalyticsInlineView({ onBack }: AnalyticsInlineViewProps) {
           </Button>
         )}
       </div>
+
+      {/* Tab Navigation */}
+      <Tabs value={currentSubView} onValueChange={(v) => setCurrentSubView(v as AnalyticsSubView)}>
+        <TabsList>
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="monthly-numbers">Monthly Numbers</TabsTrigger>
+          <TabsTrigger value="pop-ups">Pop Ups</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* All-Time Totals */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">

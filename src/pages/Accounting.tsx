@@ -316,48 +316,6 @@ const Accounting = () => {
           </Card>
         </div>
 
-        {/* Compact Monthly Goal Progress */}
-        <Card className="p-4">
-          <div className="flex flex-col md:flex-row md:items-center gap-4">
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Monthly Goal: {formatCurrency(monthlyTarget)}</span>
-                <span className="text-sm font-semibold">{progressPercent.toFixed(0)}%</span>
-              </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary transition-all duration-500"
-                  style={{ width: `${Math.min(progressPercent, 100)}%` }}
-                />
-              </div>
-            </div>
-            <div className="w-px h-8 bg-border hidden md:block" />
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Stretch: {formatCurrency(stretchTarget)}</span>
-                <span className="text-sm font-semibold">{((summary.totalRevenue / stretchTarget) * 100).toFixed(0)}%</span>
-              </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-chart-1 transition-all duration-500"
-                  style={{ width: `${Math.min((summary.totalRevenue / stretchTarget) * 100, 100)}%` }}
-                />
-              </div>
-            </div>
-            <div className="w-px h-8 bg-border hidden md:block" />
-            <div className="flex gap-6 text-sm">
-              <div>
-                <p className="text-muted-foreground">Revenue</p>
-                <p className="font-semibold text-chart-2">+{formatCurrency(summary.totalRevenue)}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Remaining</p>
-                <p className="font-semibold">{formatCurrency(Math.max(0, monthlyTarget - summary.totalRevenue))}</p>
-              </div>
-            </div>
-          </div>
-        </Card>
-
         {/* Key Financial Metrics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-4">
