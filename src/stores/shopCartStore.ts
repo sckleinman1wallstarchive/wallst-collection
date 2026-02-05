@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { PublicInventoryItem } from '@/hooks/usePublicInventory';
 import { supabase } from '@/integrations/supabase/client';
+import { metaPixel } from '@/lib/metaPixel';
 
 export interface ShopCartItem {
   item: PublicInventoryItem;
@@ -31,14 +32,13 @@ export const useShopCartStore = create<ShopCartStore>()(
         const existingIndex = items.findIndex(i => i.item.id === item.id);
         
         if (existingIndex >= 0) {
-          // Item already in cart, increment quantity
           const newItems = [...items];
           newItems[existingIndex].quantity += 1;
           set({ items: newItems });
         } else {
-          // Add new item
           set({ items: [...items, { item, quantity: 1 }] });
         }
+        metaPixel.trackAddToCart(item);
       },
 
       removeItem: (itemId) => {
@@ -73,6 +73,12 @@ export const useShopCartStore = create<ShopCartStore>()(
       checkout: async () => {
         const { items } = get();
         if (items.length === 0) return null;
+
+        metaPixel.trackInitiateCheckout(
+          items.map(i => i.item.id),
+          items.reduce((sum, i) => sum + i.quantity, 0),
+          get().getTotal()
+        );
 
         set({ isLoading: true });
         try {

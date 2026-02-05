@@ -20,6 +20,7 @@ import { StorefrontLanding } from '@/components/storefront/StorefrontLanding';
  import { SoldProductDetail } from '@/components/storefront/SoldProductDetail';
  import { SoldInventoryItem } from '@/hooks/useSoldInventory';
 import { supabase } from '@/integrations/supabase/client';
+import { metaPixel } from '@/lib/metaPixel';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
@@ -102,6 +103,7 @@ export default function Storefront() {
     setSelectedProduct(item);
     if (item) {
       setSearchParams({ item: item.id });
+      metaPixel.trackViewContent(item);
     } else {
       searchParams.delete('item');
       setSearchParams(searchParams);
@@ -200,7 +202,8 @@ export default function Storefront() {
     }
     setSearchQuery('');
     setFilters({ sizes: [], brands: [], categories: [] });
-    setBrandItemFilter(null); // Clear brand item filter when navigating
+    setBrandItemFilter(null);
+    metaPixel.trackPageView();
   };
 
   const handleSelectCloset = (closet: 'parker' | 'spencer') => {
