@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
  import { CheckCircle, ShoppingBag, ArrowLeft, Mail, CreditCard } from 'lucide-react';
 import { useShopCartStore } from '@/stores/shopCartStore';
+import { metaPixel } from '@/lib/metaPixel';
 
 export default function CheckoutSuccess() {
   const [searchParams] = useSearchParams();
@@ -11,8 +12,8 @@ export default function CheckoutSuccess() {
   const clearCart = useShopCartStore(state => state.clearCart);
 
   useEffect(() => {
-    // Clear the cart after successful checkout
     clearCart();
+    metaPixel.trackPurchase(0); // Value unknown client-side; Stripe webhook can supplement
   }, [clearCart]);
 
   return (
