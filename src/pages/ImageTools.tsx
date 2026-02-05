@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { cn } from '@/lib/utils';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useSupabaseInventory } from '@/hooks/useSupabaseInventory';
 import { useRemoveBgUsage } from '@/hooks/useRemoveBgUsage';
@@ -32,10 +33,20 @@ interface ProcessedImage {
   imageIndex?: number;
 }
 
+const STATUS_FILTERS = [
+  { value: 'all', label: 'All' },
+  { value: 'for-sale', label: 'For Sale' },
+  { value: 'otw', label: 'OTW' },
+  { value: 'in-closet-parker', label: 'In Closet (Parker)' },
+  { value: 'in-closet-spencer', label: 'In Closet (Spencer)' },
+  { value: 'sold', label: 'Sold' },
+];
+
 export default function ImageTools() {
   const { inventory, isLoading, updateItem } = useSupabaseInventory();
   const { usage, isLoading: usageLoading, invalidate: invalidateUsage } = useRemoveBgUsage();
   
+  const [statusFilter, setStatusFilter] = useState('all');
   // Map: itemId -> Set of selected image URLs
   const [selectedImages, setSelectedImages] = useState<Map<string, Set<string>>>(new Map());
   const [isProcessing, setIsProcessing] = useState(false);
@@ -45,6 +56,10 @@ export default function ImageTools() {
   const [backgroundOptions, setBackgroundOptions] = useState<BackgroundOptions>({ type: 'transparent' });
   const [showLimitWarning, setShowLimitWarning] = useState(false);
   const [pendingProcessCount, setPendingProcessCount] = useState(0);
+
+  const filteredInventory = statusFilter === 'all'
+    ? inventory
+    : inventory.filter((item) => item.status === statusFilter);
 
   const getTotalSelectedCount = () => {
     let total = 0;
@@ -274,8 +289,26 @@ export default function ImageTools() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {/* Status Filter */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {STATUS_FILTERS.map((sf) => (
+                    <button
+                      key={sf.value}
+                      onClick={() => setStatusFilter(sf.value)}
+                      className={cn(
+                        "px-3 py-1.5 text-xs font-medium rounded-md border transition-colors",
+                        statusFilter === sf.value
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-foreground border-border hover:bg-muted"
+                      )}
+                    >
+                      {sf.label}
+                    </button>
+                  ))}
+                </div>
+
                 <InventoryImageSelector
-                  inventory={inventory}
+                  inventory={filteredInventory}
                   isLoading={isLoading}
                   selectedImages={selectedImages}
                   onSelectionChange={setSelectedImages}
