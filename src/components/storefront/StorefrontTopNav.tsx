@@ -1,9 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Pencil, Check } from 'lucide-react';
+ import { LayoutDashboard, Pencil, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ShopCart } from '@/components/shop/ShopCart';
 
-export type LandingNavView = 'home' | 'shop-all' | 'shop-by-brand' | 'collection-grails';
+ export type LandingNavView = 'home' | 'shop-all' | 'sold' | 'shop-by-brand' | 'collection-grails';
 
 interface StorefrontTopNavProps {
   currentView: LandingNavView;
@@ -16,6 +16,7 @@ interface StorefrontTopNavProps {
 const NAV_ITEMS: { view: LandingNavView; label: string }[] = [
   { view: 'home', label: 'Home' },
   { view: 'shop-all', label: 'Shop All' },
+   { view: 'sold', label: 'Sold' },
   { view: 'shop-by-brand', label: 'Shop By Brand' },
   { view: 'collection-grails', label: 'Grails' },
 ];

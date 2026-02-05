@@ -16,6 +16,9 @@ import { CollectionGrailsView } from '@/components/storefront/CollectionGrailsVi
 import { AboutUsGallery } from '@/components/storefront/AboutUsGallery';
 import { ClosetSelection } from '@/components/storefront/ClosetSelection';
 import { StorefrontLanding } from '@/components/storefront/StorefrontLanding';
+ import { SoldItemsView } from '@/components/storefront/SoldItemsView';
+ import { SoldProductDetail } from '@/components/storefront/SoldProductDetail';
+ import { SoldInventoryItem } from '@/hooks/useSoldInventory';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -32,7 +35,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 
-type StorefrontView = 'welcome' | 'home' | 'shop-all' | 'shop-by-brand' | 'collection-grails' | 'closet-selection' | 'parker-closet' | 'spencer-closet' | 'about-us';
+ type StorefrontView = 'welcome' | 'home' | 'shop-all' | 'sold' | 'shop-by-brand' | 'collection-grails' | 'closet-selection' | 'parker-closet' | 'spencer-closet' | 'about-us';
 
 export default function Storefront() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -41,6 +44,7 @@ export default function Storefront() {
   const [currentView, setCurrentView] = useState<StorefrontView>(initialItemId ? 'home' : 'welcome');
   const [selectedProduct, setSelectedProduct] = useState<PublicInventoryItem | null>(null);
   const [selectedClosetItem, setSelectedClosetItem] = useState<PublicInventoryItem | null>(null);
+   const [selectedSoldItem, setSelectedSoldItem] = useState<SoldInventoryItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterState>({ sizes: [], brands: [], categories: [] });
   const [isEditMode, setIsEditMode] = useState(false);
@@ -262,6 +266,7 @@ export default function Storefront() {
   const getViewTitle = () => {
     switch (currentView) {
       case 'shop-all': return 'Shop All';
+       case 'sold': return 'Sold';
       case 'closet-selection': return 'Personal Collection';
       case 'parker-closet': return "Parker's Closet";
       case 'spencer-closet': return "Spencer's Closet";
@@ -456,6 +461,13 @@ export default function Storefront() {
             <AboutUsGallery isEditMode={isEditMode} />
           </div>
         )}
+
+       {/* Sold Items View */}
+       {currentView === 'sold' && (
+         <div className="max-w-7xl mx-auto">
+           <SoldItemsView onItemClick={(item) => setSelectedSoldItem(item)} />
+         </div>
+       )}
       </main>
 
       {/* Product Detail Dialog */}
@@ -474,6 +486,14 @@ export default function Storefront() {
         open={!!selectedClosetItem}
         onOpenChange={(open) => !open && setSelectedClosetItem(null)}
       />
+
+     {/* Sold Item Detail Dialog */}
+     <SoldProductDetail
+       key={selectedSoldItem?.id || 'sold-none'}
+       item={selectedSoldItem}
+       open={!!selectedSoldItem}
+       onOpenChange={(open) => !open && setSelectedSoldItem(null)}
+     />
     </div>
   );
 }

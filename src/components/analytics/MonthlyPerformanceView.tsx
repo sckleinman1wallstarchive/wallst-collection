@@ -119,7 +119,7 @@ export function MonthlyPerformanceView({ onBack }: MonthlyPerformanceViewProps) 
         </Button>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Monthly Performance</h1>
-          <p className="text-muted-foreground text-sm">Month-by-month breakdown of sales performance</p>
+           <p className="text-muted-foreground text-sm">Monthly Numbers - Revenue, COGS, and Profit breakdown</p>
         </div>
       </div>
 
