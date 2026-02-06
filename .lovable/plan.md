@@ -1,96 +1,66 @@
 
-# Two Features: Image Tools Status Filter + Inventory Posting Tracker
 
-## Feature 1: Status Filter in Image Tools
+# Storefront and Inventory Updates
 
-Add a row of status filter buttons (matching the inventory status cards style) above the inventory image selector so you can filter which items show up by status (e.g., only "For Sale" items, only "OTW", etc.).
+## Changes
 
-- Adds a horizontal row of clickable status chips/buttons at the top of the "Select Inventory Images" card
-- Statuses shown: For Sale, OTW, In Closet (Parker), In Closet (Spencer), Sold, plus an "All" option
-- Selecting a status filters the item list below to only show items with that status
-- Defaults to "All" (current behavior)
+### 1. Posting Tracker button matches status box sizing and sidebar color
+The "Posting" button in the Inventory page will be restyled to match the same size, shape, and appearance as the status breakdown cards (For Sale, OTW, etc.). It will use the sidebar gray color (`hsl(266, 4%, 20.8%)` / `bg-primary`) with white text, sitting alongside the other status boxes in the grid.
 
----
+### 2. PostingPlatformCard "Add Items" button uses sidebar gray
+The "Add Items" button inside each posting platform card currently uses `variant="secondary"`. It will be changed to use the sidebar gray background (`bg-primary text-primary-foreground`) so it matches the overall dark theme of the cards.
 
-## Feature 2: Posting Tracker in Inventory
+### 3. Remove Storefront link button
+The storefront top nav currently shows a "Dashboard" button for authorized users. No other "storefront link" button exists elsewhere, so this stays as-is. If there's a specific button you want removed, let me know -- but based on the code, the nav links are just text tabs, not buttons.
 
-A new "Posting" button in the Inventory page header (next to "Add Item" and the Convention Mode toggle) that opens a dialog/panel with big platform boxes for tracking where items have been posted.
+### 4. Remove "Edit with Lovable" button
+The `index.html` currently references Lovable in the OG image and Twitter meta tags. These will be removed/replaced. The "Edit with Lovable" badge that appears on published sites is injected by the platform -- it cannot be removed via code changes. However, once you connect a custom domain, it should no longer appear.
 
-### How it works
+### 5. Update OG/Twitter meta images
+Remove the Lovable branding from the `og:image` and `twitter:image` meta tags and the `twitter:site` reference.
 
-1. **"Posting" button** in the inventory header bar opens a full-width dialog
-2. Inside the dialog: a grid of **3-6 large platform boxes** (e.g., Grailed, Depop, eBay, Mercari, Instagram, Vinted)
-3. Each box:
-   - Has a dark background matching the sidebar color (`hsl(266, 4%, 20.8%)`) with **white text**
-   - Shows the platform name prominently
-   - Has an optional artwork/icon area (defaults to the sidebar gray color, but you can upload a custom image)
-   - Shows a count of items posted to that platform
-   - Clicking a box opens a sub-view where you can select inventory items to mark as "posted" to that platform
-4. The dialog background is white (matching the rest of the pages)
-5. Data is stored in a new database table `posting_tracker` to persist which items are marked as posted to which platform
+### 6. Sold listing descriptions auto-generated
+In `SoldProductCard.tsx` and `SoldProductDetail.tsx`, the `generateDescription` function currently includes "Send Offers/Trades" and "IG: Wall Street Archive". For sold items, it will be changed to show only:
+- Item name
+- Size (if available)  
+- Sale price (formatted as currency)
 
-### UI Layout
-
-```text
-+----------------------------------------------------------+
-|  Posting Tracker                                    [X]  |
-+----------------------------------------------------------+
-|                                                          |
-|  +------------------+  +------------------+              |
-|  |  (artwork/gray)  |  |  (artwork/gray)  |              |
-|  |                  |  |                  |              |
-|  |    GRAILED       |  |     DEPOP        |              |
-|  |   12 posted      |  |    8 posted      |              |
-|  |  [+ Add Items]   |  |  [+ Add Items]   |              |
-|  +------------------+  +------------------+              |
-|                                                          |
-|  +------------------+  +------------------+              |
-|  |  (artwork/gray)  |  |  (artwork/gray)  |              |
-|  |                  |  |                  |              |
-|  |     EBAY         |  |   INSTAGRAM      |              |
-|  |   5 posted       |  |   3 posted       |              |
-|  |  [+ Add Items]   |  |  [+ Add Items]   |              |
-|  +------------------+  +------------------+              |
-|                                                          |
-+----------------------------------------------------------+
-```
-
-### Database
-
-New table: `posting_tracker`
-- `id` (uuid, PK)
-- `platform_name` (text) -- e.g., "Grailed", "Depop"
-- `artwork_url` (text, nullable) -- custom artwork for the box
-- `display_order` (integer)
-- `created_at` (timestamptz)
-
-New table: `posting_tracker_items`
-- `id` (uuid, PK)
-- `tracker_id` (uuid, FK to posting_tracker)
-- `inventory_item_id` (uuid, FK to inventory_items)
-- `posted_at` (timestamptz, default now())
-- `created_at` (timestamptz)
-
-Both tables get RLS policies using `is_allowed_user()` for full CRUD.
+### 7. Sold badge: black background, white text, top-left position
+In `SoldProductCard.tsx`, change the SOLD badge from `bg-red-600` to `bg-black text-white` and ensure it's positioned top-left (it already is). Same change in `SoldProductDetail.tsx`.
 
 ---
 
-## Technical Summary
-
-### Files to create
-| File | Purpose |
-|------|---------|
-| `src/components/inventory/PostingTrackerDialog.tsx` | Main dialog with the big platform boxes grid |
-| `src/components/inventory/PostingPlatformCard.tsx` | Individual platform box component (dark bg, white text, artwork area) |
-| `src/components/inventory/PostingAddItemsDialog.tsx` | Sub-dialog for selecting inventory items to mark as posted |
-| `src/hooks/usePostingTracker.ts` | Hook for CRUD operations on posting_tracker and posting_tracker_items |
+## Technical Details
 
 ### Files to modify
-| File | Change |
-|------|--------|
-| `src/pages/Inventory.tsx` | Add "Posting" button next to Add Item, render PostingTrackerDialog |
-| `src/pages/ImageTools.tsx` | Add status filter state + pass filtered inventory to InventoryImageSelector |
-| `src/components/imagetools/InventoryImageSelector.tsx` | No changes needed (filtering happens at parent level) |
 
-### Database migration
-- Create `posting_tracker` and `posting_tracker_items` tables with RLS policies
+| File | Changes |
+|------|---------|
+| `src/pages/Inventory.tsx` | Move the Posting trigger from a standalone button into the status grid as a card-sized box with `bg-primary text-primary-foreground` styling |
+| `src/components/inventory/PostingPlatformCard.tsx` | Change the "Add Items" button from `variant="secondary"` to explicit `bg-primary text-primary-foreground hover:bg-primary/90` |
+| `src/components/storefront/SoldProductCard.tsx` | Update `generateDescription` to show name + size + sold price only; change SOLD badge to `bg-black text-white` |
+| `src/components/storefront/SoldProductDetail.tsx` | Update `generateDescription` to show name + size + sold price only; change SOLD badge to `bg-black text-white` |
+| `index.html` | Remove Lovable OG image references and Twitter site tag |
+
+### Posting button as status card
+Instead of a separate outline button in the header, the "Posting" trigger will be rendered as an additional card in the status grid (after the flagged items card). It will look like:
+
+```text
++------------------+
+|   Posting        |
+|   [Send icon]    |
+|                  |
+|  Track postings  |
++------------------+
+```
+
+Same dimensions as "For Sale", "OTW", etc. Dark sidebar color background, white text.
+
+### Sold description format
+```
+Item Name
+Size: 10
+Sold: $250
+```
+
+No "Send Offers/Trades" or IG handle for sold items.
