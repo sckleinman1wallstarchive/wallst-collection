@@ -22,12 +22,11 @@ import { X } from 'lucide-react';
  const generateDescription = (item: SoldInventoryItem) => {
    if (item.notes) return item.notes;
    
-   const parts: string[] = [];
-   parts.push(item.name);
-   if (item.size) parts.push(`Size: ${item.size}`);
-   parts.push('Send Offers/Trades');
-   parts.push('IG: Wall Street Archive');
-   return parts.join(' • ');
+  const parts: string[] = [];
+    parts.push(item.name);
+    if (item.size) parts.push(`Size: ${item.size}`);
+    if (item.salePrice) parts.push(`Sold: ${formatCurrency(item.salePrice)}`);
+    return parts.join(' • ');
  };
  
 export function SoldProductCard({ item, isEditMode = false, onClick, onRemove }: SoldProductCardProps) {
@@ -61,7 +60,7 @@ export function SoldProductCard({ item, isEditMode = false, onClick, onRemove }:
             >
               {/* SOLD Badge */}
               <div className="absolute top-3 left-3">
-                <Badge variant="destructive" className="bg-red-600 text-white font-semibold">
+                <Badge className="bg-black text-white font-semibold border-transparent">
                   SOLD
                 </Badge>
               </div>

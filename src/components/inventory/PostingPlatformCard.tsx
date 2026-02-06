@@ -116,9 +116,8 @@ export function PostingPlatformCard({
         </div>
 
         <Button
-          variant="secondary"
           size="sm"
-          className="w-full mt-3"
+          className="w-full mt-3 bg-primary text-primary-foreground hover:bg-primary/90"
           onClick={onAddItems}
         >
           <Plus className="h-4 w-4 mr-1.5" />

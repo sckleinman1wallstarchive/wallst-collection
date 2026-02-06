@@ -21,12 +21,11 @@
  const generateDescription = (item: SoldInventoryItem) => {
    if (item.notes) return item.notes;
    
-   const parts: string[] = [];
-   parts.push(item.name);
-  if (item.size) parts.push(`Size: ${item.size}`);
-   parts.push('Send Offers/Trades');
-   parts.push('IG: Wall Street Archive');
-   return parts.join('\n');
+  const parts: string[] = [];
+    parts.push(item.name);
+    if (item.size) parts.push(`Size: ${item.size}`);
+    if (item.salePrice) parts.push(`Sold: ${formatCurrency(item.salePrice)}`);
+    return parts.join('\n');
  };
  
  export function SoldProductDetail({ item, open, onOpenChange }: SoldProductDetailProps) {
@@ -54,7 +53,7 @@
            
            <div className="p-6 space-y-6">
              {/* SOLD Badge */}
-             <Badge variant="destructive" className="bg-red-600 text-white font-semibold text-sm">
+             <Badge className="bg-black text-white font-semibold text-sm border-transparent">
                SOLD
              </Badge>
  

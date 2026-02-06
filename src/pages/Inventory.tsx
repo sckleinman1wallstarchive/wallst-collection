@@ -256,10 +256,7 @@ const Inventory = () => {
               </Label>
             </div>
             <AddItemDialog onAdd={handleAddItem} />
-            <Button variant="outline" onClick={() => setPostingOpen(true)}>
-              <Send className="h-4 w-4 mr-1.5" />
-              Posting
-            </Button>
+            <AddItemDialog onAdd={handleAddItem} />
           </div>
         </div>
 
@@ -346,6 +343,18 @@ const Inventory = () => {
                   </Card>
                 );
               })}
+
+              {/* Posting Card */}
+              <Card
+                onClick={() => setPostingOpen(true)}
+                className="p-3 cursor-pointer transition-all hover:ring-2 hover:ring-primary/50 bg-primary text-primary-foreground border-primary"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Send className="h-3.5 w-3.5" />
+                  <p className="text-xs truncate">Posting</p>
+                </div>
+                <p className="text-lg font-semibold mt-0.5">Track postings</p>
+              </Card>
 
               {/* Flagged Items Card - positioned after Sold */}
               {attentionItems.length > 0 && (
