@@ -229,6 +229,28 @@ const Accounting = () => {
     );
   }
 
+  // Render Balance Sheet view
+  if (currentView === 'balance-sheet') {
+    return (
+      <DashboardLayout>
+        <div className="max-w-4xl mx-auto">
+          <BalanceSheet onBack={() => setCurrentView('dashboard')} />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Render Income Statement view
+  if (currentView === 'income-statement') {
+    return (
+      <DashboardLayout>
+        <div className="max-w-4xl mx-auto">
+          <IncomeStatement onBack={() => setCurrentView('dashboard')} />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-6">
