@@ -42,7 +42,7 @@ import { AnalyticsInlineView } from '@/components/accounting/AnalyticsInlineView
 import { format, parse } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-type View = 'dashboard' | 'cash-flow' | 'budget' | 'analytics';
+type View = 'dashboard' | 'cash-flow' | 'budget' | 'analytics' | 'balance-sheet' | 'income-statement';
 type SortOption = 'date' | 'price' | 'brand';
 
 const Accounting = () => {
