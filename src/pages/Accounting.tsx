@@ -29,8 +29,10 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, Tooltip } from 'recharts';
-import { DollarSign, TrendingUp, Package, FileText, PlusCircle, Receipt, ChevronDown, ChevronUp, BarChart3, Users, ArrowUpDown, Pencil, Check, CalendarIcon, Wallet } from 'lucide-react';
+import { DollarSign, TrendingUp, Package, FileText, PlusCircle, Receipt, ChevronDown, ChevronUp, BarChart3, Users, ArrowUpDown, Pencil, Check, CalendarIcon, Wallet, Scale, ClipboardList } from 'lucide-react';
 import { CashFlowStatement } from '@/components/accounting/CashFlowStatement';
+import { BalanceSheet } from '@/components/accounting/BalanceSheet';
+import { IncomeStatement } from '@/components/accounting/IncomeStatement';
 import { RecordContributionDialog } from '@/components/accounting/RecordContributionDialog';
 import { ExpenseTrackerDialog } from '@/components/accounting/ExpenseTrackerDialog';
 import { ExpenseList } from '@/components/accounting/ExpenseList';
@@ -40,7 +42,7 @@ import { AnalyticsInlineView } from '@/components/accounting/AnalyticsInlineView
 import { format, parse } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-type View = 'dashboard' | 'cash-flow' | 'budget' | 'analytics';
+type View = 'dashboard' | 'cash-flow' | 'budget' | 'analytics' | 'balance-sheet' | 'income-statement';
 type SortOption = 'date' | 'price' | 'brand';
 
 const Accounting = () => {
@@ -227,6 +229,28 @@ const Accounting = () => {
     );
   }
 
+  // Render Balance Sheet view
+  if (currentView === 'balance-sheet') {
+    return (
+      <DashboardLayout>
+        <div className="max-w-4xl mx-auto">
+          <BalanceSheet onBack={() => setCurrentView('dashboard')} />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Render Income Statement view
+  if (currentView === 'income-statement') {
+    return (
+      <DashboardLayout>
+        <div className="max-w-4xl mx-auto">
+          <IncomeStatement onBack={() => setCurrentView('dashboard')} />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-6">
@@ -239,7 +263,7 @@ const Accounting = () => {
         </div>
 
         {/* Quick Action Cards - BIGGER */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
           <Card 
             className="cursor-pointer hover:border-primary/50 transition-colors hover:shadow-md"
             onClick={() => setCurrentView('budget')}
@@ -311,6 +335,36 @@ const Accounting = () => {
               <div>
                 <p className="font-semibold text-lg">Analytics</p>
                 <p className="text-xs text-muted-foreground">View insights</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:border-primary/50 transition-colors hover:shadow-md"
+            onClick={() => setCurrentView('balance-sheet')}
+          >
+            <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+              <div className="p-4 bg-chart-4/20 rounded-xl">
+                <Scale className="h-8 w-8 text-chart-4" />
+              </div>
+              <div>
+                <p className="font-semibold text-lg">Balance Sheet</p>
+                <p className="text-xs text-muted-foreground">Assets & equity</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:border-primary/50 transition-colors hover:shadow-md"
+            onClick={() => setCurrentView('income-statement')}
+          >
+            <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+              <div className="p-4 bg-chart-5/20 rounded-xl">
+                <ClipboardList className="h-8 w-8 text-chart-5" />
+              </div>
+              <div>
+                <p className="font-semibold text-lg">Income</p>
+                <p className="text-xs text-muted-foreground">P&L statement</p>
               </div>
             </CardContent>
           </Card>
