@@ -338,6 +338,36 @@ const Accounting = () => {
               </div>
             </CardContent>
           </Card>
+
+          <Card 
+            className="cursor-pointer hover:border-primary/50 transition-colors hover:shadow-md"
+            onClick={() => setCurrentView('balance-sheet')}
+          >
+            <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+              <div className="p-4 bg-chart-4/20 rounded-xl">
+                <Scale className="h-8 w-8 text-chart-4" />
+              </div>
+              <div>
+                <p className="font-semibold text-lg">Balance Sheet</p>
+                <p className="text-xs text-muted-foreground">Assets & equity</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:border-primary/50 transition-colors hover:shadow-md"
+            onClick={() => setCurrentView('income-statement')}
+          >
+            <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+              <div className="p-4 bg-chart-5/20 rounded-xl">
+                <ClipboardList className="h-8 w-8 text-chart-5" />
+              </div>
+              <div>
+                <p className="font-semibold text-lg">Income</p>
+                <p className="text-xs text-muted-foreground">P&L statement</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Key Financial Metrics */}
