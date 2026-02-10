@@ -29,7 +29,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, Tooltip } from 'recharts';
-import { DollarSign, TrendingUp, Package, FileText, PlusCircle, Receipt, ChevronDown, ChevronUp, BarChart3, Users, ArrowUpDown, Pencil, Check, CalendarIcon, Wallet } from 'lucide-react';
+import { DollarSign, TrendingUp, Package, FileText, PlusCircle, Receipt, ChevronDown, ChevronUp, BarChart3, Users, ArrowUpDown, Pencil, Check, CalendarIcon, Wallet, Scale, ClipboardList } from 'lucide-react';
 import { CashFlowStatement } from '@/components/accounting/CashFlowStatement';
 import { BalanceSheet } from '@/components/accounting/BalanceSheet';
 import { IncomeStatement } from '@/components/accounting/IncomeStatement';
